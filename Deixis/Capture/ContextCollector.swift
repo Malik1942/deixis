@@ -4,8 +4,16 @@ import Darwin
 /// R5: what the user was looking at when the hotkey fired. Runs before the overlay appears.
 @MainActor
 enum ContextCollector {
-    static func collect(reader: AccessibilityReader) async -> CaptureContext? {
-        guard let app = NSWorkspace.shared.frontmostApplication else { return nil }
+    /// With no `pid`, describes the frontmost app (hotkey time). With a `pid`, describes that app
+    /// (the owner of the clicked window), so the source matches what was actually pointed at.
+    static func collect(reader: AccessibilityReader, pid targetPID: pid_t? = nil) async -> CaptureContext? {
+        let app: NSRunningApplication?
+        if let targetPID {
+            app = NSRunningApplication(processIdentifier: targetPID)
+        } else {
+            app = NSWorkspace.shared.frontmostApplication
+        }
+        guard let app else { return nil }
         let bundleId = app.bundleIdentifier ?? "unknown"
         let name = app.localizedName ?? bundleId
         let pid = app.processIdentifier

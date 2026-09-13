@@ -102,6 +102,13 @@ final class AppState {
             guard phase == .resolving else { return }
             lockedElement = element
 
+            // R5: the source is the app that owns the clicked window. The hotkey-time context is
+            // the fallback when the click lands on the frontmost app or outside any window.
+            if pid != context.frontPID, let clicked = await ContextCollector.collect(reader: reader, pid: pid) {
+                guard phase == .resolving else { return }
+                self.context = clicked
+            }
+
             let display = SelectionOverlay.displayFrameCG(containing: point)
             let rect = Geometry.cropRect(element: element?.frame.cgRect, clickPoint: point, window: window?.bounds, display: display)
             cropTask = Task { try await ScreenCapture.crop(rect) }
