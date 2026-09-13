@@ -21,6 +21,11 @@ final class AppState {
     @ObservationIgnored private var windows: [Geometry.WindowRecord] = []
     @ObservationIgnored private var hoverTask: Task<Void, Never>?
     @ObservationIgnored private var pendingHover: CGPoint?
+    @ObservationIgnored private var lastHoverPoint: CGPoint = .zero
+    @ObservationIgnored private var lastHoverSnapshot: ElementSnapshot?
+    @ObservationIgnored private var lastHoverElement: ResolvedElement?
+    /// Option steps the selection up this many ancestors; resets when the hovered element changes.
+    @ObservationIgnored private var parentDepth = 0
     @ObservationIgnored private var lockedElement: ResolvedElement?
     @ObservationIgnored private var clickPoint: CGPoint = .zero
     @ObservationIgnored private var cropTask: Task<CroppedImage, any Error>?
@@ -34,6 +39,7 @@ final class AppState {
         overlay.onClick = { [weak self] point in self?.click(point) }
         overlay.onCancel = { [weak self] in self?.cancel() }
         overlay.onCommit = { [weak self] note in self?.commit(note: note) }
+        overlay.onOptionPressed = { [weak self] in self?.optionPressed() }
         let monitor = HotkeyMonitor { [weak self] in self?.beginCapture() }
         monitor.start()
         hotkey = monitor
@@ -69,16 +75,51 @@ final class AppState {
     }
 
     /// One in-flight lookup at a time, latest point wins, at most ~30 Hz.
+    /// R2 hover precision: the reader already refines container hits toward a real control; here the
+    /// last small element sticks while the cursor stays near it, so gaps do not flip to the big group.
     private func drainHover() async {
         defer { hoverTask = nil }
         while phase == .hovering, let point = pendingHover {
             pendingHover = nil
-            let snapshot = await reader.snapshot(at: point, pid: targetPID(at: point))
+            let fresh = await reader.snapshot(at: point, pid: targetPID(at: point))
             guard phase == .hovering else { return }
-            let element = snapshot.flatMap(ElementResolver.resolve)
-            overlay.setHighlight(element?.frame.cgRect, readout: .describing(element), around: point)
+            var snapshot = fresh
+            var element = fresh.flatMap(ElementResolver.resolve)
+            let freshIsContainer = element.map { ElementResolver.containerRoles.contains($0.role) } ?? true
+            if freshIsContainer, HitRefiner.sticks(lastHoverElement, to: point) {
+                snapshot = lastHoverSnapshot
+                element = lastHoverElement
+            }
+            if element?.frame != lastHoverElement?.frame { parentDepth = 0 }
+            lastHoverPoint = point
+            lastHoverSnapshot = snapshot
+            lastHoverElement = element
+            renderHover()
             try? await Task.sleep(for: .milliseconds(33))
         }
+    }
+
+    /// The hovered element with Option depth applied.
+    private func selectedElement() -> ResolvedElement? {
+        guard parentDepth > 0, let snapshot = lastHoverSnapshot,
+              let ancestor = HitRefiner.ancestor(of: snapshot, depth: parentDepth) else { return lastHoverElement }
+        return ElementResolver.resolve(ancestor)
+    }
+
+    private func renderHover() {
+        let element = selectedElement()
+        var readout = Readout.describing(element)
+        if parentDepth > 0 {
+            readout.suffix = [readout.suffix, "↑\(parentDepth)"].compactMap { $0 }.joined(separator: " · ")
+        }
+        overlay.setHighlight(element?.frame.cgRect, readout: readout, around: lastHoverPoint)
+    }
+
+    /// Option while hovering: parent, grandparent, … then back to the element.
+    private func optionPressed() {
+        guard phase == .hovering, let snapshot = lastHoverSnapshot else { return }
+        parentDepth = (parentDepth + 1) % (snapshot.ancestors.count + 1)
+        renderHover()
     }
 
     /// R3: the app owning the window under the point, else the app that was frontmost at hotkey time.
@@ -98,7 +139,14 @@ final class AppState {
         Task {
             let window = Geometry.windowOwner(at: point, windows: windows, excludingPID: ownPID)
             let pid = window?.ownerPID ?? context.frontPID
-            let element = await ElementResolver.resolve(at: point, using: AppElementProvider(reader: reader, pid: pid))
+            // What the user saw is what they clicked: keep the hovered selection (and its Option
+            // depth) when the click is on or near it; otherwise resolve fresh with the lazy-tree retry.
+            let element: ResolvedElement?
+            if lastHoverElement != nil, parentDepth > 0 || HitRefiner.sticks(lastHoverElement, to: point) {
+                element = selectedElement()
+            } else {
+                element = await ElementResolver.resolve(at: point, using: AppElementProvider(reader: reader, pid: pid))
+            }
             guard phase == .resolving else { return }
             lockedElement = element
 
@@ -162,6 +210,9 @@ final class AppState {
         pendingHover = nil
         cropTask = nil
         lockedElement = nil
+        lastHoverSnapshot = nil
+        lastHoverElement = nil
+        parentDepth = 0
         context = nil
         windows = []
         overlay.dismiss()

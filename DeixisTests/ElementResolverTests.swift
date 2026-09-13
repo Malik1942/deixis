@@ -93,6 +93,51 @@ final class ElementResolverTests: XCTestCase {
         XCTAssertEqual(ElementResolver.identifierSource(role: "image", identifier: ""), .unknown)
     }
 
+    // R2 hover precision
+    private func node(_ role: String, id: String? = nil, x: Double, y: Double, w: Double, h: Double) -> AttributeSet {
+        AttributeSet(role: role, identifier: id, frame: Frame(x: x, y: y, w: w, h: h), childCount: 0)
+    }
+
+    func testRefinerPicksSmallestControlNearPoint() {
+        let window = node("AXGroup", x: 0, y: 0, w: 456, h: 900)
+        let candidates = [
+            node("AXGroup", id: "content", x: 0, y: 0, w: 456, h: 900),   // same size as base: never
+            node("AXToolbar", x: 0, y: 840, w: 456, h: 60),               // container, near
+            node("AXButton", id: "capture", x: 43, y: 850, w: 370, h: 40), // control, 5 pt away
+            node("AXButton", id: "far", x: 43, y: 700, w: 370, h: 40),     // control, far
+        ]
+        let point = CGPoint(x: 228, y: 895) // 5 pt below the capture button
+        XCTAssertEqual(HitRefiner.choose(from: candidates, replacing: window, at: point)?.identifier, "capture")
+    }
+
+    func testRefinerFallsBackToSmallerContainerThenNil() {
+        let window = node("AXGroup", x: 0, y: 0, w: 456, h: 900)
+        let toolbar = node("AXToolbar", x: 0, y: 840, w: 456, h: 60)
+        let button = node("AXButton", id: "capture", x: 43, y: 850, w: 100, h: 40)
+        XCTAssertNil(HitRefiner.choose(from: [toolbar, button], replacing: window, at: CGPoint(x: 228, y: 895))?.identifier)
+        XCTAssertEqual(HitRefiner.choose(from: [toolbar, button], replacing: window, at: CGPoint(x: 228, y: 895))?.role, "AXToolbar")
+        XCTAssertNil(HitRefiner.choose(from: [toolbar, button], replacing: window, at: CGPoint(x: 228, y: 400)), "blank area keeps the container")
+    }
+
+    func testStickinessKeepsControlsNotContainers() throws {
+        let button = try XCTUnwrap(ElementResolver.resolve(try fixture("swiftui-button"))) // 43,893.67 370×50.33
+        XCTAssertTrue(HitRefiner.sticks(button, to: CGPoint(x: 228, y: 950)))   // 6 pt below
+        XCTAssertFalse(HitRefiner.sticks(button, to: CGPoint(x: 228, y: 970)))  // 26 pt below
+        let group = try XCTUnwrap(ElementResolver.resolve(try fixture("empty-group")))
+        XCTAssertFalse(HitRefiner.sticks(group, to: CGPoint(x: 100, y: 300)))
+        XCTAssertFalse(HitRefiner.sticks(nil, to: .zero))
+    }
+
+    func testAncestorDepthReRootsSnapshot() throws {
+        let snapshot = try fixture("swiftui-button")
+        let parent = try XCTUnwrap(HitRefiner.ancestor(of: snapshot, depth: 1))
+        XCTAssertEqual(ElementResolver.resolve(parent)?.role, "group")
+        XCTAssertEqual(parent.ancestors.count, 2)
+        XCTAssertEqual(ElementResolver.resolve(try XCTUnwrap(HitRefiner.ancestor(of: snapshot, depth: 3)))?.role, "window")
+        XCTAssertNil(HitRefiner.ancestor(of: snapshot, depth: 4))
+        XCTAssertEqual(HitRefiner.ancestor(of: snapshot, depth: 0), snapshot)
+    }
+
     func testModeClassifier() {
         func source(app: String, simApp: String? = nil, url: String? = nil) -> SourceInfo {
             SourceInfo(

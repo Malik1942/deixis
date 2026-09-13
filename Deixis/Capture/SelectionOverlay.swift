@@ -96,6 +96,8 @@ final class SelectionOverlay {
     var onClick: ((CGPoint) -> Void)?
     var onCancel: (() -> Void)?
     var onCommit: ((String) -> Void)?
+    /// Option pressed while hovering: step the selection to the parent.
+    var onOptionPressed: (() -> Void)?
 
     private var panels: [OverlayPanel] = []
     private var dismissing: [OverlayPanel] = []
@@ -115,6 +117,7 @@ final class SelectionOverlay {
             return panel
         }
         panels.first?.makeKey()
+        panels.first?.makeFirstResponder(panels.first?.contentOverlay)
         NSCursor.pointingHand.push()
         cursorPushed = true
         NSAnimationContext.runAnimationGroup { context in
@@ -271,6 +274,16 @@ final class OverlayContentView: NSView, NSTextFieldDelegate {
     override func keyDown(with event: NSEvent) {
         if event.keyCode == 53 { // Esc
             owner?.onCancel?()
+        }
+    }
+
+    private var optionWasDown = false
+
+    override func flagsChanged(with event: NSEvent) {
+        let optionDown = event.modifierFlags.contains(.option)
+        defer { optionWasDown = optionDown }
+        if optionDown, !optionWasDown, !locked {
+            owner?.onOptionPressed?()
         }
     }
 

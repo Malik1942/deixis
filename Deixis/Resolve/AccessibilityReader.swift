@@ -17,12 +17,42 @@ actor AccessibilityReader {
     /// R3: per-app hit test, system-wide element as fallback. Nil when neither returns anything.
     func snapshot(at point: CGPoint, pid: pid_t) -> ElementSnapshot? {
         if let element = hit(AXUIElementCreateApplication(pid), at: point) {
-            return snapshot(of: element)
+            return snapshot(of: refine(element, at: point))
         }
         if let element = hit(AXUIElementCreateSystemWide(), at: point) {
-            return snapshot(of: element)
+            return snapshot(of: refine(element, at: point))
         }
         return nil
+    }
+
+    /// R2 hover precision: a container hit is replaced by the best control among its descendants
+    /// near the point (see `HitRefiner`). Descends only through nodes whose frame is near the point,
+    /// so the walk stays small even on a large tree.
+    private func refine(_ base: AXUIElement, at point: CGPoint) -> AXUIElement {
+        let baseAttributes = attributes(of: base)
+        guard ElementResolver.isContainer(baseAttributes) else { return base }
+        let tolerance = HitRefiner.tolerance
+        var candidates: [(element: AXUIElement, attributes: AttributeSet)] = []
+        var stack: [(element: AXUIElement, depth: Int)] = children(of: base).map { ($0, 1) }
+        var visited = 0
+        while let (node, depth) = stack.popLast(), visited < 200 {
+            visited += 1
+            guard let frame = frame(copy(node, Self.frameAttribute)),
+                  frame.cgRect.insetBy(dx: -tolerance, dy: -tolerance).contains(point) else { continue }
+            let nodeAttributes = attributes(of: node)
+            candidates.append((node, nodeAttributes))
+            if depth < 6, ElementResolver.isContainer(nodeAttributes) {
+                stack.append(contentsOf: children(of: node).map { ($0, depth + 1) })
+            }
+        }
+        guard let chosen = HitRefiner.choose(from: candidates.map(\.attributes), replacing: baseAttributes, at: point),
+              let match = candidates.first(where: { $0.attributes == chosen }) else { return base }
+        return match.element
+    }
+
+    private func children(of element: AXUIElement) -> [AXUIElement] {
+        guard let value = copy(element, kAXChildrenAttribute), let array = value as? [AnyObject] else { return [] }
+        return array.compactMap { CFGetTypeID($0) == AXUIElementGetTypeID() ? ($0 as! AXUIElement) : nil }
     }
 
     /// Title of the app's focused window, falling back to its main window.

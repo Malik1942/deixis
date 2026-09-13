@@ -86,6 +86,17 @@ enum ElementResolver {
         return true
     }
 
+    /// Roles that lay out other elements. A hit on one of these is refined toward a real control
+    /// near the cursor before it is shown (R2 hover precision).
+    static let containerRoles: Set<String> = [
+        "application", "window", "sheet", "drawer", "group", "splitGroup", "tabGroup", "toolbar",
+        "scrollArea", "list", "table", "outline", "webArea", "layoutArea", "row", "column", "cell", "menuBar",
+    ]
+
+    static func isContainer(_ node: AttributeSet) -> Bool {
+        containerRoles.contains(mapRole(node.role ?? "", subrole: node.subrole))
+    }
+
     /// A group with no children is the lazy-tree symptom observed in the Simulator on first read.
     static func isEmptyGroup(_ snapshot: ElementSnapshot) -> Bool {
         mapRole(snapshot.element.role ?? "", subrole: snapshot.element.subrole) == "group"
@@ -177,5 +188,53 @@ extension ElementResolver {
             }
         }
         return nil
+    }
+}
+
+/// R2 hover precision. The platform hit test returns the deepest element under the point, and in
+/// SwiftUI every gap between controls belongs to a window-sized group, so plain hovering flickers
+/// between a small control and the whole screen. These rules keep the small one.
+enum HitRefiner {
+    /// A control counts as "under the cursor" when its frame grown by this much contains the point.
+    static let tolerance: Double = 8
+    /// The last small element stays selected while the cursor is within this distance of its frame.
+    static let stickiness: Double = 12
+
+    /// Among descendants of a container hit, the best replacement: smallest area, real controls
+    /// before containers, and only if smaller than the container itself. Nil means the container
+    /// stands (blank area or edge).
+    static func choose(from candidates: [AttributeSet], replacing base: AttributeSet, at point: CGPoint,
+                       tolerance: Double = tolerance) -> AttributeSet? {
+        let baseArea = base.frame.map { $0.w * $0.h } ?? .infinity
+        var best: (node: AttributeSet, area: Double, isContainer: Bool)?
+        for candidate in candidates {
+            guard let frame = candidate.frame, frame.w > 0, frame.h > 0,
+                  frame.cgRect.insetBy(dx: -tolerance, dy: -tolerance).contains(point) else { continue }
+            let area = frame.w * frame.h
+            guard area < baseArea else { continue }
+            let isContainer = ElementResolver.isContainer(candidate)
+            if let current = best {
+                let wins = (!isContainer && current.isContainer) || (isContainer == current.isContainer && area < current.area)
+                if wins { best = (candidate, area, isContainer) }
+            } else {
+                best = (candidate, area, isContainer)
+            }
+        }
+        return best?.node
+    }
+
+    /// True when the previously shown element should stay: it is a real control and the cursor is
+    /// still within `stickiness` of its frame.
+    static func sticks(_ previous: ResolvedElement?, to point: CGPoint) -> Bool {
+        guard let previous, !ElementResolver.containerRoles.contains(previous.role) else { return false }
+        return previous.frame.cgRect.insetBy(dx: -stickiness, dy: -stickiness).contains(point)
+    }
+
+    /// The snapshot re-rooted `depth` ancestors up (Option steps the selection to the parent).
+    /// Depth 0 is the element itself; nil when there is no such ancestor.
+    static func ancestor(of snapshot: ElementSnapshot, depth: Int) -> ElementSnapshot? {
+        guard depth > 0 else { return snapshot }
+        guard depth <= snapshot.ancestors.count else { return nil }
+        return ElementSnapshot(element: snapshot.ancestors[depth - 1], ancestors: Array(snapshot.ancestors[depth...]))
     }
 }
