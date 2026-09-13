@@ -1,6 +1,6 @@
 # Deixis: Product Requirements Document
 
-**Status:** Draft v0.3 (Sep 13, 2026: action set reorganized by output, floating ball and ring specified, web direction added)
+**Status:** Draft v0.5 (Sep 13, 2026: design language; native Settings tokens; orb rest glow)
 **Owner:** Malik Zhang
 **Platform:** macOS 15+, Apple Silicon, Swift 6 + SwiftUI/AppKit; MCP server in TypeScript
 
@@ -89,9 +89,83 @@ Ordered by priority.
 - As a user, when resolution, OCR, or cutout produces nothing, I want a short visible failure signal and an unchanged clipboard.
 - As a user, when the front app is Electron or draws its own UI and exposes no accessibility tree, I want the payload to say so and still include the image and my note.
 
-## 6. Requirements
+## 6. Design language
 
-### 6.1 P0: the pointing flow (v0.1, the 3-hour build)
+Deixis has almost no interface, only moments. Of its eleven surfaces, eight live for a few seconds, two are always present but tiny, and only Settings and the before/after panel are conventional windows. The visual language is therefore specified as "what one appearance should feel like," not as pages.
+
+### 6.0 Feel in one sentence
+**A system-level transient.** Deixis should feel like something macOS grew, in the family of the ⌘⇧4 crosshair, Live Text's selection, and Spotlight: it appears, is used, and is gone. The user should feel "the system has a new gesture," never "I opened an app." From Oryne it borrows quietness; from macOS it borrows nativeness.
+
+### 6.1 Principles
+1. **Borrow, don't brand.** System accent color, SF Pro, system materials, system cursors. No logo color, no custom font, no drawn window chrome. The only Deixis-specific mark is the pointing-hand glyph.
+2. **Nothing lingers.** Every capture surface dismisses itself. No panel stays open waiting for the user; confirmation is one second, then gone.
+3. **Quiet until approached.** Rest states are nearly invisible (the ball, the menu bar glyph). Proximity and intent reveal detail. The only permitted rest motion is the ball's slow glow; nothing pulses at notification speed, badges, or bounces to get attention.
+
+### 6.2 Tokens (map to system constants; agents use these names directly)
+
+| Token | Value | Use |
+|---|---|---|
+| `dim` | `NSColor.black` at 20 percent | overlay backdrop over the frozen frame |
+| `highlight.stroke` | `NSColor.controlAccentColor`, 2 pt | element outline |
+| `highlight.radius` | element's own corner radius when known, else 6 pt | outline corners |
+| `highlight.fallback` | `NSColor.secondaryLabelColor`, 2 pt dashed | no-element state |
+| `label.bg` | `.hudWindow` material, 6 pt radius | element label, note field, toast |
+| `label.text` | `NSColor.labelColor` | primary text on hud material |
+| `label.mono` | SF Mono 11 pt | identifiers and paths only |
+| `label.sans` | SF Pro 12 pt | everything else in overlays |
+| `field.width` | max(element width, 320 pt) | note field |
+| `space.s / m / l` | 4 / 8 / 12 pt | padding and gaps inside hud elements |
+| `motion.reveal` | 200 ms, ease-out | anything appearing |
+| `motion.dismiss` | 120 ms, ease-in | anything disappearing |
+| `motion.hover` | 80 ms | highlight moving between elements |
+| `toast.life` | 1000 ms | confirmation and failure toasts |
+| `ball.rest` | 28 pt disc on `.hudWindow` material, fill `labelColor` 10 percent, 1 px `separatorColor` edge, no shadow | floating ball at rest |
+| `ball.glow` | fill drifts 8 → 14 → 8 percent over 6 s, ease-in-out, continuous; off under Reduce Motion | the only motion at rest; slow enough to read as light, not as a pulse |
+| `ball.docked` | half-disc, fill 6 percent, glow continues | edge-docked ball |
+| `settings.window` | 520 pt wide, height to content, not resizable | Settings scene |
+| `settings.padding` | 20 pt window inset; 8 pt between rows; 24 pt between groups | matches System Settings |
+| `settings.group` | grouped `Form` rows on `controlBackgroundColor`, 10 pt corner radius, 1 px `separatorColor` hairline between rows | System Settings row look |
+| `settings.type` | `.body` for labels and values, `.footnote` in `secondaryLabelColor` for descriptions under a row | Dynamic Type via `NSFont.preferredFont(forTextStyle:)` |
+| `settings.controls` | `Toggle` (switch style), `Picker` (menu style), `TextField` (rounded border), `Button` (bordered) | system controls only, default sizes |
+| `settings.tabs` | `TabView` inside the `Settings` scene, SF Symbol per tab | toolbar-style tabs like System Settings |
+
+Dark and light appearance come free from the system constants; no second palette is designed.
+
+### 6.3 Surface specs
+
+**Overlay (Point, v0.1).** Frozen frame under `dim`. Cursor becomes the pointing hand. The hovered element gets `highlight.stroke` with `highlight.radius`, no fill. A label on `label.bg` sits 8 pt below the element (above it when within 40 pt of the screen bottom) reading `role · identifier` with the identifier in `label.mono`; the label follows the highlight with `motion.hover`. No toolbar, no instructions, no branding anywhere on the overlay. Esc dismisses with `motion.dismiss`.
+
+**Note field (v0.1).** Appears on click, anchored to the element's bottom edge, `field.width`, on `label.bg`, `label.sans`, placeholder "What should change?" (the product's voice; never reworded). A right-aligned hint in `secondaryLabelColor` reads `↩ copy · esc skip`. The highlight stays while the field is open.
+
+**Toast (v0.1).** A pill on `label.bg` near where the element was, never in a screen corner. Success: `Copied · captureButton` with the identifier in mono. Failure: the error's one-line message. Lives `toast.life`, then `motion.dismiss`. Feels like macOS's own transient feedback, not a notification banner.
+
+**No-element state (v0.1).** Same overlay, `highlight.fallback` around the approximate region, label reads `no element info · image only`. Honest, not broken.
+
+**Menu bar (v0.1).** `hand.point.up.left` as an 18×18 template image. Standard `NSMenu`, no custom views, no icons on items.
+
+**Permissions (v0.1).** The two system prompts appear as macOS presents them. Before each, one sentence in a standard alert explains why: Screen Recording captures the element; Accessibility reads what is under your cursor; nothing leaves the machine.
+
+**Floating ball and ring (v0.3).** As specified in P1.11. The ring's segments use `label.bg`, outline SF Symbols, `label.sans` labels; the center is the filled hand.
+
+**Color magnifier (v0.3).** 150×150 pt panel on `label.bg`, 15×15 native pixels at 10x, 1 px `separatorColor` grid, the center pixel outlined with `highlight.stroke`, current value in `label.mono` beneath. Follows the cursor with no smoothing.
+
+**Cut instance picker (v0.3).** Each detected instance gets `highlight.stroke` at 60 percent; the hovered one at 100 percent; click selects, Enter accepts all. No masks are drawn as fills.
+
+**Text selection layer (v0.3).** Recognized lines drawn as selectable regions with the system text-selection color; behaves like Live Text.
+
+**Settings (v0.3).** The one place Deixis is a window, so it must be indistinguishable from an Apple app's preferences. A SwiftUI `Settings` scene with `TabView`; `Form` with `.formStyle(.grouped)`; `settings.*` tokens throughout; no custom drawing, no custom colors, no header art or app name. Two tabs: **General** (`gearshape`: hotkeys per action, capture folder with a Choose… button, retention picker 7 / 30 / 90 days / never, floating ball toggle, URL scheme toggle) and **My Apps** (`app.badge.checkmark`: a list of bundle ids that count as fix mode, with `+` / `−` in the standard bottom bar). Each toggle that needs a sentence gets a `.footnote` description beneath it, the way System Settings does. Nothing in Settings is required for first use; a fresh install works with every default.
+
+**Before/after panel (v0.4).** A single standard window, two images side by side with a shared zoom, the diff stat and file list in `label.mono` beneath, the original note above. No timeline, no gallery, no annotations.
+
+### 6.4 Native fidelity check
+Two surfaces prove the language: the overlay must feel like a system gesture, and Settings must feel like an Apple preferences window. A quick test for each: put a Deixis screenshot next to ⌘⇧5's toolbar and next to System Settings > Desktop & Dock; if either Deixis surface looks like it came from a different vendor, fix it before shipping that version. Reference: Apple Human Interface Guidelines for macOS (Settings, Menus, Materials).
+
+### 6.5 What the language forbids
+Custom window chrome, brand colors, drop shadows on overlays, animated icons, onboarding tours, empty-state illustrations, badges, and any element that waits for the user.
+
+## 7. Requirements
+
+### 7.1 P0: the pointing flow (v0.1, the 3-hour build)
 
 **P0.1 Hotkey.** Double-tap Control (350 ms window) opens the selection overlay. Chosen to avoid Codex's ⌘⌘ and Claude Desktop's ⌥⌥. Configurable later.
 
@@ -100,7 +174,7 @@ Ordered by priority.
 
 **P0.3 Context at trigger time.** Front app bundle ID and name, window title, Safari/Chrome tab URL, Simulator device and app bundle ID where obtainable. Collected before the overlay appears.
 
-**P0.4 Element resolution.** `AXUIElementCopyElementAtPosition` at the click point. Read role, subrole, title, description, value, identifier, frame; walk up to 6 ancestors. Map to a platform-neutral `element` object (see 8.2). All AX work off the main thread.
+**P0.4 Element resolution.** `AXUIElementCopyElementAtPosition` at the click point. Read role, subrole, title, description, value, identifier, frame; walk up to 6 ancestors. Map to a platform-neutral `element` object (see 9.2). All AX work off the main thread.
 - Acceptance: a SwiftUI Button with `.accessibilityIdentifier("saveButton")` in Simulator yields `identifier=saveButton`, `role=button`, a frame in screen points, and an ancestry path.
 - Acceptance: an app with no accessibility tree yields `element: null` and the payload says so.
 
@@ -131,7 +205,7 @@ make this rounded, match the other pill buttons
 
 **P0.10 Failure feedback.** Typed `CaptureError`. Permission errors open System Settings once. Capture failure shows a 1-second toast and leaves clipboard and disk untouched.
 
-### 6.2 P1: MCP server (v0.2)
+### 7.2 P1: MCP server (v0.2)
 
 **P1.1 Package.** `deixis-mcp`, TypeScript, `@modelcontextprotocol/sdk`, stdio transport, installed with `npx deixis-mcp`. Reads the JSON sidecars; no HTTP server, no watcher, no state.
 
@@ -147,7 +221,7 @@ make this rounded, match the other pill buttons
 
 **P1.4 Config.** One `.mcp.json` / `mcp.json` / `config.toml` snippet each for Claude Code, Cursor, Codex, documented in README.
 
-### 6.3 P1: the action set and the entry points (v0.3)
+### 7.3 P1: the action set and the entry points (v0.3)
 
 The v0.3 surface is one primary action plus four one-shot actions, organized by **what you are about to paste**, not by feature name. The rule that decides file behavior is one sentence: **actions that produce an image keep a file for 30 days; actions that produce text or a value keep nothing.**
 
@@ -175,7 +249,7 @@ Point is the only action that leaves a record the agent and Verify can return to
 
 **P1.11 Floating ball.** Optional second entry point, off by default (the hotkey is the default). Its design principle is borrowed from Oryne's orbs, not copied: quiet at rest, present when approached. The ball and Oryne's orb should read as relatives, not twins.
 
-*Rest state.* A 28 pt translucent disc, no icon, no shadow, no animation: `labelColor` at about 12 percent over a `hudWindow`-style material with a 1 px `separatorColor` edge, following system appearance. After 5 seconds without interaction it slides to the nearest screen edge and shows as a half-disc at about 8 percent, so it is a small bump on the edge rather than an object on the desktop. Position is remembered across Spaces and launches.
+*Rest state.* A 28 pt translucent disc, no icon, no shadow: `ball.rest` on system material so it takes on whatever is behind it and follows light and dark appearance automatically. Its only motion is `ball.glow`, a six-second drift in luminance so slow it reads as the disc catching light rather than as an animation; it is disabled under Reduce Motion. After 5 seconds without interaction it slides to the nearest screen edge and shows as `ball.docked`, a faint half-disc that is a bump on the edge rather than an object on the desktop. Position is remembered across Spaces and launches. The disc should sit in the same family as Oryne's orbs: quiet, luminous, native to its surface, not a copy of them.
 
 *Proximity states* (distance-driven, not hover-driven, so the target is ready before the cursor arrives):
 
@@ -199,7 +273,7 @@ Point is the only action that leaves a record the agent and Verify can return to
 
 **Menu bar.** Capture ⌃⌃, Snap, Text, Color, Cut, Pin last capture, Open capture folder, Settings, Quit. Settings, pin, and folder live here on purpose; they are not ring material.
 
-### 6.4 P2: Verify (v0.4)
+### 7.4 P2: Verify (v0.4)
 
 The third act: point → fix → see what changed.
 
@@ -217,7 +291,7 @@ The third act: point → fix → see what changed.
 - Acceptance: three consecutive agent edits produce three iterations under one capture.
 - Blocking spike before P2 starts: confirm the rebuilt Simulator app exposes the same identifier within 5 seconds and that at least one trigger source fires reliably.
 
-### 6.5 Future considerations (P3)
+### 7.5 Future considerations (P3)
 
 - AX quality scoring per app, stored locally, to warn before capture.
 - Structured document OCR via `RecognizeDocumentsRequest` (macOS 26).
@@ -226,7 +300,7 @@ The third act: point → fix → see what changed.
 - Windows port. The element schema is already platform-neutral because Windows UI Automation exposes the same concepts; the MCP server would be shared.
 - Reuse Peekaboo's `see` for AX parsing if its output proves richer than `ElementResolver` at low cost.
 
-## 7. Success metrics
+## 8. Success metrics
 
 Measured on Malik's own usage for 30 days after v0.3, revisited if released.
 
@@ -241,12 +315,12 @@ Measured on Malik's own usage for 30 days after v0.3, revisited if released.
 - Zero screenshot files on the Desktop at day 30.
 - If released: GitHub stars and release download counts are reported, not success criteria.
 
-## 8. Technical notes and constraints
+## 9. Technical notes and constraints
 
-### 8.1 Frameworks and constraints
+### 9.1 Frameworks and constraints
 ScreenCaptureKit, Vision, Accessibility API, AppKit NSPanel, SwiftUI for Settings. Swift 6 with strict concurrency complete. No third-party dependencies in the app. Permissions: Screen Recording and Accessibility, both signature-bound; use a stable signing identity in development. Distribution: signed and notarized dmg via GitHub Releases, Homebrew cask later, not the Mac App Store.
 
-### 8.2 Contract: `schema/capture.schema.json` (v1)
+### 9.2 Contract: `schema/capture.schema.json` (v1)
 ```json
 {
   "schemaVersion": 1,
@@ -273,7 +347,7 @@ ScreenCaptureKit, Vision, Accessibility API, AppKit NSPanel, SwiftUI for Setting
 ```
 Role names are lowercase and platform-neutral (`button`, `textField`, `staticText`, `image`, `group`, `navigationBar`, `unknown`); the raw platform role is kept in `rawRole`. `iterations` entries (v0.4): `{ "capturedAt", "imagePath", "gitBefore", "gitAfter", "diffStat", "files": [] }`.
 
-### 8.3 Module boundaries
+### 9.3 Module boundaries
 ```
 Deixis/      Swift app
   Capture/   HotkeyMonitor, SelectionOverlay, FrozenFrame, ContextCollector
@@ -288,10 +362,10 @@ schema/      capture.schema.json, the only interface between app and mcp
 ```
 The app and the MCP server communicate only through files on disk. Neither knows the other is running.
 
-### 8.4 Known limitation to state in the README
+### 9.4 Known limitation to state in the README
 Element data quality depends on the target app's accessibility implementation. SwiftUI and AppKit apps and the iOS Simulator work well. Electron apps, Figma, games, and custom-drawn UIs often expose little; Deixis falls back to image plus note there.
 
-## 9. Open questions
+## 10. Open questions
 
 **Blocking**
 - (Engineering, v0.1) Does `AXUIElementCopyElementAtPosition` reach the iOS Simulator's tree on macOS 15 and 26? 30-minute spike, hard stop; fallback demo target is a native AppKit window.
@@ -302,7 +376,7 @@ Element data quality depends on the target app's accessibility implementation. S
 - (Engineering) Cleanup via LaunchAgent or only while the app runs?
 - (Product) Register `deixis.app` or `deixis.dev` before public release. Name check as of Sep 2026: no USPTO record found via search, no Mac or developer-tool product with the name, Deixis PBC (Seattle) unrelated.
 
-## 10. Phasing
+## 11. Phasing
 
 | Tag | Content | Story beat |
 |---|---|---|
