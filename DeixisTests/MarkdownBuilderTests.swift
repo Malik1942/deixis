@@ -99,6 +99,34 @@ final class MarkdownBuilderTests: XCTestCase {
         XCTAssertTrue(md.contains("Path: group > toolbar > button\n"))
     }
 
+    func testClusterRendersMembers() throws {
+        let cluster = ResolvedElement(
+            role: "cluster", rawRole: "DeixisCluster", label: nil, identifier: nil, identifierSource: .unknown, value: nil,
+            frame: Frame(x: 43, y: 590, w: 370, h: 120),
+            path: [PathEntry(role: "window", identifier: nil), PathEntry(role: "group", identifier: nil), PathEntry(role: "cluster", identifier: nil)],
+            members: [
+                ElementMember(role: "staticText", label: "Shortcut", identifier: nil),
+                ElementMember(role: "button", label: "Action Button", identifier: "shortcutActionButton"),
+            ]
+        )
+        let md = MarkdownBuilder.build(capture(element: cluster))
+        XCTAssertTrue(md.contains("cluster · 2 elements (visual grouping computed by Deixis, not an accessibility element)\nMembers: staticText \"Shortcut\" · button \"Action Button\"#shortcutActionButton\nFrame: x=43 y=590 w=370 h=120\nPath: window > group > cluster\n"))
+        XCTAssertFalse(md.contains("no identifier"))
+
+        let data = try JSONEncoder().encode(capture(element: cluster))
+        let json = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
+        let el = try XCTUnwrap(json["element"] as? [String: Any])
+        XCTAssertEqual((el["members"] as? [[String: Any]])?.count, 2)
+        XCTAssertEqual(try JSONDecoder().decode(Capture.self, from: data).element, cluster)
+        let plain = try JSONSerialization.jsonObject(with: try JSONEncoder().encode(capture(element: element()))) as? [String: Any]
+        XCTAssertNil((plain?["element"] as? [String: Any])?["members"], "members only exist on clusters")
+    }
+
+    func testNullElementHintsAtIdentifier() {
+        let md = MarkdownBuilder.build(capture(element: nil))
+        XCTAssertTrue(md.contains("Use the image.\nIf this view is yours, give it .accessibilityElement() and .accessibilityIdentifier(\"…\") so Deixis can point at it next time.\n"))
+    }
+
     func testCaptureJSONRoundTripsWithExplicitNulls() throws {
         let c = capture(element: nil)
         let encoder = JSONEncoder()

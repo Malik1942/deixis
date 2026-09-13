@@ -35,6 +35,9 @@ struct Readout: Equatable, Sendable {
         guard let element else {
             return Readout(role: "no element info", identifier: nil, suffix: "image only", isFallback: true)
         }
+        if element.role == ElementResolver.clusterRole {
+            return Readout(role: "cluster", identifier: nil, suffix: "\(element.members?.count ?? 0) elements", isFallback: false)
+        }
         var role = element.role
         if element.identifier == nil, let label = element.label {
             role += " \"\(label)\""

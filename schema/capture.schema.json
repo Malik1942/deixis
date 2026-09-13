@@ -262,13 +262,20 @@
           },
           "maxItems": 7,
           "description": "Ancestry, root-first: at most the nearest 6 ancestors, ending with the element itself."
+        },
+        "members": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/member"
+          },
+          "description": "Present only when role is cluster: the accessibility elements the computed grouping contains, in reading order."
         }
       }
     },
     "role": {
       "type": "string",
       "pattern": "^[a-z][A-Za-z0-9]*$",
-      "description": "Lowercase, platform-neutral role: button, textField, staticText, image, group, toolbar, navigationBar, unknown, and so on. Never AX-prefixed."
+      "description": "Lowercase, platform-neutral role: button, textField, staticText, image, group, toolbar, navigationBar, unknown, and so on. Never AX-prefixed. `cluster` is a visual grouping computed by Deixis from neighbouring elements when the platform exposes no container (rawRole DeixisCluster); it is not an accessibility element and carries `members`."
     },
     "frame": {
       "type": "object",
@@ -362,6 +369,32 @@
             "type": "string"
           },
           "description": "Repository-relative paths touched."
+        }
+      }
+    },
+    "member": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "role",
+        "label",
+        "identifier"
+      ],
+      "properties": {
+        "role": {
+          "$ref": "#/$defs/role"
+        },
+        "label": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "identifier": {
+          "type": [
+            "string",
+            "null"
+          ]
         }
       }
     }

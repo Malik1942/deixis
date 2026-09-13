@@ -104,14 +104,26 @@ actor AccessibilityReader {
     }
 
     private func snapshot(of element: AXUIElement) -> ElementSnapshot {
+        let elementAttributes = attributes(of: element)
         var ancestors: [AttributeSet] = []
+        var parents: [AXUIElement] = []
         var current = element
         for _ in 0..<ElementResolver.maxAncestors {
             guard let parent = self.element(copy(current, kAXParentAttribute)) else { break }
+            parents.append(parent)
             ancestors.append(attributes(of: parent))
             current = parent
         }
-        return ElementSnapshot(element: attributes(of: element), ancestors: ancestors)
+        var snapshot = ElementSnapshot(element: elementAttributes, ancestors: ancestors)
+        // Flat trees (SwiftUI): read the neighbourhood so HitRefiner can form visual clusters.
+        let window = HitRefiner.windowFrame(in: snapshot)
+        if ElementResolver.isContainer(elementAttributes), HitRefiner.spans(elementAttributes.frame, window: window) {
+            snapshot.children = children(of: element).prefix(60).map { attributes(of: $0) }
+        } else if let parent = parents.first, let parentAttributes = ancestors.first,
+                  HitRefiner.spans(parentAttributes.frame, window: window) {
+            snapshot.siblings = children(of: parent).prefix(60).map { attributes(of: $0) }
+        }
+        return snapshot
     }
 
     private func attributes(of element: AXUIElement) -> AttributeSet {

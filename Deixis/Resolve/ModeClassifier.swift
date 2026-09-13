@@ -4,8 +4,8 @@ import Foundation
 enum ModeClassifier {
     /// Hard-coded in v0.1; moves to Settings later.
     static let myApps: [String] = [
-        "com.malikzhang.oryne",
-        "com.malikzhang.moti",
+        "com.inspireocean.app", // Oryne
+        "com.malik.Moti",
     ]
 
     static let simulatorBundleId = "com.apple.iphonesimulator"

@@ -29,6 +29,10 @@ struct AttributeSet: Codable, Sendable, Equatable {
 struct ElementSnapshot: Codable, Sendable, Equatable {
     var element: AttributeSet
     var ancestors: [AttributeSet]
+    /// Direct children, read only when the element is a window-spanning container (flat trees).
+    var children: [AttributeSet]? = nil
+    /// The parent's children (including this element), read only when the parent spans the window.
+    var siblings: [AttributeSet]? = nil
 }
 
 /// Something that can hit-test a screen point and return a snapshot. The app's provider is the
@@ -42,8 +46,8 @@ enum ElementResolver {
     static let maxAncestors = 6
 
     static func resolve(_ snapshot: ElementSnapshot) -> ResolvedElement? {
-        // Missing frame means the element cannot be cropped or pointed at. Never fabricate a zero frame.
-        guard let frame = snapshot.element.frame else { return nil }
+        // A missing or empty frame means the element cannot be cropped or pointed at. Never fabricate one.
+        guard let frame = snapshot.element.frame, frame.w > 0, frame.h > 0 else { return nil }
         let rawRole = snapshot.element.role ?? ""
         let role = mapRole(rawRole, subrole: snapshot.element.subrole)
         let identifier = nonEmpty(snapshot.element.identifier)
@@ -95,6 +99,42 @@ enum ElementResolver {
 
     static func isContainer(_ node: AttributeSet) -> Bool {
         containerRoles.contains(mapRole(node.role ?? "", subrole: node.subrole))
+    }
+
+    static let clusterRole = "cluster"
+    static let clusterRawRole = "DeixisCluster"
+
+    /// A visual grouping computed from neighbouring elements. SwiftUI exposes leaves but not the
+    /// cards that hold them; this stands in for the missing container and says so in its role.
+    static func clusterElement(members: [AttributeSet], ancestors: [AttributeSet]) -> ResolvedElement? {
+        let framed = members.filter { ($0.frame?.w ?? 0) > 0 && ($0.frame?.h ?? 0) > 0 }
+        guard framed.count >= 2 else { return nil }
+        let union = HitRefiner.union(of: framed)
+        let ordered = framed.sorted { a, b in
+            let fa = a.frame!, fb = b.frame!
+            return abs(fa.y - fb.y) > 4 ? fa.y < fb.y : fa.x < fb.x
+        }
+        var path: [PathEntry] = ancestors.prefix(maxAncestors).reversed().map { node in
+            PathEntry(role: mapRole(node.role ?? "", subrole: node.subrole), identifier: nonEmpty(node.identifier))
+        }
+        path.append(PathEntry(role: clusterRole, identifier: nil))
+        return ResolvedElement(
+            role: clusterRole,
+            rawRole: clusterRawRole,
+            label: nil,
+            identifier: nil,
+            identifierSource: .unknown,
+            value: nil,
+            frame: Frame(union),
+            path: path,
+            members: ordered.map { node in
+                ElementMember(
+                    role: mapRole(node.role ?? "", subrole: node.subrole),
+                    label: nonEmpty(node.title) ?? nonEmpty(node.description),
+                    identifier: nonEmpty(node.identifier)
+                )
+            }
+        )
     }
 
     /// A group with no children is the lazy-tree symptom observed in the Simulator on first read.
@@ -163,7 +203,7 @@ enum ElementResolver {
         return roleMap[axRole] ?? "unknown"
     }
 
-    private static func nonEmpty(_ s: String?) -> String? {
+    static func nonEmpty(_ s: String?) -> String? {
         guard let s, !s.isEmpty else { return nil }
         return s
     }
@@ -180,14 +220,23 @@ extension ElementResolver {
         retries: Int = 5,
         delay: Duration = .milliseconds(100)
     ) async -> ResolvedElement? {
-        var fallback: ResolvedElement?
+        await snapshotWithRetry(at: point, using: provider, retries: retries, delay: delay).flatMap(resolve)
+    }
+
+    /// The retry loop itself, for callers that need the snapshot (selection levels, clusters).
+    static func snapshotWithRetry(
+        at point: CGPoint,
+        using provider: some ElementProvider,
+        retries: Int = 5,
+        delay: Duration = .milliseconds(100)
+    ) async -> ElementSnapshot? {
+        var fallback: ElementSnapshot?
         for attempt in 0...max(retries, 0) {
-            if let snapshot = await provider.snapshot(at: point), !isEmptyGroup(snapshot),
-               let resolved = resolve(snapshot) {
+            if let snapshot = await provider.snapshot(at: point), !isEmptyGroup(snapshot), resolve(snapshot) != nil {
                 if attempt == 0, isContainer(snapshot.element), retries > 0 {
-                    fallback = resolved
+                    fallback = snapshot
                 } else {
-                    return resolved
+                    return snapshot
                 }
             }
             if (attempt < retries) && (delay > .zero) {
@@ -235,6 +284,118 @@ enum HitRefiner {
     static func sticks(_ previous: ResolvedElement?, to point: CGPoint) -> Bool {
         guard let previous, !ElementResolver.containerRoles.contains(previous.role) else { return false }
         return previous.frame.cgRect.insetBy(dx: -stickiness, dy: -stickiness).contains(point)
+    }
+
+    /// Two frames belong to one visual cluster when one, grown by this much, touches the other.
+    static let clusterGap: Double = 24
+    /// A container spans its window when it covers at least this share of it.
+    static let spanningFraction: Double = 0.5
+    /// A child covering at least this share of its container is a background, not content.
+    static let backgroundFraction: Double = 0.6
+
+    static func union(of nodes: [AttributeSet]) -> CGRect {
+        nodes.compactMap { $0.frame?.cgRect }.reduce(CGRect.null) { $0.union($1) }
+    }
+
+    /// Connected components by proximity.
+    static func clusters(among nodes: [AttributeSet], gap: Double = clusterGap) -> [[AttributeSet]] {
+        let frames = nodes.map { $0.frame?.cgRect }
+        var assigned = Array(repeating: false, count: nodes.count)
+        var groups: [[AttributeSet]] = []
+        for start in nodes.indices where !assigned[start] {
+            guard let f = frames[start], f.width > 0, f.height > 0 else { continue }
+            assigned[start] = true
+            var group = [nodes[start]]
+            var queue = [start]
+            while let current = queue.popLast() {
+                let grown = frames[current]!.insetBy(dx: -gap, dy: -gap)
+                for other in nodes.indices where !assigned[other] {
+                    guard let g = frames[other], g.width > 0, g.height > 0, grown.intersects(g) else { continue }
+                    assigned[other] = true
+                    group.append(nodes[other])
+                    queue.append(other)
+                }
+            }
+            groups.append(group)
+        }
+        return groups
+    }
+
+    /// The smallest cluster whose bounding box contains the point.
+    static func cluster(containing point: CGPoint, among nodes: [AttributeSet]) -> [AttributeSet]? {
+        clusters(among: nodes)
+            .filter { union(of: $0).contains(point) }
+            .min { area(union(of: $0)) < area(union(of: $1)) }
+    }
+
+    /// The cluster that contains `anchor` (by identity, else by its center).
+    static func cluster(around anchor: AttributeSet, among nodes: [AttributeSet]) -> [AttributeSet]? {
+        let groups = clusters(among: nodes)
+        if let group = groups.first(where: { $0.contains(anchor) }) { return group }
+        guard let f = anchor.frame?.cgRect else { return nil }
+        return groups.first { union(of: $0).contains(CGPoint(x: f.midX, y: f.midY)) }
+    }
+
+    /// Framed nodes that are content rather than backgrounds of their container.
+    static func content(of nodes: [AttributeSet], within container: Frame?) -> [AttributeSet] {
+        let containerArea = container.map { $0.w * $0.h } ?? .infinity
+        return nodes.filter { node in
+            guard let f = node.frame, f.w > 0, f.h > 0 else { return false }
+            return f.w * f.h < backgroundFraction * containerArea
+        }
+    }
+
+    static func spans(_ frame: Frame?, window: Frame?) -> Bool {
+        guard let frame, let window, window.w > 0, window.h > 0 else { return false }
+        return frame.w * frame.h >= spanningFraction * window.w * window.h
+    }
+
+    static func windowFrame(in snapshot: ElementSnapshot) -> Frame? {
+        ([snapshot.element] + snapshot.ancestors)
+            .first { ElementResolver.mapRole($0.role ?? "", subrole: $0.subrole) == "window" }?.frame
+    }
+
+    private static func area(_ r: CGRect) -> Double { r.isNull ? .infinity : r.width * r.height }
+
+    /// What Option cycles through, innermost first. A nil level means "nothing specific here"
+    /// (the fallback square, `element: null` on click). Ancestors without a usable frame are skipped,
+    /// so the chain never ends in a phantom.
+    static func selectionLevels(for snapshot: ElementSnapshot, at point: CGPoint) -> [ResolvedElement?] {
+        let base = ElementResolver.resolve(snapshot)
+        let window = windowFrame(in: snapshot)
+        var levels: [ResolvedElement?] = []
+        if let base, ElementResolver.containerRoles.contains(base.role), spans(snapshot.element.frame, window: window) {
+            // Window-sized container under the cursor: the cluster around the point, else nothing.
+            let nodes = content(of: snapshot.children ?? [], within: snapshot.element.frame)
+            if let members = cluster(containing: point, among: nodes),
+               let cluster = ElementResolver.clusterElement(members: members, ancestors: [snapshot.element] + snapshot.ancestors) {
+                levels.append(cluster)
+            } else {
+                levels.append(nil)
+            }
+            levels.append(base)
+        } else if let base {
+            levels.append(base)
+            if let siblings = snapshot.siblings, let parent = snapshot.ancestors.first, spans(parent.frame, window: window) {
+                let nodes = content(of: siblings, within: parent.frame)
+                let parentArea = parent.frame.map { $0.w * $0.h } ?? .infinity
+                if let members = cluster(around: snapshot.element, among: nodes),
+                   let cluster = ElementResolver.clusterElement(members: members, ancestors: snapshot.ancestors),
+                   cluster.frame.w * cluster.frame.h < 0.9 * parentArea {
+                    levels.append(cluster)
+                }
+            }
+        } else {
+            levels.append(nil)
+        }
+        if !snapshot.ancestors.isEmpty {
+            for depth in 1...snapshot.ancestors.count {
+                if let up = ancestor(of: snapshot, depth: depth), let resolved = ElementResolver.resolve(up) {
+                    levels.append(resolved)
+                }
+            }
+        }
+        return levels
     }
 
     /// The snapshot re-rooted `depth` ancestors up (Option steps the selection to the parent).

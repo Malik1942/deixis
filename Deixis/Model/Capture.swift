@@ -105,9 +105,11 @@ struct ResolvedElement: Codable, Sendable, Equatable {
     var value: ElementValue?
     var frame: Frame
     var path: [PathEntry]
+    /// Present only when `role` is `cluster`: what the computed grouping contains (see `HitRefiner`).
+    var members: [ElementMember]? = nil
 
     private enum CodingKeys: String, CodingKey {
-        case role, rawRole, label, identifier, identifierSource, value, frame, path
+        case role, rawRole, label, identifier, identifierSource, value, frame, path, members
     }
 
     func encode(to encoder: any Encoder) throws {
@@ -120,6 +122,23 @@ struct ResolvedElement: Codable, Sendable, Equatable {
         try c.encode(value, forKey: .value)
         try c.encode(frame, forKey: .frame)
         try c.encode(path, forKey: .path)
+        try c.encodeIfPresent(members, forKey: .members)
+    }
+}
+
+/// One accessibility element inside a visual cluster.
+struct ElementMember: Codable, Sendable, Equatable {
+    var role: String
+    var label: String?
+    var identifier: String?
+
+    private enum CodingKeys: String, CodingKey { case role, label, identifier }
+
+    func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(role, forKey: .role)
+        try c.encode(label, forKey: .label)
+        try c.encode(identifier, forKey: .identifier)
     }
 }
 

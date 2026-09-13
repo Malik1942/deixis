@@ -24,8 +24,9 @@ final class AppState {
     @ObservationIgnored private var lastHoverPoint: CGPoint = .zero
     @ObservationIgnored private var lastHoverSnapshot: ElementSnapshot?
     @ObservationIgnored private var lastHoverElement: ResolvedElement?
-    /// Option steps the selection up this many ancestors; resets when the hovered element changes.
-    @ObservationIgnored private var parentDepth = 0
+    /// What Option cycles through for the hovered spot (see `HitRefiner.selectionLevels`).
+    @ObservationIgnored private var levels: [ResolvedElement?] = []
+    @ObservationIgnored private var levelIndex = 0
     @ObservationIgnored private var lockedElement: ResolvedElement?
     @ObservationIgnored private var clickPoint: CGPoint = .zero
     @ObservationIgnored private var cropTask: Task<CroppedImage, any Error>?
@@ -83,42 +84,41 @@ final class AppState {
             pendingHover = nil
             let fresh = await reader.snapshot(at: point, pid: targetPID(at: point))
             guard phase == .hovering else { return }
-            var snapshot = fresh
-            var element = fresh.flatMap(ElementResolver.resolve)
-            let freshIsContainer = element.map { ElementResolver.containerRoles.contains($0.role) } ?? true
-            if freshIsContainer, HitRefiner.sticks(lastHoverElement, to: point) {
-                snapshot = lastHoverSnapshot
-                element = lastHoverElement
+            let freshLevels = fresh.map { HitRefiner.selectionLevels(for: $0, at: point) } ?? []
+            let freshElement = freshLevels.first ?? nil
+            let freshIsVague = freshElement.map { ElementResolver.containerRoles.contains($0.role) } ?? true
+            if freshIsVague, HitRefiner.sticks(lastHoverElement, to: point) {
+                // Crossing padding: keep the small element and its Option level.
+            } else {
+                if freshElement?.frame != lastHoverElement?.frame { levelIndex = 0 }
+                lastHoverSnapshot = fresh
+                levels = freshLevels
+                lastHoverElement = freshElement
             }
-            if element?.frame != lastHoverElement?.frame { parentDepth = 0 }
             lastHoverPoint = point
-            lastHoverSnapshot = snapshot
-            lastHoverElement = element
             renderHover()
             try? await Task.sleep(for: .milliseconds(33))
         }
     }
 
-    /// The hovered element with Option depth applied.
+    /// The hovered selection at the current Option level.
     private func selectedElement() -> ResolvedElement? {
-        guard parentDepth > 0, let snapshot = lastHoverSnapshot,
-              let ancestor = HitRefiner.ancestor(of: snapshot, depth: parentDepth) else { return lastHoverElement }
-        return ElementResolver.resolve(ancestor)
+        levels.indices.contains(levelIndex) ? levels[levelIndex] : lastHoverElement
     }
 
     private func renderHover() {
         let element = selectedElement()
         var readout = Readout.describing(element)
-        if parentDepth > 0 {
-            readout.suffix = [readout.suffix, "↑\(parentDepth)"].compactMap { $0 }.joined(separator: " · ")
+        if levelIndex > 0 {
+            readout.suffix = [readout.suffix, "↑\(levelIndex)"].compactMap { $0 }.joined(separator: " · ")
         }
         overlay.setHighlight(element?.frame.cgRect, readout: readout, around: lastHoverPoint)
     }
 
-    /// Option while hovering: parent, grandparent, … then back to the element.
+    /// Option while hovering: cluster, parent, grandparent, … then back to the element.
     private func optionPressed() {
-        guard phase == .hovering, let snapshot = lastHoverSnapshot else { return }
-        parentDepth = (parentDepth + 1) % (snapshot.ancestors.count + 1)
+        guard phase == .hovering, levels.count > 1 else { return }
+        levelIndex = (levelIndex + 1) % levels.count
         renderHover()
     }
 
@@ -142,10 +142,14 @@ final class AppState {
             // What the user saw is what they clicked: keep the hovered selection (and its Option
             // depth) when the click is on or near it; otherwise resolve fresh with the lazy-tree retry.
             let element: ResolvedElement?
-            if lastHoverElement != nil, parentDepth > 0 || HitRefiner.sticks(lastHoverElement, to: point) {
+            let slack = HitRefiner.stickiness
+            let hoverIsCurrent = !levels.isEmpty
+                && (lastHoverElement.map { $0.frame.cgRect.insetBy(dx: -slack, dy: -slack).contains(point) } ?? true)
+            if hoverIsCurrent {
                 element = selectedElement()
             } else {
-                element = await ElementResolver.resolve(at: point, using: AppElementProvider(reader: reader, pid: pid))
+                let snapshot = await ElementResolver.snapshotWithRetry(at: point, using: AppElementProvider(reader: reader, pid: pid))
+                element = snapshot.map { HitRefiner.selectionLevels(for: $0, at: point).first ?? nil } ?? nil
             }
             guard phase == .resolving else { return }
             lockedElement = element
@@ -212,7 +216,8 @@ final class AppState {
         lockedElement = nil
         lastHoverSnapshot = nil
         lastHoverElement = nil
-        parentDepth = 0
+        levels = []
+        levelIndex = 0
         context = nil
         windows = []
         overlay.dismiss()

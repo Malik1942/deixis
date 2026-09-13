@@ -39,7 +39,19 @@ enum MarkdownBuilder {
 
     private static func elementBlock(_ element: ResolvedElement?) -> String {
         guard let element else {
-            return "### Target element\nNo element information available (app exposes no accessibility tree). Use the image."
+            return "### Target element\nNo element information available (app exposes no accessibility tree). Use the image.\nIf this view is yours, give it .accessibilityElement() and .accessibilityIdentifier(\"…\") so Deixis can point at it next time."
+        }
+        if element.role == ElementResolver.clusterRole {
+            let members = element.members ?? []
+            var lines = [
+                "### Target element",
+                "cluster · \(members.count) elements (visual grouping computed by Deixis, not an accessibility element)",
+                "Members: " + members.map(memberText).joined(separator: " · "),
+            ]
+            let f = element.frame
+            lines.append("Frame: x=\(number(f.x)) y=\(number(f.y)) w=\(number(f.w)) h=\(number(f.h))")
+            lines.append("Path: " + element.path.map(pathText).joined(separator: " > "))
+            return lines.joined(separator: "\n")
         }
         var head = element.role
         if let label = element.label { head += " \"\(label)\"" }
@@ -69,6 +81,13 @@ enum MarkdownBuilder {
     }
 
     // MARK: Formatting
+
+    private static func memberText(_ member: ElementMember) -> String {
+        var text = member.role
+        if let label = member.label { text += " \"\(label)\"" }
+        if let identifier = member.identifier { text += "#\(identifier)" }
+        return text
+    }
 
     private static func pathText(_ entry: PathEntry) -> String {
         guard let identifier = entry.identifier else { return entry.role }

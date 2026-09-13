@@ -151,6 +151,46 @@ final class ElementResolverTests: XCTestCase {
         XCTAssertEqual(HitRefiner.ancestor(of: snapshot, depth: 0), snapshot)
     }
 
+    // R2a clusters (flat SwiftUI trees expose leaves, not cards)
+    func testClustersGroupByProximity() throws {
+        let snapshot = try fixture("card-siblings")
+        let nodes = HitRefiner.content(of: snapshot.siblings ?? [], within: snapshot.ancestors[0].frame)
+        XCTAssertEqual(nodes.count, 7, "the window-sized Background sibling is dropped")
+        let groups = HitRefiner.clusters(among: nodes)
+        XCTAssertEqual(groups.count, 3, "Ocean title, the card, the tab bar")
+        let card = try XCTUnwrap(groups.first { $0.contains { $0.description == "Shortcut" } })
+        XCTAssertEqual(card.count, 5)
+        XCTAssertEqual(HitRefiner.union(of: card), CGRect(x: 43, y: 590, width: 370, height: 120))
+    }
+
+    func testSelectionLevelsFromLeafGoLeafClusterParentWindow() throws {
+        let snapshot = try fixture("card-siblings")
+        let levels = HitRefiner.selectionLevels(for: snapshot, at: CGPoint(x: 100, y: 600))
+        XCTAssertEqual(levels.map { $0?.role }, ["staticText", "cluster", "group", "window"], "the frameless application is skipped")
+        let cluster = try XCTUnwrap(levels[1])
+        XCTAssertEqual(cluster.rawRole, "DeixisCluster")
+        XCTAssertEqual(cluster.frame, Frame(x: 43, y: 590, w: 370, h: 120))
+        XCTAssertEqual(cluster.members?.map(\.role), ["staticText", "image", "staticText", "button", "button"])
+        XCTAssertEqual(cluster.members?.compactMap(\.identifier), ["bolt.fill", "shortcutActionButton"])
+        XCTAssertEqual(cluster.path.last?.role, "cluster")
+        XCTAssertEqual(cluster.path.first?.role, "application")
+    }
+
+    func testSelectionLevelsOnSpanningContainerPickClusterUnderPointOrNothing() throws {
+        let leaf = try fixture("card-siblings")
+        let group = ElementSnapshot(element: leaf.ancestors[0], ancestors: Array(leaf.ancestors[1...]), children: leaf.siblings)
+        let onCard = HitRefiner.selectionLevels(for: group, at: CGPoint(x: 300, y: 600)) // blank card area
+        XCTAssertEqual(onCard.map { $0?.role }, ["cluster", "group", "window"])
+        let onNothing = HitRefiner.selectionLevels(for: group, at: CGPoint(x: 200, y: 450)) // the orb: no elements
+        XCTAssertEqual(onNothing.map { $0?.role }, [nil, "group", "window"])
+        XCTAssertNil(onNothing[0], "nothing specific here: fallback square, element null on click")
+    }
+
+    func testZeroFrameResolvesToNil() {
+        let ghost = ElementSnapshot(element: AttributeSet(role: "AXApplication", frame: Frame(x: 0, y: 0, w: 0, h: 0)), ancestors: [])
+        XCTAssertNil(ElementResolver.resolve(ghost))
+    }
+
     func testModeClassifier() {
         func source(app: String, simApp: String? = nil, url: String? = nil) -> SourceInfo {
             SourceInfo(
