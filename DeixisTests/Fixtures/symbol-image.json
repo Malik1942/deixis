@@ -1,0 +1,7 @@
+{
+  "element": { "AXRole": "AXImage", "AXIdentifier": "plus", "AXDescription": "Add", "AXFrame": { "x": 300, "y": 60, "w": 24, "h": 24 }, "AXChildrenCount": 0 },
+  "ancestors": [
+    { "AXRole": "AXButton", "AXFrame": { "x": 290, "y": 50, "w": 44, "h": 44 }, "AXChildrenCount": 1 },
+    { "AXRole": "AXGroup", "AXFrame": { "x": 0, "y": 40, "w": 456, "h": 60 }, "AXChildrenCount": 3 }
+  ]
+}

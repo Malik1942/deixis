@@ -1,0 +1,13 @@
+{
+  "element": { "AXRole": "AXButton", "AXIdentifier": "leaf", "AXFrame": { "x": 1, "y": 1, "w": 10, "h": 10 }, "AXChildrenCount": 0 },
+  "ancestors": [
+    { "AXRole": "AXGroup", "AXIdentifier": "a1", "AXFrame": { "x": 0, "y": 0, "w": 100, "h": 100 }, "AXChildrenCount": 1 },
+    { "AXRole": "AXGroup", "AXIdentifier": "a2", "AXFrame": { "x": 0, "y": 0, "w": 100, "h": 100 }, "AXChildrenCount": 1 },
+    { "AXRole": "AXGroup", "AXIdentifier": "a3", "AXFrame": { "x": 0, "y": 0, "w": 100, "h": 100 }, "AXChildrenCount": 1 },
+    { "AXRole": "AXToolbar", "AXIdentifier": "a4", "AXFrame": { "x": 0, "y": 0, "w": 100, "h": 100 }, "AXChildrenCount": 1 },
+    { "AXRole": "AXGroup", "AXIdentifier": "a5", "AXFrame": { "x": 0, "y": 0, "w": 100, "h": 100 }, "AXChildrenCount": 1 },
+    { "AXRole": "AXGroup", "AXIdentifier": "a6", "AXFrame": { "x": 0, "y": 0, "w": 100, "h": 100 }, "AXChildrenCount": 1 },
+    { "AXRole": "AXWindow", "AXIdentifier": "a7", "AXFrame": { "x": 0, "y": 0, "w": 100, "h": 100 }, "AXChildrenCount": 1 },
+    { "AXRole": "AXApplication", "AXIdentifier": "a8", "AXFrame": { "x": 0, "y": 0, "w": 100, "h": 100 }, "AXChildrenCount": 1 }
+  ]
+}

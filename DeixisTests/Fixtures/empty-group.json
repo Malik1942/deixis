@@ -1,0 +1,4 @@
+{
+  "element": { "AXRole": "AXGroup", "AXFrame": { "x": 0, "y": 140, "w": 456, "h": 900 }, "AXChildrenCount": 0 },
+  "ancestors": [ { "AXRole": "AXWindow", "AXTitle": "iPhone 17 Pro", "AXFrame": { "x": 0, "y": 101, "w": 456, "h": 972 }, "AXChildrenCount": 1 } ]
+}
