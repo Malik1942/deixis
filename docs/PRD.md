@@ -1,0 +1,350 @@
+# Deixis: Product Requirements Document
+
+**Status:** Draft v0.3 (Sep 13, 2026: action set reorganized by output, floating ball and ring specified, web direction added)
+**Owner:** Malik Zhang
+**Platform:** macOS 15+, Apple Silicon, Swift 6 + SwiftUI/AppKit; MCP server in TypeScript
+
+---
+
+## One-line description
+
+Deixis is a native macOS tool that lets you point at any element in any app and hand a coding agent a precise, grep-able description of it, then shows you what the agent changed. Screenshot, OCR, color picking, and subject cutout are supporting tools around that loop.
+
+The name is the linguistics term for words like "this," "here," and "that one," which only make sense when someone is pointing. Agents do not understand deixis. Deixis makes them.
+
+**Positioning line:** Appshots gives your agent the window. Deixis gives it the element.
+
+---
+
+## 1. Problem statement
+
+Coding agents (Claude Code, Codex, Cursor, Xcode 27's agent) work through text and code, but UI polish starts as a visual observation: "this button is misaligned," "this card needs more padding." Today the designer-builder has to translate what they see into a file path and a description, or paste a screenshot and hope the agent guesses right.
+
+People want control and precision over their intent; they do not want to spend time learning how to describe a button to a model. Pointing is how humans resolve this between each other.
+
+Browser tools (Agentation, Stagewise, Cursor Design Mode) solve this for web apps by capturing CSS selectors when you click an element. Platform features (Codex Appshots, Claude Desktop quick entry) send a whole window to one specific agent. Agent-side tools (Peekaboo, Xcode 27 Device Hub, Microsoft's winapp CLI) let the agent read the accessibility tree itself. None of them lets a human point at one element in a native app and hand the result to any agent.
+
+The cost is felt every time a SwiftUI builder iterates on UI with an agent: describe, wait, see the wrong file changed, redescribe. For a solo builder shipping multiple SwiftUI apps, that loop runs dozens of times a day.
+
+## 2. Target user
+
+**Primary (v1):** Malik. A product designer who builds native SwiftUI apps solo, uses Claude Code as the primary implementation tool, and reviews his own UI in the iOS Simulator and on Mac.
+
+**Secondary (post-v1):** Designer-builders and indie Mac/iOS developers who use any coding agent and want to give feedback by pointing rather than describing. Not targeting teams, not targeting web-only developers (browser tools already serve them).
+
+## 3. Goals
+
+1. **Pointing replaces describing.** For UI changes in Malik's own apps, the agent modifies the correct view file on the first attempt in at least 8 of 10 captures where the target element exposes an accessibility identifier.
+2. **One gesture, zero mode switching.** From hotkey to payload on the clipboard in under 3 seconds of user time, with no dialog and no window to dismiss.
+3. **Works everywhere, degrades honestly.** The same gesture produces a useful payload on any app. When the accessibility tree is poor, the payload says so and falls back to image plus note rather than failing.
+4. **Agent-agnostic output.** The payload works in Claude Code, Codex, Cursor, and Xcode 27's agent via clipboard, and via MCP wherever the agent supports it. No agent gets a private integration the others lack.
+5. **The loop closes.** After the agent edits, Deixis can show before and after for the pointed element alongside the code diff, without the user re-pointing.
+6. **Lightweight by design.** Idle memory under 30 MB, no Dock icon, no accounts, no network calls, no telemetry.
+
+## 4. Non-goals
+
+- **Not window-level context.** Codex Appshots and Claude Desktop quick entry already send the front window to their own agent. Deixis captures the element under the cursor and its crop, not the window.
+- **Not a visual regression suite.** Chromatic, Percy, Playwright snapshots, and swift-snapshot-testing capture everything on every commit and fail CI on pixel diffs. Deixis captures one element when a human pointed at it and shows the human the change; it never judges pass or fail.
+- **Not a screen recorder, GIF tool, or scrolling-capture tool.** CleanShot X and a dozen open-source alternatives own this.
+- **Not a cloud upload or share-link service.** Deixis is local.
+- **Not an annotation editor.** No arrows or shapes on images in v1. The payload is the annotation.
+- **Not an asset library.** No browsing UI, no smart folders. Deixis writes metadata (Finder tags, extended attributes) so Finder, Raycast, and Eagle can find captures.
+- **Not a web DOM inspector.** For browser pages Deixis uses the browser's accessibility tree, not the DOM.
+- **Not an autonomous agent.** Deixis never edits code and never talks to a model. It produces input for agents the user already runs.
+
+## 5. User stories
+
+Ordered by priority.
+
+**Core: pointing at your own app**
+- As a SwiftUI builder, I want to press a hotkey, click a button in the iOS Simulator, type "make this rounded," and paste into Claude Code, so that the agent edits the exact view without me naming the file.
+- As a SwiftUI builder, I want the payload to include the element's accessibility identifier, role, label, frame, and ancestry, so that the agent can grep for it.
+- As a SwiftUI builder, I want to know immediately when the element under my cursor has no identifier, so that I can add one in code instead of getting a vague payload.
+- As a SwiftUI builder, I want to drag a region instead of clicking one element, so that I can point at a layout problem that spans several views.
+
+**Core: the agent fetches it**
+- As a Claude Code or Cursor user, I want to say "fix what I just pointed at" and have the agent pull the capture itself over MCP, so that I never paste anything.
+- As a Codex user, I want the same MCP tool to give me the image path and structured text, so that Codex can read the image with its own viewer even though it cannot consume MCP image blocks reliably.
+
+**Core: seeing what changed**
+- As a SwiftUI builder, after the agent edits and the app rebuilds, I want Deixis to re-capture the same element by identifier and show me before and after next to the git diff, so that I can judge the change without re-pointing.
+- As a SwiftUI builder, when the agent makes three passes, I want the three afters chained under my original capture, so that I can see the iteration, not just the endpoint.
+
+**Core: pointing at someone else's app**
+- As a designer, I want to capture an element or region of any app (Figma, Safari, a competitor's Mac app) with its text recognized, so that I can paste "make mine like this" with the reference intact.
+- As a designer, I want the payload to record which app and window the capture came from, so that when I find it a week later I know what I was looking at.
+
+**One-shot actions (things you grab and move on)**
+- As a builder, I want a normal screenshot (Snap) that lands in a folder and expires after 30 days, and a clipboard-only variant when I know I will paste it right away, so that nothing piles up on the Desktop.
+- As a designer, I want to pull recognized text (Text) out of any region and have it on the clipboard without a file.
+- As a designer, I want to pick a color (Color) from anywhere on screen in the format I last used.
+- As a designer, I want to cut a subject (Cut) out of the screen with a transparent background and drag it into Figma.
+
+**Entry points**
+- As a trackpad user, I want an optional floating ball that is nearly invisible at rest, wakes as my cursor approaches, starts Point on click, and opens a four-way ring on press-and-hold.
+- As a keyboard user, I want to keep the ball off and use hotkeys only.
+- As a Raycast user, I want to trigger each Deixis action from Raycast.
+
+**Edge cases**
+- As a user, when resolution, OCR, or cutout produces nothing, I want a short visible failure signal and an unchanged clipboard.
+- As a user, when the front app is Electron or draws its own UI and exposes no accessibility tree, I want the payload to say so and still include the image and my note.
+
+## 6. Requirements
+
+### 6.1 P0: the pointing flow (v0.1, the 3-hour build)
+
+**P0.1 Hotkey.** Double-tap Control (350 ms window) opens the selection overlay. Chosen to avoid Codex's ⌘⌘ and Claude Desktop's ⌥⌥. Configurable later.
+
+**P0.2 Selection overlay.** Full-screen transparent `NSPanel` per display showing a frozen frame from ScreenCaptureKit, with Deixis's own windows excluded via `SCContentFilter`. Hover highlights the accessibility element under the cursor. Click captures it. Esc cancels with no side effects.
+- Acceptance: overlay appears within 150 ms; Deixis never appears in its own capture.
+
+**P0.3 Context at trigger time.** Front app bundle ID and name, window title, Safari/Chrome tab URL, Simulator device and app bundle ID where obtainable. Collected before the overlay appears.
+
+**P0.4 Element resolution.** `AXUIElementCopyElementAtPosition` at the click point. Read role, subrole, title, description, value, identifier, frame; walk up to 6 ancestors. Map to a platform-neutral `element` object (see 8.2). All AX work off the main thread.
+- Acceptance: a SwiftUI Button with `.accessibilityIdentifier("saveButton")` in Simulator yields `identifier=saveButton`, `role=button`, a frame in screen points, and an ancestry path.
+- Acceptance: an app with no accessibility tree yields `element: null` and the payload says so.
+
+**P0.5 Mode.** `fix` when the front app is Simulator, in the user's "my apps" list, or the URL host is localhost; else `reference`. Affects payload wording and order only.
+
+**P0.6 Crop.** The PNG is the element's frame plus 8 pt padding, not the window.
+
+**P0.7 Note.** Single-line inline field under the element. Enter confirms; Esc skips the note but keeps the capture.
+
+**P0.8 Payload.** One `NSPasteboardItem` with PNG and Markdown. The Markdown's first line after the heading is `Image: <absolute path>` because terminal agents receive only the text representation on paste and read the PNG from disk.
+
+```
+## Deixis capture (fix)
+Image: /Users/malik/Pictures/Deixis/deixis-moti-20260912-140312.png
+App: Simulator (com.malikzhang.moti) · Window: iPhone 17 Pro
+Captured: 2026-09-12 14:03 · Element region: 320×88 pt @2x
+
+### Target element
+button "Save" · id=saveButton
+Frame: x=312 y=88 w=64 h=32
+Path: navigationBar > group > button#saveButton
+
+### Note
+make this rounded, match the other pill buttons
+```
+
+**P0.9 Storage.** PNG plus a JSON sidecar conforming to `schema/capture.schema.json` in `~/Pictures/Deixis/`. The sidecar is the contract for the MCP server and the verify feature; the app never needs to change for either.
+
+**P0.10 Failure feedback.** Typed `CaptureError`. Permission errors open System Settings once. Capture failure shows a 1-second toast and leaves clipboard and disk untouched.
+
+### 6.2 P1: MCP server (v0.2)
+
+**P1.1 Package.** `deixis-mcp`, TypeScript, `@modelcontextprotocol/sdk`, stdio transport, installed with `npx deixis-mcp`. Reads the JSON sidecars; no HTTP server, no watcher, no state.
+
+**P1.2 Tools.**
+- `list_captures(unresolved_only?: boolean)` → id, createdAt, mode, app, note summary
+- `get_capture(id, include_image?: boolean = false)` → full JSON as text, plus the absolute image path. When `include_image` is true, also an MCP image content block.
+- `resolve_capture(id)` → sets `resolved: true`
+
+**P1.3 Compatibility rules** (from testing of each agent's MCP image handling, Sep 2026):
+- Primary return is always text plus path. Claude Code and Cursor consume image blocks; Codex does not reliably (two open issues), Gemini/Antigravity unconfirmed.
+- Never return `structuredContent` together with an image block (Codex drops `content[]` when both are present).
+- README carries an agent compatibility table with the date each row was tested.
+
+**P1.4 Config.** One `.mcp.json` / `mcp.json` / `config.toml` snippet each for Claude Code, Cursor, Codex, documented in README.
+
+### 6.3 P1: the action set and the entry points (v0.3)
+
+The v0.3 surface is one primary action plus four one-shot actions, organized by **what you are about to paste**, not by feature name. The rule that decides file behavior is one sentence: **actions that produce an image keep a file for 30 days; actions that produce text or a value keep nothing.**
+
+| Action | You paste | Trigger | Clipboard | Disk |
+|---|---|---|---|---|
+| **Point** (primary) | element reference + crop + note | ⌃⌃, ball click, `deixis://capture` | yes | yes, 30 days; captures the agent resolved or the user pinned are kept |
+| **Snap** | an image | ring ↑, hotkey | yes | yes, 30 days. Hold ⌥: clipboard only, no file |
+| **Text** | recognized text (OCR) | ring →, hotkey | yes | no (text is also written as an xattr on any Snap it came from) |
+| **Color** | a color value | ring ↓, hotkey | yes | no; last 10 colors in memory |
+| **Cut** | an image with transparent background | ring ←, hotkey | yes | yes, 30 days. Hold ⌥: clipboard only |
+
+Point is the only action that leaves a record the agent and Verify can return to. The four ring actions are things you grab and move on.
+
+**P1.5 Snap.** Region or window capture from the frozen frame; ⌥ suppresses the file. This is the "normal screenshot" replacement: same speed as ⌘⇧4, but files go to the Deixis folder and expire instead of piling up on the Desktop.
+
+**P1.6 Text (OCR).** `VNRecognizeTextRequest`, `.accurate`, zh-Hans and en-US, language correction off for code editors, reading order rebuilt by line geometry. A second hotkey keeps the overlay and makes each recognized line drag-selectable.
+
+**P1.7 Color.** Own magnifier (15×15 native pixels at 10x, pixel grid, arrow-key nudge), sRGB conversion with a Display P3 option, formats hex / rgb / hsl / SwiftUI Color / nearest Tailwind, remembers last format. Magnifier and ball are excluded from sampling.
+
+**P1.8 Cut.** `VNGenerateForegroundInstanceMaskRequest` with instance picking; flood-fill fallback for flat UI; PNG with alpha. Saved by default because cutouts are usually dragged into Figma rather than pasted.
+
+**P1.9 Drag selection for Point.** Hold ⇧ while pointing to drag a region; every element at least 50 percent inside is included, capped at 12.
+
+**P1.10 Lifecycle.** Daily cleanup moves image files older than N days (default 30) to Trash unless pinned via extended attribute. Pin-last available from the menu bar and `deixis://pin-last`.
+
+**P1.11 Floating ball.** Optional second entry point, off by default (the hotkey is the default). Its design principle is borrowed from Oryne's orbs, not copied: quiet at rest, present when approached. The ball and Oryne's orb should read as relatives, not twins.
+
+*Rest state.* A 28 pt translucent disc, no icon, no shadow, no animation: `labelColor` at about 12 percent over a `hudWindow`-style material with a 1 px `separatorColor` edge, following system appearance. After 5 seconds without interaction it slides to the nearest screen edge and shows as a half-disc at about 8 percent, so it is a small bump on the edge rather than an object on the desktop. Position is remembered across Spaces and launches.
+
+*Proximity states* (distance-driven, not hover-driven, so the target is ready before the cursor arrives):
+
+| Cursor | State | Change |
+|---|---|---|
+| farther than 80 pt | rest | as above |
+| within 80 pt | awake | opacity to 100 percent in 200 ms, `hand.point.up.left` fades in at center, an edge-docked ball slides back out |
+| over the ball | ready | edge turns system accent color, cursor becomes the pointing hand |
+| click | Point | starts the primary action directly, no ring |
+| press and hold 300 ms | ring | four segments unfold from the disc; the disc becomes the ring's center |
+
+*Ring.* Four segments at the cardinal directions (Snap ↑, Text →, Color ↓, Cut ←), release over a segment to choose, release at center to cancel. 90 degrees per target makes mis-selection rare and the gesture learnable without looking. Segment icons are SF Symbols in outline; the center is the filled pointing hand, the one visual rule that separates the primary action from the one-shot ones. One-word labels fade in below each icon 200 ms after the ring opens; holding ⌥ appends a small ⌥ to Snap and Cut to signal clipboard-only. Hover-to-expand is explicitly rejected: it collides with edge docking and causes accidental opens.
+
+*Discoverability floor.* First launch places the ball near the lower-right edge with a single 800 ms fade-in. The menu bar icon is always at normal visibility; the ball is the quiet entry, the menu bar is the reliable one.
+
+*Icons.* Menu bar and ring center: `hand.point.up.left` (template, 18×18). Snap: `camera.viewfinder`. Text: `text.viewfinder` (Apple's own Live Text glyph). Color: `eyedropper`. Cut: `person.and.background.dotted` (fallback `scissors`). Verify symbol names against the installed SF Symbols release.
+
+**P1.12 URL scheme and Raycast.** `deixis://capture`, `deixis://snap`, `deixis://text`, `deixis://color`, `deixis://cut`, `deixis://pin-last`. Off by default. Thin Raycast extension calling these.
+
+**P1.13 Settings.** Hotkeys per action, capture folder, retention days, "my apps" list, ball on/off, URL scheme on/off.
+
+**Menu bar.** Capture ⌃⌃, Snap, Text, Color, Cut, Pin last capture, Open capture folder, Settings, Quit. Settings, pin, and folder live here on purpose; they are not ring material.
+
+### 6.4 P2: Verify (v0.4)
+
+The third act: point → fix → see what changed.
+
+**P2.1 Trigger.** After a fix-mode capture, Deixis arms a one-shot listener for "the app was rebuilt." Trigger sources, in order of preference: Xcode build-succeeded notification, git `post-commit` hook installed by Deixis in the project, Claude Code `Stop` hook. The user can also trigger manually ("Capture after" in the menu).
+
+**P2.2 Re-find.** Deixis locates the same element by `source.app` plus `element.identifier` (fallback: role plus label plus nearest frame) in the rebuilt app, retrying every 500 ms for up to 5 seconds while the UI comes up. Anchoring by identifier, not by pixel position, is what makes this work when the element moves.
+
+**P2.3 Iteration record.** Each after is stored as an `iteration` under the original capture: after-image path, git SHA before and after, `git diff --stat` between them, and the list of files touched. A capture can hold many iterations.
+
+**P2.4 View.** A single before/after panel (slider or side by side), the diff stat, the files list, and the original note. Reachable from the menu bar and from `get_capture` over MCP (iterations are included in the JSON). No timeline browser, no gallery.
+
+**P2.5 No judgment.** No pixel-diff threshold, no pass/fail, no alerts. The human decides.
+
+- Acceptance: point at `saveButton`, note "make this rounded", agent edits, app rebuilds, Deixis shows the button before and after with "1 file changed" and the file name, without the user pointing again.
+- Acceptance: three consecutive agent edits produce three iterations under one capture.
+- Blocking spike before P2 starts: confirm the rebuilt Simulator app exposes the same identifier within 5 seconds and that at least one trigger source fires reliably.
+
+### 6.5 Future considerations (P3)
+
+- AX quality scoring per app, stored locally, to warn before capture.
+- Structured document OCR via `RecognizeDocumentsRequest` (macOS 26).
+- Two-color contrast picking (WCAG and APCA).
+- **Web, native.** Two steps. First, zero-install: Safari and Chrome expose the DOM through the accessibility tree, so Point already returns role, label, and frame for page elements plus the tab URL; enough for reference mode. Second, an optional companion browser extension that, when Point lands in a browser, returns the element's CSS selector, tag, classes, id, and key computed styles over native messaging, upgrading the payload to Agentation-level precision on any page, without installing anything into the project. The schema gains an optional `web: { selector, tag, classes, id, computedStyles }` field; the MCP server does not change. Deixis on the web stays the same sentence: point at an element, give the agent a reference. No DOM export, no "copy as component."
+- Windows port. The element schema is already platform-neutral because Windows UI Automation exposes the same concepts; the MCP server would be shared.
+- Reuse Peekaboo's `see` for AX parsing if its output proves richer than `ElementResolver` at low cost.
+
+## 7. Success metrics
+
+Measured on Malik's own usage for 30 days after v0.3, revisited if released.
+
+**Leading**
+- Captures per working day: 15 or more (replaces the built-in screenshot tool).
+- First-attempt correct-file rate for fix-mode captures: 80 percent, tallied by hand.
+- Median trigger-to-clipboard time: under 3 seconds of user time.
+- Share of fix-mode captures that get at least one verify iteration (after v0.4): tracked, no target.
+
+**Lagging**
+- Built-in macOS screenshot hotkeys stay remapped to Deixis.
+- Zero screenshot files on the Desktop at day 30.
+- If released: GitHub stars and release download counts are reported, not success criteria.
+
+## 8. Technical notes and constraints
+
+### 8.1 Frameworks and constraints
+ScreenCaptureKit, Vision, Accessibility API, AppKit NSPanel, SwiftUI for Settings. Swift 6 with strict concurrency complete. No third-party dependencies in the app. Permissions: Screen Recording and Accessibility, both signature-bound; use a stable signing identity in development. Distribution: signed and notarized dmg via GitHub Releases, Homebrew cask later, not the Mac App Store.
+
+### 8.2 Contract: `schema/capture.schema.json` (v1)
+```json
+{
+  "schemaVersion": 1,
+  "id": "20260912-140312",
+  "createdAt": "2026-09-12T14:03:12-07:00",
+  "mode": "fix",
+  "image": { "path": "...png", "widthPt": 320, "heightPt": 88, "scale": 2 },
+  "source": {
+    "app": { "bundleId": "com.apple.iphonesimulator", "name": "Simulator" },
+    "window": { "title": "iPhone 17 Pro" },
+    "url": null,
+    "simulator": { "device": "iPhone 17 Pro", "appBundleId": "com.malikzhang.moti" }
+  },
+  "element": {
+    "role": "button", "rawRole": "AXButton", "label": "Save", "identifier": "saveButton", "value": null,
+    "frame": { "x": 312, "y": 88, "w": 64, "h": 32 },
+    "path": [ { "role": "navigationBar", "identifier": null }, { "role": "group", "identifier": null }, { "role": "button", "identifier": "saveButton" } ]
+  },
+  "note": "make this rounded",
+  "ocr": null,
+  "iterations": [],
+  "resolved": false
+}
+```
+Role names are lowercase and platform-neutral (`button`, `textField`, `staticText`, `image`, `group`, `navigationBar`, `unknown`); the raw platform role is kept in `rawRole`. `iterations` entries (v0.4): `{ "capturedAt", "imagePath", "gitBefore", "gitAfter", "diffStat", "files": [] }`.
+
+### 8.3 Module boundaries
+```
+Deixis/      Swift app
+  Capture/   HotkeyMonitor, SelectionOverlay, FrozenFrame, ContextCollector
+  Resolve/   ElementResolver (pure, tested), ModeClassifier
+  Modules/   Screenshot, OCR, ColorPicker, Cutout   (protocol CaptureModule)
+  Payload/   MarkdownBuilder (pure, tested), PasteboardWriter
+  Store/     FileStore, Lifecycle, Xattr
+  Verify/    RebuildTrigger, ElementRefinder, IterationStore, BeforeAfterPanel
+  Launcher/  FloatingBall, URLScheme
+mcp/         TypeScript, three tools, one store.ts, types generated from schema/
+schema/      capture.schema.json, the only interface between app and mcp
+```
+The app and the MCP server communicate only through files on disk. Neither knows the other is running.
+
+### 8.4 Known limitation to state in the README
+Element data quality depends on the target app's accessibility implementation. SwiftUI and AppKit apps and the iOS Simulator work well. Electron apps, Figma, games, and custom-drawn UIs often expose little; Deixis falls back to image plus note there.
+
+## 9. Open questions
+
+**Blocking**
+- (Engineering, v0.1) Does `AXUIElementCopyElementAtPosition` reach the iOS Simulator's tree on macOS 15 and 26? 30-minute spike, hard stop; fallback demo target is a native AppKit window.
+- (Engineering, v0.4) Which rebuild trigger fires reliably: Xcode notification, git post-commit, or Claude Code `Stop`? Spike before P2.
+
+**Non-blocking**
+- (Design) Ball on or off by default at first launch? Current answer: off.
+- (Engineering) Cleanup via LaunchAgent or only while the app runs?
+- (Product) Register `deixis.app` or `deixis.dev` before public release. Name check as of Sep 2026: no USPTO record found via search, no Mac or developer-tool product with the name, Deixis PBC (Seattle) unrelated.
+
+## 10. Phasing
+
+| Tag | Content | Story beat |
+|---|---|---|
+| **v0.1** (3 hours) | P0.1 to P0.10: hotkey, click element, payload, clipboard, JSON sidecar | "Point, capture, paste." |
+| **v0.2** | P1.1 to P1.4: MCP server, agent compatibility table, signed dmg, README, website | "The agent fetches it." |
+| **v0.3** | P1.5 to P1.13: Snap, Text, Color, Cut, drag, lifecycle, floating ball with ring, URL scheme, Settings | "It replaced my screenshot tool." |
+| **v0.4** | P2.1 to P2.5: verify, before/after, iterations | "And I see what changed." |
+
+Public launch (site, X, LinkedIn, download count) after v0.2. Palantir submission uses v0.1 as the 3-hour artifact and whatever tag exists at submission time as the download. Video narrative: "The first three hours got me to v0.1. I liked it enough to keep going."
+
+---
+
+## Appendix A: Competitive context (as of September 12, 2026)
+
+| Tool | Who triggers | Granularity | Note | Output goes to | Platform |
+|---|---|---|---|---|---|
+| Codex Appshots (May 2026) | Human (⌘⌘) | Window + AX text incl. offscreen | No | Codex only | Any Mac app |
+| Claude Desktop quick entry (Oct 2025) | Human (⌥⌥) | Region or window | Yes (chat message) | Claude chat only | Any Mac app |
+| EYHN/appshots (OSS) | Human (⌥⌥) | Window | No | Clipboard | Any Mac app |
+| Agentation | Human (click) | Element (CSS selector, React fiber) | Yes | Clipboard, MCP, Claude Code hook | Localhost web only |
+| Stagewise (YC S25) | Human (click) | Element (DOM) | Yes | Its own agent | Localhost web only |
+| Cursor Design Mode | Human (click, drag) | Element (DOM) | Yes | Cursor only | Browser-rendered UI |
+| Peekaboo (Swift, MCP) | Agent | Element (AX tree) | No | MCP, CLI | Any Mac app |
+| Xcode 27 Device Hub + agent | Agent | Element (AX tree) | No | Xcode, mcpbridge | Simulator, device |
+| Microsoft winapp `ui` (Apr 2026) | Agent | Element (UI Automation) | No | CLI | Any Windows app |
+| Windows-Use, CliGate, ScreenHand, agent-aid | Agent | Element (UIA / AX) | No | MCP, Python | Windows, some macOS |
+| Chromatic, Percy, swift-snapshot-testing | CI | Everything | No | Test report | Web, iOS tests |
+| CleanShot X, Shottr, Snapzy, macshot | Human | Pixels | No | Clipboard, file | Any Mac app |
+| **Deixis** | **Human (click)** | **Element (AX), platform-neutral schema** | **Yes** | **Clipboard + MCP, any agent** | **Any Mac app, Simulator** |
+
+The empty cell across platforms: human-triggered, element-level, with a note, agent-agnostic, native. Web has Agentation and Stagewise; macOS, Windows, and Linux have only agent-driven tools.
+
+## Appendix B: Agent MCP image support (tested or sourced, Sep 2026)
+
+| Agent | MCP image block | Deixis strategy |
+|---|---|---|
+| Claude Code | Consumed (Peekaboo depends on it) | Text + path; `include_image` optional |
+| Cursor | Consumed (official docs) | Same |
+| Codex | Unreliable (issues #4819, #10334 open) | Text + path; agent uses `view_image` |
+| Gemini CLI / Antigravity | Unconfirmed (issue #2136) | Text + path; mark untested |
+| Anything else | Unknown | Clipboard Markdown as the floor |
+
+## Appendix C: Name
+
+"Deixis" (/ˈdaɪksɪs/): the linguistic term for expressions whose meaning depends on pointing. README opening line: "Agents don't understand *this*. Now they do."
