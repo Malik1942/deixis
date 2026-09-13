@@ -77,6 +77,19 @@ final class ElementResolverTests: XCTestCase {
         XCTAssertEqual(calls, 3, "one read plus two retries")
     }
 
+    func testRetryReReadsAFirstContainerHitOnce() async throws {
+        let container = ElementSnapshot(element: AttributeSet(role: "AXGroup", frame: Frame(x: 0, y: 0, w: 1448, h: 944), childCount: 40), ancestors: [])
+        let refined = ScriptedProvider(script: [container, try fixture("swiftui-button")])
+        let e = await ElementResolver.resolve(at: .zero, using: refined, retries: 5, delay: .zero)
+        XCTAssertEqual(e?.identifier, "captureButton")
+        let calls = await refined.calls
+        XCTAssertEqual(calls, 2)
+
+        let stubborn = ScriptedProvider(script: [container, container])
+        let f = await ElementResolver.resolve(at: .zero, using: stubborn, retries: 1, delay: .zero)
+        XCTAssertEqual(f?.role, "group", "a container that stays a container is still the answer")
+    }
+
     // 8
     func testIdentifierSourceForSymbolImageAndDeclaredButton() throws {
         let image = try XCTUnwrap(ElementResolver.resolve(try fixture("symbol-image")))

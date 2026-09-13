@@ -171,23 +171,30 @@ enum ElementResolver {
 
 extension ElementResolver {
     /// R3 lazy-tree retry: a nil hit or an empty group is re-read every `delay`, up to `retries` more
-    /// times. Returns nil when no populated element was ever seen; the caller records `element: null`.
+    /// times. A container hit on the first read is re-read once too, because Chromium answers the
+    /// first hit test from a cache and refines it asynchronously; the container is kept as the
+    /// fallback. Returns nil when no populated element was ever seen; the caller records `element: null`.
     static func resolve(
         at point: CGPoint,
         using provider: some ElementProvider,
         retries: Int = 5,
         delay: Duration = .milliseconds(100)
     ) async -> ResolvedElement? {
+        var fallback: ResolvedElement?
         for attempt in 0...max(retries, 0) {
             if let snapshot = await provider.snapshot(at: point), !isEmptyGroup(snapshot),
                let resolved = resolve(snapshot) {
-                return resolved
+                if attempt == 0, isContainer(snapshot.element), retries > 0 {
+                    fallback = resolved
+                } else {
+                    return resolved
+                }
             }
             if (attempt < retries) && (delay > .zero) {
                 try? await Task.sleep(for: delay)
             }
         }
-        return nil
+        return fallback
     }
 }
 

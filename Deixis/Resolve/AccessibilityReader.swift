@@ -1,3 +1,4 @@
+import AppKit
 import ApplicationServices
 import CoreGraphics
 import Foundation
@@ -14,9 +15,39 @@ actor AccessibilityReader {
         return AXIsProcessTrustedWithOptions(options)
     }
 
+    /// Apps whose accessibility tree has been switched on this session (Electron and Chromium build
+    /// it only when an assistive client asks).
+    private var accessibilityEnabledPIDs: Set<pid_t> = []
+
+    /// Chromium-based browsers respond to `AXEnhancedUserInterface`, the signal VoiceOver sends.
+    /// Electron apps expose `AXManualAccessibility` for the same purpose and are detected by it.
+    private static let chromiumBundleIDs: Set<String> = [
+        "com.google.Chrome", "com.google.Chrome.canary", "com.google.Chrome.beta", "org.chromium.Chromium",
+        "com.microsoft.edgemac", "com.brave.Browser", "company.thebrowser.Browser", "com.vivaldi.Vivaldi",
+    ]
+
+    /// R3: Electron and Chromium apps expose only window-sized groups until accessibility is enabled
+    /// from outside. Done once per app per session; the tree fills in within about half a second.
+    private func enableAccessibilityIfNeeded(app: AXUIElement, pid: pid_t) {
+        guard !accessibilityEnabledPIDs.contains(pid) else { return }
+        accessibilityEnabledPIDs.insert(pid)
+        var names: CFArray?
+        AXUIElementCopyAttributeNames(app, &names)
+        let attributeNames = (names as? [String]) ?? []
+        if attributeNames.contains("AXManualAccessibility") {
+            AXUIElementSetAttributeValue(app, "AXManualAccessibility" as CFString, kCFBooleanTrue)
+        }
+        if let bundleID = NSRunningApplication(processIdentifier: pid)?.bundleIdentifier,
+           Self.chromiumBundleIDs.contains(bundleID) {
+            AXUIElementSetAttributeValue(app, "AXEnhancedUserInterface" as CFString, kCFBooleanTrue)
+        }
+    }
+
     /// R3: per-app hit test, system-wide element as fallback. Nil when neither returns anything.
     func snapshot(at point: CGPoint, pid: pid_t) -> ElementSnapshot? {
-        if let element = hit(AXUIElementCreateApplication(pid), at: point) {
+        let app = AXUIElementCreateApplication(pid)
+        enableAccessibilityIfNeeded(app: app, pid: pid)
+        if let element = hit(app, at: point) {
             return snapshot(of: refine(element, at: point))
         }
         if let element = hit(AXUIElementCreateSystemWide(), at: point) {
@@ -35,13 +66,13 @@ actor AccessibilityReader {
         var candidates: [(element: AXUIElement, attributes: AttributeSet)] = []
         var stack: [(element: AXUIElement, depth: Int)] = children(of: base).map { ($0, 1) }
         var visited = 0
-        while let (node, depth) = stack.popLast(), visited < 200 {
+        while let (node, depth) = stack.popLast(), visited < 400 {
             visited += 1
             guard let frame = frame(copy(node, Self.frameAttribute)),
                   frame.cgRect.insetBy(dx: -tolerance, dy: -tolerance).contains(point) else { continue }
             let nodeAttributes = attributes(of: node)
             candidates.append((node, nodeAttributes))
-            if depth < 6, ElementResolver.isContainer(nodeAttributes) {
+            if depth < 12, ElementResolver.isContainer(nodeAttributes) {
                 stack.append(contentsOf: children(of: node).map { ($0, depth + 1) })
             }
         }
