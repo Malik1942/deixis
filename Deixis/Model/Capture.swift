@@ -162,7 +162,7 @@ struct PathEntry: Codable, Sendable, Equatable {
 }
 
 /// A rectangle in global screen points, top-left origin (the accessibility convention).
-struct Frame: Codable, Sendable, Equatable {
+struct Frame: Codable, Sendable, Hashable {
     var x: Double
     var y: Double
     var w: Double

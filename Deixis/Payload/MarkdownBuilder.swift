@@ -45,7 +45,7 @@ enum MarkdownBuilder {
             let members = element.members ?? []
             var lines = [
                 "### Target element",
-                "cluster · \(members.count) elements (visual grouping computed by Deixis, not an accessibility element)",
+                "cluster · \(members.count) elements (visual grouping computed by Deixis, not an accessibility element; frame approximate)",
                 "Members: " + members.map(memberText).joined(separator: " · "),
             ]
             let f = element.frame

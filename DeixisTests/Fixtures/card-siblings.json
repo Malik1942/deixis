@@ -7,11 +7,11 @@
   ],
   "siblings": [
     { "AXRole": "AXStaticText", "AXDescription": "Ocean", "AXFrame": { "x": 43, "y": 251, "w": 103, "h": 40 }, "AXChildrenCount": 0 },
-    { "AXRole": "AXImage", "AXIdentifier": "bolt.fill", "AXFrame": { "x": 43, "y": 600, "w": 32, "h": 32 }, "AXChildrenCount": 0 },
+    { "AXRole": "AXImage", "AXIdentifier": "bolt.fill", "AXFrame": { "x": 59, "y": 600, "w": 32, "h": 32 }, "AXChildrenCount": 0 },
     { "AXRole": "AXStaticText", "AXDescription": "Shortcut", "AXFrame": { "x": 95, "y": 590, "w": 140, "h": 28 }, "AXChildrenCount": 0 },
     { "AXRole": "AXStaticText", "AXDescription": "One press, one drift.", "AXFrame": { "x": 95, "y": 620, "w": 230, "h": 18 }, "AXChildrenCount": 0 },
-    { "AXRole": "AXButton", "AXIdentifier": "shortcutActionButton", "AXTitle": "Action Button", "AXFrame": { "x": 43, "y": 660, "w": 185, "h": 50 }, "AXChildrenCount": 0 },
-    { "AXRole": "AXButton", "AXTitle": "Camera Control", "AXFrame": { "x": 228, "y": 660, "w": 185, "h": 50 }, "AXChildrenCount": 0 },
+    { "AXRole": "AXButton", "AXIdentifier": "shortcutActionButton", "AXTitle": "Action Button", "AXFrame": { "x": 59, "y": 660, "w": 169, "h": 50 }, "AXChildrenCount": 0 },
+    { "AXRole": "AXButton", "AXTitle": "Camera Control", "AXFrame": { "x": 228, "y": 660, "w": 169, "h": 50 }, "AXChildrenCount": 0 },
     { "AXRole": "AXGroup", "AXDescription": "Tab Bar", "AXFrame": { "x": 27, "y": 972, "w": 402, "h": 83 }, "AXChildrenCount": 0 },
     { "AXRole": "AXGroup", "AXDescription": "Background", "AXFrame": { "x": 27, "y": 181, "w": 402, "h": 874 }, "AXChildrenCount": 0 }
   ]

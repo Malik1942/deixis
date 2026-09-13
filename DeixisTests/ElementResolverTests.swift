@@ -160,7 +160,7 @@ final class ElementResolverTests: XCTestCase {
         XCTAssertEqual(groups.count, 3, "Ocean title, the card, the tab bar")
         let card = try XCTUnwrap(groups.first { $0.contains { $0.description == "Shortcut" } })
         XCTAssertEqual(card.count, 5)
-        XCTAssertEqual(HitRefiner.union(of: card), CGRect(x: 43, y: 590, width: 370, height: 120))
+        XCTAssertEqual(HitRefiner.union(of: card), CGRect(x: 59, y: 590, width: 338, height: 120))
     }
 
     func testSelectionLevelsFromLeafGoLeafClusterParentWindow() throws {
@@ -169,7 +169,7 @@ final class ElementResolverTests: XCTestCase {
         XCTAssertEqual(levels.map { $0?.role }, ["staticText", "cluster", "group", "window"], "the frameless application is skipped")
         let cluster = try XCTUnwrap(levels[1])
         XCTAssertEqual(cluster.rawRole, "DeixisCluster")
-        XCTAssertEqual(cluster.frame, Frame(x: 43, y: 590, w: 370, h: 120))
+        XCTAssertEqual(cluster.frame, Frame(x: 43, y: 574, w: 370, h: 152), "members' bounds plus 16 pt, inside the parent")
         XCTAssertEqual(cluster.members?.map(\.role), ["staticText", "image", "staticText", "button", "button"])
         XCTAssertEqual(cluster.members?.compactMap(\.identifier), ["bolt.fill", "shortcutActionButton"])
         XCTAssertEqual(cluster.path.last?.role, "cluster")

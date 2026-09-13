@@ -106,10 +106,15 @@ enum ElementResolver {
 
     /// A visual grouping computed from neighbouring elements. SwiftUI exposes leaves but not the
     /// cards that hold them; this stands in for the missing container and says so in its role.
-    static func clusterElement(members: [AttributeSet], ancestors: [AttributeSet]) -> ResolvedElement? {
+    static func clusterElement(members: [AttributeSet], ancestors: [AttributeSet], within container: Frame? = nil) -> ResolvedElement? {
         let framed = members.filter { ($0.frame?.w ?? 0) > 0 && ($0.frame?.h ?? 0) > 0 }
         guard framed.count >= 2 else { return nil }
-        let union = HitRefiner.union(of: framed)
+        // The members' bounds plus a typical card inset, kept inside the container: the visible card
+        // is usually a little larger than what it holds.
+        var union = HitRefiner.union(of: framed).insetBy(dx: -HitRefiner.clusterPadding, dy: -HitRefiner.clusterPadding)
+        if let container = container?.cgRect, !union.intersection(container).isEmpty {
+            union = union.intersection(container)
+        }
         let ordered = framed.sorted { a, b in
             let fa = a.frame!, fb = b.frame!
             return abs(fa.y - fb.y) > 4 ? fa.y < fb.y : fa.x < fb.x
@@ -288,6 +293,8 @@ enum HitRefiner {
 
     /// Two frames belong to one visual cluster when one, grown by this much, touches the other.
     static let clusterGap: Double = 24
+    /// A cluster's frame is its members' bounds grown by this much, a typical card inset.
+    static let clusterPadding: Double = 16
     /// A container spans its window when it covers at least this share of it.
     static let spanningFraction: Double = 0.5
     /// A child covering at least this share of its container is a background, not content.
@@ -368,7 +375,7 @@ enum HitRefiner {
             // Window-sized container under the cursor: the cluster around the point, else nothing.
             let nodes = content(of: snapshot.children ?? [], within: snapshot.element.frame)
             if let members = cluster(containing: point, among: nodes),
-               let cluster = ElementResolver.clusterElement(members: members, ancestors: [snapshot.element] + snapshot.ancestors) {
+               let cluster = ElementResolver.clusterElement(members: members, ancestors: [snapshot.element] + snapshot.ancestors, within: snapshot.element.frame) {
                 levels.append(cluster)
             } else {
                 levels.append(nil)
@@ -380,7 +387,7 @@ enum HitRefiner {
                 let nodes = content(of: siblings, within: parent.frame)
                 let parentArea = parent.frame.map { $0.w * $0.h } ?? .infinity
                 if let members = cluster(around: snapshot.element, among: nodes),
-                   let cluster = ElementResolver.clusterElement(members: members, ancestors: snapshot.ancestors),
+                   let cluster = ElementResolver.clusterElement(members: members, ancestors: snapshot.ancestors, within: parent.frame),
                    cluster.frame.w * cluster.frame.h < 0.9 * parentArea {
                     levels.append(cluster)
                 }

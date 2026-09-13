@@ -110,7 +110,7 @@ final class MarkdownBuilderTests: XCTestCase {
             ]
         )
         let md = MarkdownBuilder.build(capture(element: cluster))
-        XCTAssertTrue(md.contains("cluster · 2 elements (visual grouping computed by Deixis, not an accessibility element)\nMembers: staticText \"Shortcut\" · button \"Action Button\"#shortcutActionButton\nFrame: x=43 y=590 w=370 h=120\nPath: window > group > cluster\n"))
+        XCTAssertTrue(md.contains("cluster · 2 elements (visual grouping computed by Deixis, not an accessibility element; frame approximate)\nMembers: staticText \"Shortcut\" · button \"Action Button\"#shortcutActionButton\nFrame: x=43 y=590 w=370 h=120\nPath: window > group > cluster\n"))
         XCTAssertFalse(md.contains("no identifier"))
 
         let data = try JSONEncoder().encode(capture(element: cluster))

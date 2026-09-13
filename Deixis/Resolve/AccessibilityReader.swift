@@ -64,13 +64,26 @@ actor AccessibilityReader {
         guard ElementResolver.isContainer(baseAttributes) else { return base }
         let tolerance = HitRefiner.tolerance
         var candidates: [(element: AXUIElement, attributes: AttributeSet)] = []
-        var stack: [(element: AXUIElement, depth: Int)] = children(of: base).map { ($0, 1) }
+        var stack: [(element: AXUIElement, depth: Int)] = []
+        // First level: reuse the cached neighborhood when it lines up with the live children.
+        let kids = children(of: base)
+        let known = neighbors(of: base, attributes: baseAttributes)
+        if known.count == kids.count {
+            for (kid, attributes) in zip(kids, known) {
+                guard let frame = attributes.frame, frame.cgRect.insetBy(dx: -tolerance, dy: -tolerance).contains(point) else { continue }
+                candidates.append((kid, attributes))
+                if ElementResolver.isContainer(attributes) { stack.append((kid, 2)) }
+            }
+            stack = stack.flatMap { container in children(of: container.element).map { ($0, 2) } }
+        } else {
+            stack = kids.map { ($0, 1) }
+        }
         var visited = 0
         while let (node, depth) = stack.popLast(), visited < 400 {
             visited += 1
             guard let frame = frame(copy(node, Self.frameAttribute)),
                   frame.cgRect.insetBy(dx: -tolerance, dy: -tolerance).contains(point) else { continue }
-            let nodeAttributes = attributes(of: node)
+            let nodeAttributes = lightAttributes(of: node)
             candidates.append((node, nodeAttributes))
             if depth < 12, ElementResolver.isContainer(nodeAttributes) {
                 stack.append(contentsOf: children(of: node).map { ($0, depth + 1) })
@@ -111,19 +124,86 @@ actor AccessibilityReader {
         for _ in 0..<ElementResolver.maxAncestors {
             guard let parent = self.element(copy(current, kAXParentAttribute)) else { break }
             parents.append(parent)
-            ancestors.append(attributes(of: parent))
+            ancestors.append(cachedAttributes(of: parent))
             current = parent
         }
         var snapshot = ElementSnapshot(element: elementAttributes, ancestors: ancestors)
         // Flat trees (SwiftUI): read the neighbourhood so HitRefiner can form visual clusters.
         let window = HitRefiner.windowFrame(in: snapshot)
         if ElementResolver.isContainer(elementAttributes), HitRefiner.spans(elementAttributes.frame, window: window) {
-            snapshot.children = children(of: element).prefix(60).map { attributes(of: $0) }
+            snapshot.children = neighbors(of: element, attributes: elementAttributes)
         } else if let parent = parents.first, let parentAttributes = ancestors.first,
                   HitRefiner.spans(parentAttributes.frame, window: window) {
-            snapshot.siblings = children(of: parent).prefix(60).map { attributes(of: $0) }
+            snapshot.siblings = neighbors(of: parent, attributes: parentAttributes)
         }
         return snapshot
+    }
+
+    // MARK: Attribute cache
+
+    /// Reads cost about 2 ms each against the Simulator, and hover asks about the same ancestors
+    /// dozens of times a second. Attributes are cached per element for `neighborTTL`.
+    private struct ElementKey: Hashable {
+        let pid: pid_t
+        let hash: CFHashCode
+    }
+
+    private var attributeCache: [ElementKey: (stamp: ContinuousClock.Instant, attributes: AttributeSet)] = [:]
+
+    private func cachedAttributes(of element: AXUIElement) -> AttributeSet {
+        var pid: pid_t = 0
+        AXUIElementGetPid(element, &pid)
+        let key = ElementKey(pid: pid, hash: CFHash(element))
+        let now = ContinuousClock.now
+        if let cached = attributeCache[key], now - cached.stamp < Self.neighborTTL {
+            return cached.attributes
+        }
+        let read = lightAttributes(of: element)
+        if attributeCache.count > 256 { attributeCache.removeAll() }
+        attributeCache[key] = (now, read)
+        return read
+    }
+
+    // MARK: Neighborhood cache
+
+    /// Hover moves inside one container far more often than that container's children change, so a
+    /// container's children are re-read at most every `neighborTTL`. Keyed by app, role, and frame.
+    private struct NeighborKey: Hashable {
+        let pid: pid_t
+        let role: String?
+        let frame: Frame?
+    }
+
+    private var neighborCache: [NeighborKey: (stamp: ContinuousClock.Instant, nodes: [AttributeSet])] = [:]
+    private static let neighborTTL: Duration = .milliseconds(400)
+    private static let neighborLimit = 60
+
+    private func neighbors(of container: AXUIElement, attributes: AttributeSet) -> [AttributeSet] {
+        var pid: pid_t = 0
+        AXUIElementGetPid(container, &pid)
+        let key = NeighborKey(pid: pid, role: attributes.role, frame: attributes.frame)
+        let now = ContinuousClock.now
+        if let cached = neighborCache[key], now - cached.stamp < Self.neighborTTL {
+            return cached.nodes
+        }
+        let nodes = children(of: container).prefix(Self.neighborLimit).map { lightAttributes(of: $0) }
+        if neighborCache.count > 32 { neighborCache.removeAll() }
+        neighborCache[key] = (now, nodes)
+        return nodes
+    }
+
+    /// What clustering needs and nothing more: six reads instead of eight.
+    private func lightAttributes(of element: AXUIElement) -> AttributeSet {
+        AttributeSet(
+            role: string(copy(element, kAXRoleAttribute)),
+            subrole: string(copy(element, kAXSubroleAttribute)),
+            title: string(copy(element, kAXTitleAttribute)),
+            description: string(copy(element, kAXDescriptionAttribute)),
+            value: nil,
+            identifier: string(copy(element, kAXIdentifierAttribute)),
+            frame: frame(copy(element, Self.frameAttribute)),
+            childCount: nil
+        )
     }
 
     private func attributes(of element: AXUIElement) -> AttributeSet {
