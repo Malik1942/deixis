@@ -5,13 +5,25 @@
   "description": "One capture: the element the user pointed at, the cropped image on disk, and the context it came from. This file is the only interface between the Deixis app and anything else. The Markdown on the clipboard is derived from it, never the other way around. Field names are platform-neutral.",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schemaVersion", "id", "createdAt", "mode", "image", "source", "element", "note", "resolved"],
+  "required": [
+    "schemaVersion",
+    "id",
+    "createdAt",
+    "mode",
+    "image",
+    "source",
+    "element",
+    "note",
+    "resolved"
+  ],
   "properties": {
-    "schemaVersion": { "const": 1 },
+    "schemaVersion": {
+      "const": 1
+    },
     "id": {
       "type": "string",
-      "pattern": "^[0-9]{8}-[0-9]{6}$",
-      "description": "Local timestamp, yyyyMMdd-HHmmss. Same stamp as in the PNG and JSON file names."
+      "pattern": "^[0-9]{8}-[0-9]{6}-[a-z0-9]{4}$",
+      "description": "Local timestamp yyyyMMdd-HHmmss plus 4 random base36 characters, so two captures in one second never collide. Same id as in the PNG and JSON file names. \"Latest\" is the newest createdAt, ties broken by id."
     },
     "createdAt": {
       "type": "string",
@@ -20,13 +32,27 @@
     },
     "mode": {
       "type": "string",
-      "enum": ["fix", "reference"],
+      "enum": [
+        "fix",
+        "reference"
+      ],
       "description": "fix: the user's own code is on screen (front app is Simulator, bundle id is in MyApps, or URL host is localhost/127.0.0.1). reference: anything else."
     },
-    "image": { "$ref": "#/$defs/image" },
-    "source": { "$ref": "#/$defs/source" },
+    "image": {
+      "$ref": "#/$defs/image"
+    },
+    "source": {
+      "$ref": "#/$defs/source"
+    },
     "element": {
-      "oneOf": [{ "$ref": "#/$defs/element" }, { "type": "null" }],
+      "oneOf": [
+        {
+          "$ref": "#/$defs/element"
+        },
+        {
+          "type": "null"
+        }
+      ],
       "description": "null when resolution failed. Never fabricated."
     },
     "note": {
@@ -36,32 +62,82 @@
     "resolved": {
       "type": "boolean",
       "description": "Always false when written by the app. Reserved for an agent or the MCP server to mark the capture as acted on."
+    },
+    "ocr": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Recognized text (v0.3 Text action). Always null when written by the v0.1 app."
+    },
+    "iterations": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/iteration"
+      },
+      "description": "Verify records (v0.4), newest last. Always empty when written by the v0.1 app."
     }
   },
   "$defs": {
     "image": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["path", "widthPt", "heightPt", "scale"],
+      "required": [
+        "path",
+        "widthPt",
+        "heightPt",
+        "scale"
+      ],
       "properties": {
-        "path": { "type": "string", "description": "Absolute path to the cropped PNG." },
-        "widthPt": { "type": "number", "exclusiveMinimum": 0, "description": "Crop width in screen points." },
-        "heightPt": { "type": "number", "exclusiveMinimum": 0, "description": "Crop height in screen points." },
-        "scale": { "type": "number", "exclusiveMinimum": 0, "description": "Backing scale factor of the source display (2 on Retina). Pixel size is points times scale." }
+        "path": {
+          "type": "string",
+          "description": "Absolute path to the cropped PNG."
+        },
+        "widthPt": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "description": "Crop width in screen points."
+        },
+        "heightPt": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "description": "Crop height in screen points."
+        },
+        "scale": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "description": "Backing scale factor of the source display (2 on Retina). Pixel size is points times scale."
+        },
+        "crop": {
+          "$ref": "#/$defs/frame",
+          "description": "The crop rectangle in global screen points, so element.frame can be placed inside the image."
+        }
       }
     },
     "source": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["app", "window", "url", "simulator"],
+      "required": [
+        "app",
+        "window",
+        "url",
+        "simulator"
+      ],
       "properties": {
         "app": {
           "type": "object",
           "additionalProperties": false,
-          "required": ["bundleId", "name"],
+          "required": [
+            "bundleId",
+            "name"
+          ],
           "properties": {
-            "bundleId": { "type": "string" },
-            "name": { "type": "string" }
+            "bundleId": {
+              "type": "string"
+            },
+            "name": {
+              "type": "string"
+            }
           },
           "description": "The frontmost app at hotkey time."
         },
@@ -70,15 +146,29 @@
             {
               "type": "object",
               "additionalProperties": false,
-              "required": ["title"],
-              "properties": { "title": { "type": ["string", "null"] } }
+              "required": [
+                "title"
+              ],
+              "properties": {
+                "title": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              }
             },
-            { "type": "null" }
+            {
+              "type": "null"
+            }
           ],
           "description": "The front window at hotkey time. null when there is none."
         },
         "url": {
-          "type": ["string", "null"],
+          "type": [
+            "string",
+            "null"
+          ],
           "description": "Front tab URL. Filled only for Safari and Chrome; null otherwise."
         },
         "simulator": {
@@ -86,13 +176,25 @@
             {
               "type": "object",
               "additionalProperties": false,
-              "required": ["device", "appBundleId"],
+              "required": [
+                "device",
+                "appBundleId"
+              ],
               "properties": {
-                "device": { "type": "string" },
-                "appBundleId": { "type": ["string", "null"] }
+                "device": {
+                  "type": "string"
+                },
+                "appBundleId": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
               }
             },
-            { "type": "null" }
+            {
+              "type": "null"
+            }
           ],
           "description": "Present only when the front app is the iOS Simulator."
         }
@@ -101,31 +203,67 @@
     "element": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["role", "label", "identifier", "identifierSource", "value", "frame", "path"],
+      "required": [
+        "role",
+        "rawRole",
+        "label",
+        "identifier",
+        "identifierSource",
+        "value",
+        "frame",
+        "path"
+      ],
       "properties": {
-        "role": { "$ref": "#/$defs/role" },
+        "role": {
+          "$ref": "#/$defs/role"
+        },
         "rawRole": {
           "type": "string",
-          "description": "The platform's own role string (for example AXCustomThing). Present only when role is unknown."
+          "description": "The platform's own role string (for example AXButton). Always present."
         },
-        "label": { "type": ["string", "null"], "description": "Human-readable name: title or description." },
-        "identifier": { "type": ["string", "null"], "description": "Developer-facing identifier as exposed by the platform, unmodified." },
+        "label": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Human-readable name: title or description."
+        },
+        "identifier": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Developer-facing identifier as exposed by the platform, unmodified."
+        },
         "identifierSource": {
           "type": "string",
-          "enum": ["declared", "possiblySymbolName", "unknown"],
+          "enum": [
+            "declared",
+            "possiblySymbolName",
+            "unknown"
+          ],
           "description": "possiblySymbolName: role is image and the identifier matches ^[a-z0-9]+(\\.[a-z0-9]+)*$ (SF Symbol naming), so it may not be a declared identifier. declared: any other non-empty identifier. unknown: identifier is empty."
         },
-        "value": { "type": ["string", "number", "boolean", "null"] },
-        "frame": { "$ref": "#/$defs/frame" },
+        "value": {
+          "type": [
+            "string",
+            "number",
+            "boolean",
+            "null"
+          ]
+        },
+        "frame": {
+          "$ref": "#/$defs/frame"
+        },
         "path": {
           "type": "array",
-          "items": { "$ref": "#/$defs/pathEntry" },
+          "items": {
+            "$ref": "#/$defs/pathEntry"
+          },
           "maxItems": 7,
           "description": "Ancestry, root-first: at most the nearest 6 ancestors, ending with the element itself."
         }
-      },
-      "if": { "properties": { "role": { "const": "unknown" } } },
-      "then": { "required": ["rawRole"] }
+      }
     },
     "role": {
       "type": "string",
@@ -135,22 +273,96 @@
     "frame": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["x", "y", "w", "h"],
+      "required": [
+        "x",
+        "y",
+        "w",
+        "h"
+      ],
       "properties": {
-        "x": { "type": "number" },
-        "y": { "type": "number" },
-        "w": { "type": "number", "minimum": 0 },
-        "h": { "type": "number", "minimum": 0 }
+        "x": {
+          "type": "number"
+        },
+        "y": {
+          "type": "number"
+        },
+        "w": {
+          "type": "number",
+          "minimum": 0
+        },
+        "h": {
+          "type": "number",
+          "minimum": 0
+        }
       },
       "description": "Global screen points, top-left origin (accessibility convention)."
     },
     "pathEntry": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["role", "identifier"],
+      "required": [
+        "role",
+        "identifier"
+      ],
       "properties": {
-        "role": { "$ref": "#/$defs/role" },
-        "identifier": { "type": ["string", "null"] }
+        "role": {
+          "$ref": "#/$defs/role"
+        },
+        "identifier": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "iteration": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "capturedAt",
+        "imagePath",
+        "gitBefore",
+        "gitAfter",
+        "diffStat",
+        "files"
+      ],
+      "properties": {
+        "capturedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "imagePath": {
+          "type": "string",
+          "description": "Absolute path to the after-image PNG."
+        },
+        "gitBefore": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Commit SHA before the change, when the app maps to a repository."
+        },
+        "gitAfter": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "diffStat": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Output of git diff --stat between the two SHAs."
+        },
+        "files": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Repository-relative paths touched."
+        }
       }
     }
   }
