@@ -601,7 +601,7 @@ final class HighlightView: NSView {
 
     /// Chrome never takes the mouse: the content view owns the gesture. (A view that receives the
     /// mouse-down and is then hidden stops getting the drag, which is how region select broke.)
-    override func hitTest(_ point: NSPoint) -> NSView? { nil }
+    nonisolated override func hitTest(_ point: NSPoint) -> NSView? { nil }   // AX hit tests reach this off the main thread
 
     override func draw(_ dirtyRect: NSRect) {
         let inset = bounds.insetBy(dx: strokeWidth / 2, dy: strokeWidth / 2)
@@ -641,7 +641,7 @@ final class RegionFrameView: NSView {
     @available(*, unavailable)
     required init?(coder: NSCoder) { fatalError("init(coder:) is not supported") }
 
-    override func hitTest(_ point: NSPoint) -> NSView? { nil }
+    nonisolated override func hitTest(_ point: NSPoint) -> NSView? { nil }   // AX hit tests reach this off the main thread
 
     override func draw(_ dirtyRect: NSRect) {
         let rect = bounds.insetBy(dx: Self.pad, dy: Self.pad)
@@ -687,7 +687,7 @@ final class HudLabel: NSVisualEffectView {
     @available(*, unavailable)
     required init?(coder: NSCoder) { fatalError("init(coder:) is not supported") }
 
-    override func hitTest(_ point: NSPoint) -> NSView? { nil }
+    nonisolated override func hitTest(_ point: NSPoint) -> NSView? { nil }   // AX hit tests reach this off the main thread
 
     func set(_ string: NSAttributedString) {
         text.attributedStringValue = string
