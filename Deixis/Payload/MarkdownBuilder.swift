@@ -5,15 +5,18 @@ enum MarkdownBuilder {
     static func build(_ capture: Capture) -> String {
         var sections: [String] = ["## Deixis capture (\(capture.mode.rawValue))"]
         let note = noteBlock(capture.note)
+        let extras = [elementsBlock(capture), nearbyBlock(capture), textBlock(capture)].compactMap { $0 }
         switch capture.mode {
         case .fix:
             sections.append(sourceBlock(capture))
             sections.append(elementBlock(capture.element))
+            sections.append(contentsOf: extras)
             if let note { sections.append(note) }
         case .reference:
             if let note { sections.append(note) }
             sections.append(sourceBlock(capture))
             sections.append(elementBlock(capture.element))
+            sections.append(contentsOf: extras)
         }
         // The heading sits directly on the first block (section 5); blocks are separated by a blank line.
         let heading = sections.removeFirst()
@@ -27,7 +30,8 @@ enum MarkdownBuilder {
         let bundleId = source.simulator?.appBundleId ?? source.app.bundleId
         let windowTitle = source.window?.title ?? "none"
         let region = "\(number(capture.image.widthPt))×\(number(capture.image.heightPt)) pt @\(number(capture.image.scale))x"
-        let regionNote = capture.element == nil ? "around the click point" : "element + \(number(Geometry.cropPadding)) pt"
+        let regionNote = capture.elements != nil ? "drawn frame"
+            : capture.element == nil ? "around the click point" : "element + \(number(Geometry.cropPadding)) pt"
         var lines = [
             "Image: \(capture.image.path)",
             "App: \(source.app.name) (\(bundleId)) · Window: \(windowTitle)",
@@ -72,6 +76,40 @@ enum MarkdownBuilder {
         lines.append("Frame: x=\(number(f.x)) y=\(number(f.y)) w=\(number(f.w)) h=\(number(f.h))")
         lines.append("Path: " + element.path.map(pathText).joined(separator: " > "))
         return lines.joined(separator: "\n")
+    }
+
+    // v0.2 blocks
+
+    private static func elementsBlock(_ capture: Capture) -> String? {
+        guard let elements = capture.elements else { return nil }
+        guard !elements.isEmpty else { return "### Elements in frame (0)\nNo accessibility elements inside the frame." }
+        return (["### Elements in frame (\(elements.count))"] + elements.map { regionLine($0, suffix: nil) }).joined(separator: "\n")
+    }
+
+    private static func nearbyBlock(_ capture: Capture) -> String? {
+        guard let nearby = capture.nearby, !nearby.isEmpty, let crop = capture.image.crop else { return nil }
+        let center = CGPoint(x: crop.x + crop.w / 2, y: crop.y + crop.h / 2)
+        return (["### Nearby"] + nearby.map { regionLine($0, suffix: RegionResolver.offsetText(from: center, to: $0.frame.cgRect)) }).joined(separator: "\n")
+    }
+
+    private static func textBlock(_ capture: Capture) -> String? {
+        guard let ocr = capture.ocr, !ocr.isEmpty else { return nil }
+        return "### Text in image\n" + ocr
+    }
+
+    private static func regionLine(_ e: RegionElement, suffix: String?) -> String {
+        var text = e.role
+        if let label = e.label { text += " \"\(label)\"" }
+        if let identifier = e.identifier {
+            text += " · id=\(identifier)"
+            if e.identifierSource == .possiblySymbolName { text += " (may be a symbol name)" }
+        }
+        if let suffix {
+            text += " · \(suffix)"
+        } else {
+            text += " · x=\(number(e.frame.x)) y=\(number(e.frame.y)) w=\(number(e.frame.w)) h=\(number(e.frame.h))"
+        }
+        return text
     }
 
     private static func noteBlock(_ note: String) -> String? {

@@ -127,6 +127,44 @@ final class MarkdownBuilderTests: XCTestCase {
         XCTAssertTrue(md.contains("Use the image.\nIf this view is yours, give it .accessibilityElement() and .accessibilityIdentifier(\"…\") so Deixis can point at it next time.\n"))
     }
 
+    // v0.2
+    private func regionElement(_ role: String, label: String?, id: String?, x: Double, y: Double, w: Double, h: Double) -> RegionElement {
+        RegionElement(role: role, rawRole: "AX" + role, label: label, identifier: id, identifierSource: id == nil ? .unknown : .declared, frame: Frame(x: x, y: y, w: w, h: h))
+    }
+
+    func testElementsInFrameBlockAndRegionSourceLine() throws {
+        var c = capture(element: element(identifier: "shortcutActionButton", label: "Action Button"))
+        c.elements = [
+            regionElement("staticText", label: "Shortcut", id: nil, x: 95, y: 590, w: 140, h: 28),
+            regionElement("button", label: "Action Button", id: "shortcutActionButton", x: 59, y: 660, w: 169, h: 50),
+        ]
+        let md = MarkdownBuilder.build(c)
+        XCTAssertTrue(md.contains("(drawn frame)\n"))
+        XCTAssertTrue(md.contains("### Elements in frame (2)\nstaticText \"Shortcut\" · x=95 y=590 w=140 h=28\nbutton \"Action Button\" · id=shortcutActionButton · x=59 y=660 w=169 h=50\n"))
+        let elements = md.range(of: "### Elements in frame")!, note = md.range(of: "### Note")!, target = md.range(of: "### Target element")!
+        XCTAssertLessThan(target.lowerBound, elements.lowerBound)
+        XCTAssertLessThan(elements.lowerBound, note.lowerBound)
+        c.elements = []
+        XCTAssertTrue(MarkdownBuilder.build(c).contains("### Elements in frame (0)\nNo accessibility elements inside the frame.\n"))
+
+        let data = try JSONEncoder().encode(c)
+        let json = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
+        XCTAssertNotNil(json["elements"])
+        XCTAssertEqual(try JSONDecoder().decode(Capture.self, from: data), c)
+    }
+
+    func testNearbyAndTextBlocksForNullElement() {
+        var c = capture(element: nil)
+        c.image.crop = Frame(x: 100, y: 350, w: 200, h: 200) // click at (200, 450)
+        c.nearby = [regionElement("button", label: "Resurfacing", id: nil, x: 43, y: 304, w: 370, h: 48)]
+        c.ocr = "Product Ideas\nCooking"
+        let md = MarkdownBuilder.build(c)
+        XCTAssertTrue(md.contains("### Nearby\nbutton \"Resurfacing\" · 98 pt above\n"))
+        XCTAssertTrue(md.contains("### Text in image\nProduct Ideas\nCooking\n"))
+        XCTAssertLessThan(md.range(of: "### Nearby")!.lowerBound, md.range(of: "### Text in image")!.lowerBound)
+        XCTAssertFalse(md.contains("### Elements in frame"))
+    }
+
     func testCaptureJSONRoundTripsWithExplicitNulls() throws {
         let c = capture(element: nil)
         let encoder = JSONEncoder()
