@@ -32,6 +32,7 @@ final class AppState {
     @ObservationIgnored private let overlay = SelectionOverlay()
     @ObservationIgnored private let toast = Toast()
     @ObservationIgnored private var hotkey: HotkeyMonitor?
+    @ObservationIgnored private var actionMonitors: [HotkeyMonitor] = []
     @ObservationIgnored private var ball: FloatingBall?
     @ObservationIgnored private var context: CaptureContext?
     @ObservationIgnored private var windows: [Geometry.WindowRecord] = []
@@ -50,6 +51,7 @@ final class AppState {
     @ObservationIgnored private var colorSession: ColorPickerSession?
     @ObservationIgnored private var clipboardOnlyPreset = false
     @ObservationIgnored private var sweepTask: Task<Void, Never>?
+    @ObservationIgnored private let beforeAfter = BeforeAfterWindow()
     /// R25: the last ten picked colors, in memory only.
     @ObservationIgnored private(set) var recentColors: [ColorValue] = []
     @ObservationIgnored private var clickPoint: CGPoint = .zero
@@ -65,6 +67,7 @@ final class AppState {
             await MainActor.run { self?.userTeamIDs = teams }
         }
         preferences.onHotkeyChange = { [weak self] in self?.restartHotkey() }
+        preferences.onActionHotkeysChange = { [weak self] in self?.restartHotkey() }
         preferences.onBallEnabledChange = { [weak self] in self?.updateBall() }
         preferences.onBallAutoHideChange = { [weak self] in
             guard let self else { return }
@@ -86,6 +89,20 @@ final class AppState {
         let monitor = HotkeyMonitor(hotkey: preferences.hotkey) { [weak self] in self?.beginCapture() }
         monitor.start()
         hotkey = monitor
+        for old in actionMonitors { old.stop() }
+        actionMonitors = preferences.actionHotkeys.compactMap { name, key in
+            let fire: @MainActor () -> Void
+            switch name {
+            case "snap": fire = { [weak self] in self?.beginAction(.snap) }
+            case "text": fire = { [weak self] in self?.beginAction(.text) }
+            case "color": fire = { [weak self] in self?.beginColorPick() }
+            case "cut": fire = { [weak self] in self?.beginAction(.cut) }
+            default: return nil
+            }
+            let actionMonitor = HotkeyMonitor(hotkey: key, onFire: fire)
+            actionMonitor.start()
+            return actionMonitor
+        }
     }
 
     /// v0.3 R20: the ball follows the Settings toggle; first launch places it at the lower right.
@@ -106,8 +123,11 @@ final class AppState {
         }
     }
 
-    /// While the Settings recorder listens, the real hotkey must not fire.
-    func pauseHotkey() { hotkey?.stop() }
+    /// While the Settings recorder listens, the real hotkeys must not fire.
+    func pauseHotkey() {
+        hotkey?.stop()
+        for monitor in actionMonitors { monitor.stop() }
+    }
     func resumeHotkey() { restartHotkey() }
 
     // MARK: Session
@@ -141,6 +161,104 @@ final class AppState {
                 try? await Task.sleep(for: Lifecycle.sweepInterval)
             }
         }
+    }
+
+    // MARK: Verify (v0.4)
+
+    /// The newest Point capture: an image with a sidecar.
+    private func newestSidecar() -> URL? {
+        Lifecycle.entries(in: preferences.captureFolderURL)
+            .filter { $0.urls.count == 2 }
+            .max { $0.modified < $1.modified }?
+            .urls.first(where: { $0.pathExtension == "json" })
+    }
+
+    /// R31–R34: find the newest capture's element again in the running app, capture it, record the
+    /// git facts, append the iteration, and show the panel.
+    func captureAfter() {
+        guard phase == .idle else { return }
+        guard let sidecar = newestSidecar(), let capture = try? IterationStore.load(sidecar) else {
+            toast.show(HudText.plain("No capture to verify"), near: Self.mainScreenCenterCG())
+            return
+        }
+        guard let element = capture.element, element.role != ElementResolver.clusterRole else {
+            toast.show(HudText.plain("Nothing to re-find in the last capture"), near: Self.mainScreenCenterCG())
+            return
+        }
+        let bundleId = capture.source.app.bundleId
+        guard let app = NSRunningApplication.runningApplications(withBundleIdentifier: bundleId).first else {
+            toast.show(HudText.plain("\(capture.source.app.name) is not running"), near: Self.mainScreenCenterCG())
+            return
+        }
+        guard ScreenCapture.hasPermission() else {
+            fail(.noScreenRecordingPermission, nearRect: nil)
+            return
+        }
+        phase = .writing
+        let pid = app.processIdentifier
+        let name = element.identifier ?? element.label ?? element.role
+        Task {
+            var found: ResolvedElement?
+            var windowBounds: CGRect?
+            for attempt in 0..<ElementRefinder.retries {
+                let windows = WindowList.onScreen().filter { $0.ownerPID == pid && $0.layer == 0 }
+                let largest = windows.max { $0.bounds.width * $0.bounds.height < $1.bounds.width * $1.bounds.height }
+                windowBounds = largest?.bounds
+                let region = largest?.bounds ?? SelectionOverlay.displayFrameCG(containing: element.frame.cgRect.origin)
+                let snapshots = await reader.elements(in: region, pid: pid)
+                found = ElementRefinder.match(element, among: snapshots)
+                if found != nil { break }
+                if attempt < ElementRefinder.retries - 1 { try? await Task.sleep(for: ElementRefinder.retryInterval) }
+            }
+            guard let found else {
+                phase = .idle
+                toast.show(HudText.plain("Element not found · \(name)"), near: element.frame.cgRect)
+                return
+            }
+            do {
+                let center = CGPoint(x: found.frame.x + found.frame.w / 2, y: found.frame.y + found.frame.h / 2)
+                let display = SelectionOverlay.displayFrameCG(containing: center)
+                let crop = Geometry.cropRect(element: found.frame.cgRect, clickPoint: center, window: windowBounds, display: display)
+                let image = try await ScreenCapture.crop(crop)
+                let index = capture.iterations.count + 1
+                let afterURL = IterationStore.afterImageURL(for: sidecar, index: index)
+                try image.png.write(to: afterURL, options: .atomic)
+                FileStore.setFinderTags(FileStore.tags(for: capture) + ["after"], on: afterURL)
+                let root = capture.source.projectRoot
+                let before = capture.source.gitCommit
+                let change: GitChange = await Task.detached {
+                    root.map { GitFacts.changes(at: $0, since: before) } ?? GitChange(before: before, after: nil, diffStat: nil, files: [])
+                }.value
+                let iteration = Iteration(
+                    capturedAt: FileStore.isoTimestamp(date: Date()),
+                    imagePath: afterURL.path(percentEncoded: false),
+                    gitBefore: change.before, gitAfter: change.after, diffStat: change.diffStat, files: change.files,
+                    frame: found.frame
+                )
+                let updated = try IterationStore.append(iteration, to: sidecar)
+                phase = .idle
+                let summary = GitFacts.summaryLine(of: change.diffStat) ?? (root == nil ? "no project folder" : "no changes")
+                toast.show(HudText.plain("After #\(index) · \(summary)"), near: found.frame.cgRect)
+                beforeAfter.show(updated)
+            } catch {
+                phase = .idle
+                fail(.captureFailed(error), nearRect: found.frame.cgRect)
+            }
+        }
+    }
+
+    /// R35: the newest capture that has iterations.
+    func showBeforeAfter() {
+        let candidates = Lifecycle.entries(in: preferences.captureFolderURL)
+            .filter { $0.urls.count == 2 }
+            .sorted { $0.modified > $1.modified }
+        for entry in candidates {
+            guard let sidecar = entry.urls.first(where: { $0.pathExtension == "json" }),
+                  let capture = try? IterationStore.load(sidecar), !capture.iterations.isEmpty else { continue }
+            beforeAfter.show(capture)
+            return
+        }
+        toast.show(HudText.plain("No verified capture yet · use Capture after"), near: Self.mainScreenCenterCG())
     }
 
     /// Menu bar: keep the newest capture out of the sweep.
@@ -232,7 +350,7 @@ final class AppState {
                 try? await Task.sleep(for: .milliseconds(33))
                 continue
             }
-            let fresh = await reader.snapshot(at: point, pid: targetPID(at: point))
+            let fresh = await reader.snapshot(at: point, candidates: windowCandidates(at: point), fallbackPID: context?.frontPID ?? 0)
             guard phase == .hovering else { return }
             let freshLevels = fresh.map { HitRefiner.selectionLevels(for: $0, at: point) } ?? []
             let freshElement = freshLevels.first ?? nil
@@ -272,13 +390,40 @@ final class AppState {
         renderHover()
     }
 
-    /// R3: the app owning the window under the point, else the app that was frontmost at hotkey time.
-    private func targetPID(at point: CGPoint) -> pid_t {
-        Geometry.windowOwner(at: point, windows: windows, excludingPID: ownPID)?.ownerPID ?? context?.frontPID ?? 0
+    /// R3: the on-screen windows under the point, front to back, in every layer. The reader asks
+    /// their owners in turn; the app frontmost at hotkey time is the fallback when none contains it.
+    private func windowCandidates(at point: CGPoint) -> [Geometry.WindowRecord] {
+        Geometry.windowCandidates(at: point, windows: windows, excludingPID: ownPID)
+    }
+
+    private func provider(at point: CGPoint) -> AppElementProvider {
+        AppElementProvider(reader: reader, candidates: windowCandidates(at: point), fallbackPID: context?.frontPID ?? 0)
+    }
+
+    /// R5: the source is the app that owns what was clicked. A normal window keeps the hotkey-time
+    /// context when it is the same app, and otherwise names the app's focused window. Anything else
+    /// (a desktop icon, a widget, a status item, a Dock item) is described afresh, with the window the
+    /// element itself sits in, if any: a widget says "Month", a desktop icon says none, rather than
+    /// whichever Finder window happens to be focused.
+    private func recollectContextIfNeeded(window: Geometry.WindowRecord?, snapshot: ElementSnapshot?) async {
+        guard let context else { return }
+        let pid = window?.ownerPID ?? context.frontPID
+        let isNormalWindow = (window?.layer ?? 0) == 0
+        guard !isNormalWindow || pid != context.frontPID else { return }
+        let title: ContextCollector.WindowTitle = isNormalWindow ? .focused : .known(snapshot.flatMap(Self.windowTitle(in:)))
+        if let clicked = await ContextCollector.collect(reader: reader, pid: pid, windowTitle: title), phase == .resolving {
+            self.context = clicked
+        }
+    }
+
+    private static func windowTitle(in snapshot: ElementSnapshot) -> String? {
+        ([snapshot.element] + snapshot.ancestors)
+            .first { ElementResolver.mapRole($0.role ?? "", subrole: $0.subrole) == "window" }
+            .flatMap { ElementResolver.nonEmpty($0.title) }
     }
 
     private func click(_ point: CGPoint) {
-        guard phase == .hovering, let context else { return }
+        guard phase == .hovering, context != nil else { return }
         switch action {
         case .point:
             break
@@ -301,21 +446,27 @@ final class AppState {
             return
         }
         Task {
-            let window = Geometry.windowOwner(at: point, windows: windows, excludingPID: ownPID)
-            let pid = window?.ownerPID ?? context.frontPID
             // What the user saw is what they clicked: keep the hovered selection (and its Option
             // depth) when the click is on or near it; otherwise resolve fresh with the lazy-tree retry.
             let element: ResolvedElement?
+            let snapshot: ElementSnapshot?
             let slack = HitRefiner.stickiness
             let hoverIsCurrent = !levels.isEmpty
-                && (lastHoverElement.map { $0.frame.cgRect.insetBy(dx: -slack, dy: -slack).contains(point) } ?? true)
-            if hoverIsCurrent {
-                element = selectedElement()
+                && (lastHoverElement.map { $0.frame.cgRect.insetBy(dx: -slack, dy: -slack).contains(point) } ?? false)
+            if hoverIsCurrent, let shown = selectedElement() {
+                element = shown
+                snapshot = lastHoverSnapshot
+            } else if levelIndex > 0, let shown = selectedElement() {
+                element = shown // an Option level chosen on purpose
+                snapshot = lastHoverSnapshot
             } else {
-                let snapshot = await ElementResolver.snapshotWithRetry(at: point, using: AppElementProvider(reader: reader, pid: pid))
+                // Nothing (or nothing specific) was hovered: read fresh, with the lazy-tree retry.
+                snapshot = await ElementResolver.snapshotWithRetry(at: point, using: provider(at: point))
                 element = snapshot.map { HitRefiner.selectionLevels(for: $0, at: point).first ?? nil } ?? nil
             }
             guard phase == .resolving else { return }
+            // The window that answered the hit test, else the normal window under the point.
+            let window = snapshot?.window ?? Geometry.windowOwner(at: point, windows: windows, excludingPID: ownPID)
             lockedElement = element
             if element == nil, let snapshot = lastHoverSnapshot {
                 // v0.2 R15: what sits around a point that has no element.
@@ -323,12 +474,8 @@ final class AppState {
                 lockedNearby = RegionResolver.nearby(point: point, among: neighborhood).map(\.element)
             }
 
-            // R5: the source is the app that owns the clicked window. The hotkey-time context is
-            // the fallback when the click lands on the frontmost app or outside any window.
-            if pid != context.frontPID, let clicked = await ContextCollector.collect(reader: reader, pid: pid) {
-                guard phase == .resolving else { return }
-                self.context = clicked
-            }
+            await recollectContextIfNeeded(window: window, snapshot: snapshot)
+            guard phase == .resolving else { return }
 
             let display = SelectionOverlay.displayFrameCG(containing: point)
             let rect = Geometry.cropRect(element: element?.frame.cgRect, clickPoint: point, window: window?.bounds, display: display)
@@ -356,7 +503,11 @@ final class AppState {
             return
         }
         Task {
-            let window = Geometry.windowOwner(at: start, windows: windows, excludingPID: ownPID)
+            // The frame belongs to whoever answers at its first corner: a normal window, or the
+            // desktop, a widget, or the menu bar behind an empty stretch of Dock or menu bar backdrop.
+            let hit = await reader.snapshot(at: start, candidates: windowCandidates(at: start), fallbackPID: context.frontPID)
+            guard phase == .resolving else { return }
+            let window = hit?.window ?? Geometry.windowOwner(at: start, windows: windows, excludingPID: ownPID)
             let pid = window?.ownerPID ?? context.frontPID
             var snapshots = await reader.elements(in: rect, pid: pid)
             var retry = 0
@@ -366,10 +517,8 @@ final class AppState {
                 snapshots = await reader.elements(in: rect, pid: pid)
             }
             guard phase == .resolving else { return }
-            if pid != context.frontPID, let clicked = await ContextCollector.collect(reader: reader, pid: pid) {
-                guard phase == .resolving else { return }
-                self.context = clicked
-            }
+            await recollectContextIfNeeded(window: window, snapshot: hit)
+            guard phase == .resolving else { return }
             let elements = RegionResolver.elements(in: rect, among: snapshots)
             lockedElement = RegionResolver.primary(among: snapshots, in: rect)
             lockedElements = elements
@@ -464,9 +613,14 @@ final class AppState {
             do {
                 let image = try await cropTask.value
                 // v0.3 R17: fix or reference, and the project root, from signals; touches the disk.
-                let decision = await Task.detached { ModeInference.infer(signals) }.value
+                // v0.4 R33: remember HEAD so Verify can diff against it later.
+                let (decision, head) = await Task.detached { () -> (ModeDecision, String?) in
+                    let decision = ModeInference.infer(signals)
+                    return (decision, decision.projectRoot.flatMap(GitFacts.head(at:)))
+                }.value
                 var source = context.source
                 source.projectRoot = decision.projectRoot
+                source.gitCommit = head
                 let now = Date()
                 var capture = Capture(
                     id: FileStore.makeID(date: now),

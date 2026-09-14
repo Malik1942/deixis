@@ -25,6 +25,14 @@ final class ModeInferenceTests: XCTestCase {
         XCTAssertEqual(ModeInference.infer(s, environment: environment()), ModeDecision(mode: .fix, projectRoot: nil, rule: .simulator))
     }
 
+    func testSimulatedAppGetsProjectRootFromDerivedDataProduct() {
+        var env = environment()
+        env.simulatorProjectRoot = { $0 == "com.inspireocean.app" ? "/Users/me/Code/Oryne" : nil }
+        let s = ModeSignals(bundleId: ModeInference.simulatorBundleId, isSimulator: true, simulatedBundleId: "com.inspireocean.app", bundlePath: "/Applications/Xcode.app/Contents/Developer/Applications/Simulator.app")
+        XCTAssertEqual(ModeInference.infer(s, environment: env), ModeDecision(mode: .fix, projectRoot: "/Users/me/Code/Oryne", rule: .simulator))
+        XCTAssertNil(ModeInference.infer(ModeSignals(bundleId: ModeInference.simulatorBundleId, isSimulator: true, simulatedBundleId: "com.other"), environment: env).projectRoot)
+    }
+
     // 3
     func testLocalhostHosts() {
         for host in ["localhost", "127.0.0.1", "0.0.0.0", "::1", "myapp.local", "LOCALHOST"] {

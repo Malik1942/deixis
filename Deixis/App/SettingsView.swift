@@ -33,7 +33,11 @@ struct GeneralSettings: View {
             Section {
                 // System Settings row: title and description in the label, the control trailing.
                 LabeledContent {
-                    HotkeyRecorder(hotkey: $preferences.hotkey, onBegin: { state.pauseHotkey() }, onEnd: { state.resumeHotkey() })
+                    HotkeyRecorder(
+                        hotkey: Binding(get: { preferences.hotkey }, set: { preferences.hotkey = $0 ?? .default }),
+                        fallback: .default,
+                        onBegin: { state.pauseHotkey() }, onEnd: { state.resumeHotkey() }
+                    )
                 } label: {
                     Text("Capture hotkey")
                     Text("Press a key with modifiers, or double-tap one modifier. Double-tap Command is used by Codex; double-tap Option by Claude Desktop.")
@@ -43,6 +47,17 @@ struct GeneralSettings: View {
                     Text("After you drag a region for Snap, Text, or Cut, handles let you fine-tune it. Press Return to capture, Esc to cancel.")
                 }
                 .toggleStyle(.switch)
+            }
+            Section {
+                ForEach(Preferences.hotkeyActions, id: \.self) { action in
+                    LabeledContent(action.capitalized) {
+                        HotkeyRecorder(
+                            hotkey: Binding(get: { preferences.actionHotkeys[action] }, set: { preferences.actionHotkeys[action] = $0 }),
+                            onBegin: { state.pauseHotkey() }, onEnd: { state.resumeHotkey() }
+                        )
+                    }
+                }
+                Footnote(text: "Snap, Text, Color, and Cut are also on the ball: press and hold it. Hotkeys are optional.")
             }
             Section {
                 LabeledContent("Capture folder") {
@@ -111,7 +126,9 @@ struct GeneralSettings: View {
 
 /// Records the next key press or modifier double-tap as the hotkey. Esc cancels.
 struct HotkeyRecorder: View {
-    @Binding var hotkey: Hotkey
+    @Binding var hotkey: Hotkey?
+    /// What "Default" restores; nil means the action can be left unassigned ("Clear").
+    var fallback: Hotkey? = nil
     let onBegin: () -> Void
     let onEnd: () -> Void
 
@@ -134,13 +151,17 @@ struct HotkeyRecorder: View {
         // The width sits on the label so the bordered button itself is the fixed-width control;
         // a frame on the button would leave invisible space around a short title.
         HStack(spacing: 8) {
-            if hotkey != .default, !recording {
-                Button("Reset") { hotkey = .default }
+            if !recording {
+                if let fallback, hotkey != fallback {
+                    Button("Reset") { hotkey = fallback }
+                } else if fallback == nil, hotkey != nil {
+                    Button("Clear") { hotkey = nil }
+                }
             }
             Button {
                 recording ? stop() : begin()
             } label: {
-                Text(recording ? (hint ?? "Press keys…") : hotkey.title)
+                Text(recording ? (hint ?? "Press keys…") : (hotkey?.title ?? "None"))
                     .lineLimit(1)
                     .frame(minWidth: 150)
             }

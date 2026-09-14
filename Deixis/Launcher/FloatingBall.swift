@@ -343,6 +343,11 @@ final class BallView: NSView {
         hypot(point.x - bounds.midX, point.y - bounds.midY) <= FloatingBall.Tokens.diameter / 2 + 2
     }
 
+    /// The ball is never the key window; without this the first click only activates it.
+    override func acceptsFirstMouse(for event: NSEvent?) -> Bool {
+        true
+    }
+
     func apply(_ state: FloatingBall.State, animated: Bool, waking: Bool = false) {
         current = state
         disc.apply(state, animated: animated, waking: waking)

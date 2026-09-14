@@ -35,6 +35,9 @@ private struct StatusMenu: View {
         Button("Capture (\(state.preferences.hotkey.symbol))") {
             state.beginCapture()
         }
+        Button("Capture after") { state.captureAfter() }
+        Button("Show before & after") { state.showBeforeAfter() }
+        Divider()
         Button("Snap") { state.beginAction(.snap) }
         Button("Text") { state.beginAction(.text) }
         Button("Color") { state.beginColorPick() }

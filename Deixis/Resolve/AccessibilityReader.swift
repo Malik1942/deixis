@@ -43,17 +43,46 @@ actor AccessibilityReader {
         }
     }
 
-    /// R3: per-app hit test, system-wide element as fallback. Nil when neither returns anything.
-    func snapshot(at point: CGPoint, pid: pid_t) -> ElementSnapshot? {
+    /// R3: the element under `point`, asked of the app that owns what the user sees there.
+    /// `candidates` are the on-screen windows containing the point, front to back (see
+    /// `Geometry.windowCandidates`). An owner that reports nothing at the point yields to the window
+    /// behind it: the Dock and the menu bar own screen-wide windows that are mostly empty, and the
+    /// Finder desktop lies under everything. A normal window whose app reports nothing ends the
+    /// search, since nothing behind it is visible; the system-wide element is the last resort there.
+    /// With no candidate at all, `fallbackPID` (the app frontmost at hotkey time) is asked.
+    /// The returned snapshot carries the window that answered.
+    func snapshot(at point: CGPoint, candidates: [Geometry.WindowRecord], fallbackPID: pid_t) -> ElementSnapshot? {
+        for window in candidates {
+            if var snapshot = snapshot(at: point, pid: window.ownerPID) {
+                snapshot.window = window
+                return snapshot
+            }
+            if window.layer == 0 {
+                guard var snapshot = systemWideSnapshot(at: point) else { return nil }
+                snapshot.window = window
+                return snapshot
+            }
+        }
+        if fallbackPID > 0, let snapshot = snapshot(at: point, pid: fallbackPID) { return snapshot }
+        return systemWideSnapshot(at: point)
+    }
+
+    /// Per-app hit test. Nil when the app has nothing at the point.
+    private func snapshot(at point: CGPoint, pid: pid_t) -> ElementSnapshot? {
         let app = AXUIElementCreateApplication(pid)
         enableAccessibilityIfNeeded(app: app, pid: pid)
-        if let element = hit(app, at: point) {
-            return snapshot(of: refine(element, at: point))
-        }
-        if let element = hit(AXUIElementCreateSystemWide(), at: point) {
-            return snapshot(of: refine(element, at: point))
-        }
-        return nil
+        guard let element = hit(app, at: point) else { return nil }
+        return snapshot(of: refine(element, at: point))
+    }
+
+    /// The system-wide hit test sees whatever is topmost, which under the overlay may be Deixis
+    /// itself; that answer is discarded.
+    private func systemWideSnapshot(at point: CGPoint) -> ElementSnapshot? {
+        guard let element = hit(AXUIElementCreateSystemWide(), at: point) else { return nil }
+        var pid: pid_t = 0
+        AXUIElementGetPid(element, &pid)
+        guard pid != ProcessInfo.processInfo.processIdentifier else { return nil }
+        return snapshot(of: refine(element, at: point))
     }
 
     /// R2 hover precision: a container hit is replaced by the best control among its descendants
@@ -283,12 +312,13 @@ actor AccessibilityReader {
     }
 }
 
-/// The reader bound to one process, as the resolver's provider.
+/// The reader bound to the windows under one point, as the resolver's provider.
 struct AppElementProvider: ElementProvider {
     let reader: AccessibilityReader
-    let pid: pid_t
+    let candidates: [Geometry.WindowRecord]
+    let fallbackPID: pid_t
 
     func snapshot(at point: CGPoint) async -> ElementSnapshot? {
-        await reader.snapshot(at: point, pid: pid)
+        await reader.snapshot(at: point, candidates: candidates, fallbackPID: fallbackPID)
     }
 }

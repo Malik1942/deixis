@@ -217,6 +217,10 @@
         "projectRoot": {
           "type": "string",
           "description": "Absolute path of the project directory that produced the app, when Deixis could infer it (DerivedData, an ancestor with .xcodeproj/.xcworkspace/Package.swift). Absent otherwise; never guessed."
+        },
+        "gitCommit": {
+          "type": "string",
+          "description": "HEAD of the project at capture time, when projectRoot is a git repository. Absent otherwise."
         }
       }
     },
@@ -381,7 +385,7 @@
             "string",
             "null"
           ],
-          "description": "Output of git diff --stat between the two SHAs."
+          "description": "Output of git diff --stat between gitBefore and gitAfter, or of the working tree against HEAD when they are equal."
         },
         "files": {
           "type": "array",
@@ -389,6 +393,10 @@
             "type": "string"
           },
           "description": "Repository-relative paths touched."
+        },
+        "frame": {
+          "$ref": "#/$defs/frame",
+          "description": "Where the element was found for this iteration, global screen points."
         }
       }
     },

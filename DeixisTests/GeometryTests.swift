@@ -62,4 +62,28 @@ final class GeometryTests: XCTestCase {
         XCTAssertEqual(Geometry.windowOwner(at: CGPoint(x: 1500, y: 700), windows: windows, excludingPID: 999)?.ownerPID, 777)
         XCTAssertNil(Geometry.windowOwner(at: point, windows: [windows[0], windows[1]], excludingPID: 999))
     }
+
+    // 6: desktop icons, widgets, and status items live in other layers. Candidates keep every layer,
+    // front to back, so the reader can ask the Dock, then the app, then Finder, in that order.
+    func testWindowCandidatesKeepEveryLayerFrontToBackExceptOwn() {
+        let screen = CGRect(x: 0, y: 0, width: 2056, height: 1329)
+        let windows: [Geometry.WindowRecord] = [
+            .init(ownerPID: 999, layer: 1000, bounds: screen),                                          // Deixis overlay
+            .init(ownerPID: 1109, layer: 25, bounds: CGRect(x: 1783, y: 0, width: 38, height: 39)),     // Wi-Fi status item
+            .init(ownerPID: 4242, layer: 24, bounds: CGRect(x: 0, y: 0, width: 2056, height: 39)),      // menu bar, credited to its owner
+            .init(ownerPID: 1282, layer: 20, bounds: screen),                                           // Dock (screen-wide)
+            .init(ownerPID: 45450, layer: 0, bounds: CGRect(x: 0, y: 101, width: 456, height: 972)),    // Simulator
+            .init(ownerPID: 1112, layer: -2147483601, bounds: CGRect(x: 8, y: 47, width: 180, height: 180)), // widget
+            .init(ownerPID: 1284, layer: -2147483603, bounds: screen),                                  // Finder desktop
+        ]
+        let inSimulator = Geometry.windowCandidates(at: CGPoint(x: 100, y: 150), windows: windows, excludingPID: 999)
+        XCTAssertEqual(inSimulator.map(\.ownerPID), [1282, 45450, 1112, 1284], "the widget is behind the Simulator window")
+        let onDesktop = Geometry.windowCandidates(at: CGPoint(x: 1500, y: 700), windows: windows, excludingPID: 999)
+        XCTAssertEqual(onDesktop.map(\.ownerPID), [1282, 1284])
+        let onWiFi = Geometry.windowCandidates(at: CGPoint(x: 1800, y: 20), windows: windows, excludingPID: 999)
+        XCTAssertEqual(onWiFi.map(\.ownerPID), [1109, 4242, 1282, 1284])
+        let onMenuTitle = Geometry.windowCandidates(at: CGPoint(x: 80, y: 20), windows: windows, excludingPID: 999)
+        XCTAssertEqual(onMenuTitle.map(\.ownerPID), [4242, 1282, 1284])
+        XCTAssertEqual(Geometry.windowOwner(at: CGPoint(x: 1500, y: 700), windows: windows, excludingPID: 999), nil, "Snap and Cut still take normal windows only")
+    }
 }

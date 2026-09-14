@@ -46,6 +46,23 @@ make this rounded, match the other pills
 - **The floating ball** rests as a faint disc, docks to the nearest edge when ignored, wakes as the cursor approaches, and starts a capture on click. Drag it to move it. Turn it off in Settings; the hotkey works either way.
 - **Drawn frames and text.** Drag on the overlay to capture a frame and every element inside it. When nothing has an identifier, the text in the image is recognized and listed, and the nearest labeled elements are named.
 
+## The other actions
+
+Point is the primary action. Four one-shot actions share its gesture and sit on the ball's ring (press and hold the ball) and in the menu bar. Actions that make an image keep a file for the retention period; actions that make text or a value keep nothing.
+
+- **Snap**: drag a region or click a window. PNG to the clipboard and the folder; hold ⌥ at release for clipboard only.
+- **Text**: drag a region or click an element. Recognized lines to the clipboard, nothing on disk.
+- **Color**: a magnifier follows the cursor; arrows nudge by a pixel, click copies the value. Hex, rgb, hsl, or SwiftUI, in sRGB or Display P3, chosen in Settings.
+- **Cut**: drag or click; the subject is cut onto a transparent background, PNG to the clipboard and the folder.
+- **Retention**: images older than the setting (30 days by default) move to the Trash on launch and daily. Pinned captures ("Pin last capture" in the menu) and captures an agent marked resolved stay.
+- Each action can have its own hotkey, recorded in Settings; none is assigned by default.
+
+## See what changed
+
+After a capture of your own app and an agent's edit, choose **Capture after** in the menu. Deixis finds the same element again in the running app by its identifier (then by role and label, then by the nearest frame), captures it, records the git facts, and opens **Before & After**: the two images side by side with one zoom, the diff stat and the files touched beneath, your note above. Each pass adds an iteration under the original capture; **Show before & after** reopens the newest one.
+
+Git facts need a project folder. Deixis finds it for Xcode builds, including apps running in the Simulator, through DerivedData; the sidecar records the commit at capture time, and the diff runs against it, or against the working tree when nothing was committed. Deixis never commits, never installs hooks, never talks to the network.
+
 ## Agent compatibility
 
 | Agent | Paste | Image | Status |
@@ -61,6 +78,7 @@ The image path comes first in the payload because terminal agents receive only t
 
 - Element quality depends on the target app's accessibility implementation. SwiftUI, AppKit, and the iOS Simulator work well. Electron and Chromium apps (Claude, VS Code, Slack, Chrome) build their tree only when asked; Deixis asks on first contact, and the first hover over such an app can take about half a second to sharpen. Figma, games, and custom-drawn UIs often expose little; Deixis then records `element: null`, says so in the payload, and still gives the agent the image and your note.
 - Hover picks the smallest real control near the cursor and sticks to it across padding; a whole-window group appears only in blank areas. Press Option to step to the parent.
+- The desktop and the menu bar are targets too. Desktop icons resolve through Finder, desktop widgets through Notification Center (the payload names the widget's window, for example `Month`), menu titles through the app that owns the menu bar, status items through Control Center or the app that placed them (`menuExtra · id=com.apple.menuextra.wifi`), and Dock items through the Dock. A normal window in front of any of these wins, since that is what is visible. Snap and Cut on a click still take a normal window only.
 - iOS Simulator: the per-app hit test reaches the simulated app's tree through public API, and the system-wide hit test returns the same element (confirmed Sep 13, 2026 on Xcode 26.6, iPhone 17 Pro, iOS 26.5). The tree is built lazily on first access; Deixis retries for up to 600 ms before giving up.
 - Which app the Simulator is showing is inferred from the most recently launched simulated process. With two apps launched in one device, the newer one is assumed.
 - Safari and Chrome tab URLs are not read in v0.1, so `url` is always null and the localhost rule for fix mode is dormant.
