@@ -420,10 +420,13 @@ final class AppState {
             let element: ResolvedElement?
             let slack = HitRefiner.stickiness
             let hoverIsCurrent = !levels.isEmpty
-                && (lastHoverElement.map { $0.frame.cgRect.insetBy(dx: -slack, dy: -slack).contains(point) } ?? true)
-            if hoverIsCurrent {
-                element = selectedElement()
+                && (lastHoverElement.map { $0.frame.cgRect.insetBy(dx: -slack, dy: -slack).contains(point) } ?? false)
+            if hoverIsCurrent, let shown = selectedElement() {
+                element = shown
+            } else if levelIndex > 0, let shown = selectedElement() {
+                element = shown // an Option level chosen on purpose
             } else {
+                // Nothing (or nothing specific) was hovered: read fresh, with the lazy-tree retry.
                 let snapshot = await ElementResolver.snapshotWithRetry(at: point, using: AppElementProvider(reader: reader, pid: pid))
                 element = snapshot.map { HitRefiner.selectionLevels(for: $0, at: point).first ?? nil } ?? nil
             }

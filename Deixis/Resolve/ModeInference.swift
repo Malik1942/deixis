@@ -41,21 +41,26 @@ struct ModeEnvironment: Sendable {
         simulatorProjectRoot: { bundleId in
             // Simulated apps run from the device container; the product that built them sits in
             // DerivedData/<Project-hash>/Build/Products/<Config>-iphonesimulator/<App>.app.
+            // Several products can match (worktrees, old builds); the newest one wins.
             let fm = FileManager.default
             guard let projects = try? fm.contentsOfDirectory(at: derivedDataFolder, includingPropertiesForKeys: nil) else { return nil }
+            var best: (modified: Date, root: String)?
             for project in projects {
                 let products = project.appending(path: "Build/Products")
                 guard let configs = try? fm.contentsOfDirectory(at: products, includingPropertiesForKeys: nil) else { continue }
                 for config in configs where config.lastPathComponent.contains("iphonesimulator") {
-                    guard let apps = try? fm.contentsOfDirectory(at: config, includingPropertiesForKeys: nil) else { continue }
+                    guard let apps = try? fm.contentsOfDirectory(at: config, includingPropertiesForKeys: [.contentModificationDateKey]) else { continue }
                     for app in apps where app.pathExtension == "app" {
                         guard Bundle(url: app)?.bundleIdentifier == bundleId,
                               let workspace = workspacePath(inDerivedDataFolder: project.path(percentEncoded: false)) else { continue }
-                        return ModeInference.directoryPath(URL(filePath: workspace).deletingLastPathComponent())
+                        let modified = (try? app.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate) ?? .distantPast
+                        if best == nil || modified > best!.modified {
+                            best = (modified, ModeInference.directoryPath(URL(filePath: workspace).deletingLastPathComponent()))
+                        }
                     }
                 }
             }
-            return nil
+            return best?.root
         }
     )
 
