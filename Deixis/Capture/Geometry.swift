@@ -67,14 +67,24 @@ enum Geometry {
 
     // MARK: Window hit-test (R3)
 
-    struct WindowRecord: Sendable, Equatable {
+    struct WindowRecord: Sendable, Equatable, Codable {
         var ownerPID: pid_t
         var layer: Int
         var bounds: CGRect
     }
 
     /// Topmost normal-layer window under `point`, skipping Deixis's own. `windows` is front to back.
+    /// This is what Snap and Cut take on a click, and the crop clamp when no element answered.
     static func windowOwner(at point: CGPoint, windows: [WindowRecord], excludingPID: pid_t) -> WindowRecord? {
         windows.first { $0.layer == 0 && $0.ownerPID != excludingPID && $0.bounds.contains(point) }
+    }
+
+    /// Every on-screen window under `point` in any layer, front to back, skipping Deixis's own. The
+    /// first is what the user sees there; the ones behind it matter only when its owner reports
+    /// nothing at the point. The Dock, the menu bar, and the Finder desktop each own a screen-wide
+    /// window that is mostly empty, so a desktop icon, a widget, or a status item is reached by
+    /// asking each owner in turn (see `AccessibilityReader.snapshot(at:candidates:fallbackPID:)`).
+    static func windowCandidates(at point: CGPoint, windows: [WindowRecord], excludingPID: pid_t) -> [WindowRecord] {
+        windows.filter { $0.ownerPID != excludingPID && $0.bounds.contains(point) }
     }
 }

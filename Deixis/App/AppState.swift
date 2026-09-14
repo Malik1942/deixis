@@ -344,7 +344,7 @@ final class AppState {
                 try? await Task.sleep(for: .milliseconds(33))
                 continue
             }
-            let fresh = await reader.snapshot(at: point, pid: targetPID(at: point))
+            let fresh = await reader.snapshot(at: point, candidates: windowCandidates(at: point), fallbackPID: context?.frontPID ?? 0)
             guard phase == .hovering else { return }
             let freshLevels = fresh.map { HitRefiner.selectionLevels(for: $0, at: point) } ?? []
             let freshElement = freshLevels.first ?? nil
@@ -384,13 +384,40 @@ final class AppState {
         renderHover()
     }
 
-    /// R3: the app owning the window under the point, else the app that was frontmost at hotkey time.
-    private func targetPID(at point: CGPoint) -> pid_t {
-        Geometry.windowOwner(at: point, windows: windows, excludingPID: ownPID)?.ownerPID ?? context?.frontPID ?? 0
+    /// R3: the on-screen windows under the point, front to back, in every layer. The reader asks
+    /// their owners in turn; the app frontmost at hotkey time is the fallback when none contains it.
+    private func windowCandidates(at point: CGPoint) -> [Geometry.WindowRecord] {
+        Geometry.windowCandidates(at: point, windows: windows, excludingPID: ownPID)
+    }
+
+    private func provider(at point: CGPoint) -> AppElementProvider {
+        AppElementProvider(reader: reader, candidates: windowCandidates(at: point), fallbackPID: context?.frontPID ?? 0)
+    }
+
+    /// R5: the source is the app that owns what was clicked. A normal window keeps the hotkey-time
+    /// context when it is the same app, and otherwise names the app's focused window. Anything else
+    /// (a desktop icon, a widget, a status item, a Dock item) is described afresh, with the window the
+    /// element itself sits in, if any: a widget says "Month", a desktop icon says none, rather than
+    /// whichever Finder window happens to be focused.
+    private func recollectContextIfNeeded(window: Geometry.WindowRecord?, snapshot: ElementSnapshot?) async {
+        guard let context else { return }
+        let pid = window?.ownerPID ?? context.frontPID
+        let isNormalWindow = (window?.layer ?? 0) == 0
+        guard !isNormalWindow || pid != context.frontPID else { return }
+        let title: ContextCollector.WindowTitle = isNormalWindow ? .focused : .known(snapshot.flatMap(Self.windowTitle(in:)))
+        if let clicked = await ContextCollector.collect(reader: reader, pid: pid, windowTitle: title), phase == .resolving {
+            self.context = clicked
+        }
+    }
+
+    private static func windowTitle(in snapshot: ElementSnapshot) -> String? {
+        ([snapshot.element] + snapshot.ancestors)
+            .first { ElementResolver.mapRole($0.role ?? "", subrole: $0.subrole) == "window" }
+            .flatMap { ElementResolver.nonEmpty($0.title) }
     }
 
     private func click(_ point: CGPoint) {
-        guard phase == .hovering, let context else { return }
+        guard phase == .hovering, context != nil else { return }
         switch action {
         case .point:
             break
@@ -413,24 +440,27 @@ final class AppState {
             return
         }
         Task {
-            let window = Geometry.windowOwner(at: point, windows: windows, excludingPID: ownPID)
-            let pid = window?.ownerPID ?? context.frontPID
             // What the user saw is what they clicked: keep the hovered selection (and its Option
             // depth) when the click is on or near it; otherwise resolve fresh with the lazy-tree retry.
             let element: ResolvedElement?
+            let snapshot: ElementSnapshot?
             let slack = HitRefiner.stickiness
             let hoverIsCurrent = !levels.isEmpty
                 && (lastHoverElement.map { $0.frame.cgRect.insetBy(dx: -slack, dy: -slack).contains(point) } ?? false)
             if hoverIsCurrent, let shown = selectedElement() {
                 element = shown
+                snapshot = lastHoverSnapshot
             } else if levelIndex > 0, let shown = selectedElement() {
                 element = shown // an Option level chosen on purpose
+                snapshot = lastHoverSnapshot
             } else {
                 // Nothing (or nothing specific) was hovered: read fresh, with the lazy-tree retry.
-                let snapshot = await ElementResolver.snapshotWithRetry(at: point, using: AppElementProvider(reader: reader, pid: pid))
+                snapshot = await ElementResolver.snapshotWithRetry(at: point, using: provider(at: point))
                 element = snapshot.map { HitRefiner.selectionLevels(for: $0, at: point).first ?? nil } ?? nil
             }
             guard phase == .resolving else { return }
+            // The window that answered the hit test, else the normal window under the point.
+            let window = snapshot?.window ?? Geometry.windowOwner(at: point, windows: windows, excludingPID: ownPID)
             lockedElement = element
             if element == nil, let snapshot = lastHoverSnapshot {
                 // v0.2 R15: what sits around a point that has no element.
@@ -438,12 +468,8 @@ final class AppState {
                 lockedNearby = RegionResolver.nearby(point: point, among: neighborhood).map(\.element)
             }
 
-            // R5: the source is the app that owns the clicked window. The hotkey-time context is
-            // the fallback when the click lands on the frontmost app or outside any window.
-            if pid != context.frontPID, let clicked = await ContextCollector.collect(reader: reader, pid: pid) {
-                guard phase == .resolving else { return }
-                self.context = clicked
-            }
+            await recollectContextIfNeeded(window: window, snapshot: snapshot)
+            guard phase == .resolving else { return }
 
             let display = SelectionOverlay.displayFrameCG(containing: point)
             let rect = Geometry.cropRect(element: element?.frame.cgRect, clickPoint: point, window: window?.bounds, display: display)
@@ -471,7 +497,11 @@ final class AppState {
             return
         }
         Task {
-            let window = Geometry.windowOwner(at: start, windows: windows, excludingPID: ownPID)
+            // The frame belongs to whoever answers at its first corner: a normal window, or the
+            // desktop, a widget, or the menu bar behind an empty stretch of Dock or menu bar backdrop.
+            let hit = await reader.snapshot(at: start, candidates: windowCandidates(at: start), fallbackPID: context.frontPID)
+            guard phase == .resolving else { return }
+            let window = hit?.window ?? Geometry.windowOwner(at: start, windows: windows, excludingPID: ownPID)
             let pid = window?.ownerPID ?? context.frontPID
             var snapshots = await reader.elements(in: rect, pid: pid)
             var retry = 0
@@ -481,10 +511,8 @@ final class AppState {
                 snapshots = await reader.elements(in: rect, pid: pid)
             }
             guard phase == .resolving else { return }
-            if pid != context.frontPID, let clicked = await ContextCollector.collect(reader: reader, pid: pid) {
-                guard phase == .resolving else { return }
-                self.context = clicked
-            }
+            await recollectContextIfNeeded(window: window, snapshot: hit)
+            guard phase == .resolving else { return }
             let elements = RegionResolver.elements(in: rect, among: snapshots)
             lockedElement = RegionResolver.primary(among: snapshots, in: rect)
             lockedElements = elements
