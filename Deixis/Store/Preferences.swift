@@ -100,6 +100,8 @@ final class Preferences {
     @ObservationIgnored private let defaults: UserDefaults
     /// Called after the hotkey changes so the monitor can restart.
     @ObservationIgnored var onHotkeyChange: (() -> Void)?
+    /// Called after the ball toggle changes so it can show or hide at once.
+    @ObservationIgnored var onBallEnabledChange: (() -> Void)?
 
     var hotkey: Hotkey {
         didSet {
@@ -113,7 +115,10 @@ final class Preferences {
     }
 
     var ballEnabled: Bool {
-        didSet { defaults.set(ballEnabled, forKey: Key.ballEnabled) }
+        didSet {
+            defaults.set(ballEnabled, forKey: Key.ballEnabled)
+            if ballEnabled != oldValue { onBallEnabledChange?() }
+        }
     }
 
     /// AppKit screen points; nil until the user moves the ball.

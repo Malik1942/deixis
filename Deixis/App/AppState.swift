@@ -18,6 +18,7 @@ final class AppState {
     @ObservationIgnored private let overlay = SelectionOverlay()
     @ObservationIgnored private let toast = Toast()
     @ObservationIgnored private var hotkey: HotkeyMonitor?
+    @ObservationIgnored private var ball: FloatingBall?
     @ObservationIgnored private var context: CaptureContext?
     @ObservationIgnored private var windows: [Geometry.WindowRecord] = []
     @ObservationIgnored private var hoverTask: Task<Void, Never>?
@@ -44,6 +45,8 @@ final class AppState {
             await MainActor.run { self?.userTeamIDs = teams }
         }
         preferences.onHotkeyChange = { [weak self] in self?.restartHotkey() }
+        preferences.onBallEnabledChange = { [weak self] in self?.updateBall() }
+        updateBall()
         overlay.onHover = { [weak self] point in self?.hover(point) }
         overlay.onClick = { [weak self] point in self?.click(point) }
         overlay.onCancel = { [weak self] in self?.cancel() }
@@ -58,6 +61,22 @@ final class AppState {
         let monitor = HotkeyMonitor(hotkey: preferences.hotkey) { [weak self] in self?.beginCapture() }
         monitor.start()
         hotkey = monitor
+    }
+
+    /// v0.3 R20: the ball follows the Settings toggle; first launch places it at the lower right.
+    private func updateBall() {
+        if preferences.ballEnabled {
+            guard ball == nil else { return }
+            let firstLaunch = preferences.ballPosition == nil
+            let newBall = FloatingBall(origin: preferences.ballPosition)
+            newBall.onPoint = { [weak self] in self?.beginCapture() }
+            newBall.onMoved = { [weak self] origin in self?.preferences.ballPosition = origin }
+            newBall.show(firstLaunch: firstLaunch)
+            ball = newBall
+        } else {
+            ball?.hide()
+            ball = nil
+        }
     }
 
     /// While the Settings recorder listens, the real hotkey must not fire.
