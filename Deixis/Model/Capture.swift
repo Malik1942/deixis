@@ -84,8 +84,10 @@ struct SourceInfo: Codable, Sendable, Equatable {
     var simulator: SimulatorInfo?
     /// The project directory that produced the app, when inference found one (v0.3).
     var projectRoot: String? = nil
+    /// The project's HEAD at capture time, when it is a repository (v0.4).
+    var gitCommit: String? = nil
 
-    private enum CodingKeys: String, CodingKey { case app, window, url, simulator, projectRoot }
+    private enum CodingKeys: String, CodingKey { case app, window, url, simulator, projectRoot, gitCommit }
 
     func encode(to encoder: any Encoder) throws {
         var c = encoder.container(keyedBy: CodingKeys.self)
@@ -94,6 +96,7 @@ struct SourceInfo: Codable, Sendable, Equatable {
         try c.encode(url, forKey: .url)
         try c.encode(simulator, forKey: .simulator)
         try c.encodeIfPresent(projectRoot, forKey: .projectRoot)
+        try c.encodeIfPresent(gitCommit, forKey: .gitCommit)
     }
 }
 
@@ -241,9 +244,11 @@ struct Iteration: Codable, Sendable, Equatable {
     var gitAfter: String?
     var diffStat: String?
     var files: [String]
+    /// Where the element was found this time, screen points (v0.4, optional).
+    var frame: Frame? = nil
 
     private enum CodingKeys: String, CodingKey {
-        case capturedAt, imagePath, gitBefore, gitAfter, diffStat, files
+        case capturedAt, imagePath, gitBefore, gitAfter, diffStat, files, frame
     }
 
     func encode(to encoder: any Encoder) throws {
@@ -254,6 +259,7 @@ struct Iteration: Codable, Sendable, Equatable {
         try c.encode(gitAfter, forKey: .gitAfter)
         try c.encode(diffStat, forKey: .diffStat)
         try c.encode(files, forKey: .files)
+        try c.encodeIfPresent(frame, forKey: .frame)
     }
 }
 

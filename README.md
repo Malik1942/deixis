@@ -57,6 +57,12 @@ Point is the primary action. Four one-shot actions share its gesture and sit on 
 - **Retention**: images older than the setting (30 days by default) move to the Trash on launch and daily. Pinned captures ("Pin last capture" in the menu) and captures an agent marked resolved stay.
 - Each action can have its own hotkey, recorded in Settings; none is assigned by default.
 
+## See what changed
+
+After a capture of your own app and an agent's edit, choose **Capture after** in the menu. Deixis finds the same element again in the running app by its identifier (then by role and label, then by the nearest frame), captures it, records the git facts, and opens **Before & After**: the two images side by side with one zoom, the diff stat and the files touched beneath, your note above. Each pass adds an iteration under the original capture; **Show before & after** reopens the newest one.
+
+Git facts need a project folder. Deixis finds it for Xcode builds, including apps running in the Simulator, through DerivedData; the sidecar records the commit at capture time, and the diff runs against it, or against the working tree when nothing was committed. Deixis never commits, never installs hooks, never talks to the network.
+
 ## Agent compatibility
 
 | Agent | Paste | Image | Status |

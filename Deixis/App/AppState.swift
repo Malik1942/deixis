@@ -51,6 +51,7 @@ final class AppState {
     @ObservationIgnored private var colorSession: ColorPickerSession?
     @ObservationIgnored private var clipboardOnlyPreset = false
     @ObservationIgnored private var sweepTask: Task<Void, Never>?
+    @ObservationIgnored private let beforeAfter = BeforeAfterWindow()
     /// R25: the last ten picked colors, in memory only.
     @ObservationIgnored private(set) var recentColors: [ColorValue] = []
     @ObservationIgnored private var clickPoint: CGPoint = .zero
@@ -155,6 +156,104 @@ final class AppState {
                 try? await Task.sleep(for: Lifecycle.sweepInterval)
             }
         }
+    }
+
+    // MARK: Verify (v0.4)
+
+    /// The newest Point capture: an image with a sidecar.
+    private func newestSidecar() -> URL? {
+        Lifecycle.entries(in: preferences.captureFolderURL)
+            .filter { $0.urls.count == 2 }
+            .max { $0.modified < $1.modified }?
+            .urls.first(where: { $0.pathExtension == "json" })
+    }
+
+    /// R31–R34: find the newest capture's element again in the running app, capture it, record the
+    /// git facts, append the iteration, and show the panel.
+    func captureAfter() {
+        guard phase == .idle else { return }
+        guard let sidecar = newestSidecar(), let capture = try? IterationStore.load(sidecar) else {
+            toast.show(HudText.plain("No capture to verify"), near: Self.mainScreenCenterCG())
+            return
+        }
+        guard let element = capture.element, element.role != ElementResolver.clusterRole else {
+            toast.show(HudText.plain("Nothing to re-find in the last capture"), near: Self.mainScreenCenterCG())
+            return
+        }
+        let bundleId = capture.source.app.bundleId
+        guard let app = NSRunningApplication.runningApplications(withBundleIdentifier: bundleId).first else {
+            toast.show(HudText.plain("\(capture.source.app.name) is not running"), near: Self.mainScreenCenterCG())
+            return
+        }
+        guard ScreenCapture.hasPermission() else {
+            fail(.noScreenRecordingPermission, nearRect: nil)
+            return
+        }
+        phase = .writing
+        let pid = app.processIdentifier
+        let name = element.identifier ?? element.label ?? element.role
+        Task {
+            var found: ResolvedElement?
+            var windowBounds: CGRect?
+            for attempt in 0..<ElementRefinder.retries {
+                let windows = WindowList.onScreen().filter { $0.ownerPID == pid && $0.layer == 0 }
+                let largest = windows.max { $0.bounds.width * $0.bounds.height < $1.bounds.width * $1.bounds.height }
+                windowBounds = largest?.bounds
+                let region = largest?.bounds ?? SelectionOverlay.displayFrameCG(containing: element.frame.cgRect.origin)
+                let snapshots = await reader.elements(in: region, pid: pid)
+                found = ElementRefinder.match(element, among: snapshots)
+                if found != nil { break }
+                if attempt < ElementRefinder.retries - 1 { try? await Task.sleep(for: ElementRefinder.retryInterval) }
+            }
+            guard let found else {
+                phase = .idle
+                toast.show(HudText.plain("Element not found · \(name)"), near: element.frame.cgRect)
+                return
+            }
+            do {
+                let center = CGPoint(x: found.frame.x + found.frame.w / 2, y: found.frame.y + found.frame.h / 2)
+                let display = SelectionOverlay.displayFrameCG(containing: center)
+                let crop = Geometry.cropRect(element: found.frame.cgRect, clickPoint: center, window: windowBounds, display: display)
+                let image = try await ScreenCapture.crop(crop)
+                let index = capture.iterations.count + 1
+                let afterURL = IterationStore.afterImageURL(for: sidecar, index: index)
+                try image.png.write(to: afterURL, options: .atomic)
+                FileStore.setFinderTags(FileStore.tags(for: capture) + ["after"], on: afterURL)
+                let root = capture.source.projectRoot
+                let before = capture.source.gitCommit
+                let change: GitChange = await Task.detached {
+                    root.map { GitFacts.changes(at: $0, since: before) } ?? GitChange(before: before, after: nil, diffStat: nil, files: [])
+                }.value
+                let iteration = Iteration(
+                    capturedAt: FileStore.isoTimestamp(date: Date()),
+                    imagePath: afterURL.path(percentEncoded: false),
+                    gitBefore: change.before, gitAfter: change.after, diffStat: change.diffStat, files: change.files,
+                    frame: found.frame
+                )
+                let updated = try IterationStore.append(iteration, to: sidecar)
+                phase = .idle
+                let summary = GitFacts.summaryLine(of: change.diffStat) ?? (root == nil ? "no project folder" : "no changes")
+                toast.show(HudText.plain("After #\(index) · \(summary)"), near: found.frame.cgRect)
+                beforeAfter.show(updated)
+            } catch {
+                phase = .idle
+                fail(.captureFailed(error), nearRect: found.frame.cgRect)
+            }
+        }
+    }
+
+    /// R35: the newest capture that has iterations.
+    func showBeforeAfter() {
+        let candidates = Lifecycle.entries(in: preferences.captureFolderURL)
+            .filter { $0.urls.count == 2 }
+            .sorted { $0.modified > $1.modified }
+        for entry in candidates {
+            guard let sidecar = entry.urls.first(where: { $0.pathExtension == "json" }),
+                  let capture = try? IterationStore.load(sidecar), !capture.iterations.isEmpty else { continue }
+            beforeAfter.show(capture)
+            return
+        }
+        toast.show(HudText.plain("No verified capture yet · use Capture after"), near: Self.mainScreenCenterCG())
     }
 
     /// Menu bar: keep the newest capture out of the sweep.
@@ -318,7 +417,7 @@ final class AppState {
     }
 
     private func click(_ point: CGPoint) {
-        guard phase == .hovering, let context else { return }
+        guard phase == .hovering, context != nil else { return }
         switch action {
         case .point:
             break
@@ -347,11 +446,15 @@ final class AppState {
             let snapshot: ElementSnapshot?
             let slack = HitRefiner.stickiness
             let hoverIsCurrent = !levels.isEmpty
-                && (lastHoverElement.map { $0.frame.cgRect.insetBy(dx: -slack, dy: -slack).contains(point) } ?? true)
-            if hoverIsCurrent {
-                element = selectedElement()
+                && (lastHoverElement.map { $0.frame.cgRect.insetBy(dx: -slack, dy: -slack).contains(point) } ?? false)
+            if hoverIsCurrent, let shown = selectedElement() {
+                element = shown
+                snapshot = lastHoverSnapshot
+            } else if levelIndex > 0, let shown = selectedElement() {
+                element = shown // an Option level chosen on purpose
                 snapshot = lastHoverSnapshot
             } else {
+                // Nothing (or nothing specific) was hovered: read fresh, with the lazy-tree retry.
                 snapshot = await ElementResolver.snapshotWithRetry(at: point, using: provider(at: point))
                 element = snapshot.map { HitRefiner.selectionLevels(for: $0, at: point).first ?? nil } ?? nil
             }
@@ -504,9 +607,14 @@ final class AppState {
             do {
                 let image = try await cropTask.value
                 // v0.3 R17: fix or reference, and the project root, from signals; touches the disk.
-                let decision = await Task.detached { ModeInference.infer(signals) }.value
+                // v0.4 R33: remember HEAD so Verify can diff against it later.
+                let (decision, head) = await Task.detached { () -> (ModeDecision, String?) in
+                    let decision = ModeInference.infer(signals)
+                    return (decision, decision.projectRoot.flatMap(GitFacts.head(at:)))
+                }.value
                 var source = context.source
                 source.projectRoot = decision.projectRoot
+                source.gitCommit = head
                 let now = Date()
                 var capture = Capture(
                     id: FileStore.makeID(date: now),
