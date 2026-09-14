@@ -132,17 +132,24 @@
   .nav .dl { display: inline-block; text-decoration: none; background: var(--accent); color: #fff; font-weight: 600; font-size: 13px; padding: 7px 14px; border-radius: 980px; }
   .nav a:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 4px; }
   @media (max-width: 720px) { .nav .links, .nav .by { display: none; } .nav .dl { margin-left: auto; } }
+
+  /* ribbon: the announcement strip under the nav */
+  .ribbon {
+    margin-inline: -20px; padding: 11px 20px;
+    text-align: center; font-size: 14px; line-height: 1.4; color: var(--ink);
+    background: color-mix(in srgb, var(--accent) 9%, var(--ground));
+    border-bottom: 1px solid color-mix(in srgb, var(--accent) 16%, var(--hair));
+  }
+  .ribbon p { margin: 0; text-wrap: balance; }
+  .ribbon b { font-weight: 600; }
+  .ribbon a { color: var(--accent); text-decoration: none; white-space: nowrap; }
+  .ribbon a:hover { text-decoration: underline; }
+  .ribbon a:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 4px; }
   html { scroll-behavior: smooth; scroll-padding-top: 64px; }
   @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
 
   /* hero */
   .hero { text-align: center; padding-block: 88px 48px; display: grid; gap: 20px; justify-items: center; }
-  .hero .eyebrow {
-    max-width: 64ch; margin-bottom: 2px;
-    font-size: 15px; font-weight: 400; line-height: 1.4; letter-spacing: -0.005em;
-    color: var(--muted); text-wrap: balance;
-  }
-  .hero .eyebrow b { color: var(--accent); font-weight: 600; }
   .app-icon {
     width: 128px; height: 128px;
     background-image: var(--icon);
@@ -397,9 +404,11 @@
     <a class="dl" href="https://github.com/Malik1942/deixis/releases/latest">Download</a>
   </div>
 </nav>
+<div class="ribbon">
+  <p><b>Made for the Palantir Product Design Show&nbsp;&amp;&nbsp;Tell.</b> v0.4 built in 3 hours. <a href="https://github.com/Malik1942/deixis/tags">See the commits&nbsp;›</a></p>
+</div>
 <main id="top">
   <header class="hero col">
-    <p class="eyebrow"><b>v0.4, built in 3 hours</b> for the Palantir Product Design Show &amp; Tell</p>
     <div class="app-icon" role="img" aria-label="Deixis app icon"></div>
     <p class="name">Deixis <span>for Mac</span></p>
     <h1>Agents don't understand <em>this</em>. Deixis&nbsp;does.</h1>
