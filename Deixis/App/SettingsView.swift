@@ -199,6 +199,14 @@ struct GeneralSettings: View {
                 .toggleStyle(.switch)
                 .disabled(!preferences.ballEnabled)
             }
+            Section {
+                LabeledContent {
+                    Button("Show…") { state.showHelp() }
+                } label: {
+                    Text("Deixis Help")
+                    Text("The one-page guide shown on first launch: every action, its hotkey, and the gestures on the overlay.")
+                }
+            }
         }
         .formStyle(.grouped)
         .task { refreshConflicts() }

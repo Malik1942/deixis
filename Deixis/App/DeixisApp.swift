@@ -41,7 +41,7 @@ struct DeixisApp: App {
     }
 }
 
-/// R10: Capture, Open capture folder, Settings…, Quit. Nothing else.
+/// R10: Capture, Open capture folder, Settings…, Quit; v0.4 Capture after; v0.5 Deixis Help.
 private struct StatusMenu: View {
     @Environment(AppState.self) private var state
     @Environment(\.openSettings) private var openSettings
@@ -67,6 +67,7 @@ private struct StatusMenu: View {
             openSettings()
         }
         .keyboardShortcut(",")
+        Button("Deixis Help") { state.showHelp() }
         Divider()
         Button("Quit Deixis") {
             NSApp.terminate(nil)

@@ -14,7 +14,7 @@ Deixis is a macOS menu bar tool. Press a hotkey, click one element in any app, t
    - **Accessibility**: reads what is under your cursor and listens for the hotkey. Without it nothing works.
    - **Screen Recording**: captures the pixels of the element. Asked on first launch; macOS applies a fresh grant after a relaunch, and offers to do that itself.
    - There is no third prompt. Nothing leaves the machine: no network, no telemetry, no accounts.
-4. A one-line hint under the ball says what to press. The first three times each action opens, a line at the bottom of the screen names its gestures. Both fade by themselves and never come back; there is nothing to dismiss.
+4. A one-page guide opens: every action, its hotkey, and the gestures on the overlay. Close it; reopen it any time from the menu bar (Deixis Help) or Settings. The first three times each action opens, a line at the bottom of the screen names its gestures, then fades by itself.
 
 ## Use
 
