@@ -44,6 +44,31 @@ private struct Footnote: View {
     }
 }
 
+/// A permission as System Settings would show it: the state at a glance, and a way to grant it when missing.
+private struct PermissionRow: View {
+    let title: String
+    let detail: String
+    let granted: Bool
+    let grant: () -> Void
+
+    var body: some View {
+        LabeledContent {
+            HStack(spacing: 8) {
+                Image(systemName: granted ? "checkmark.circle.fill" : "exclamationmark.circle.fill")
+                    .foregroundStyle(granted ? .green : .orange)
+                Text(granted ? "Granted" : "Not granted")
+                    .foregroundStyle(.secondary)
+                if !granted {
+                    Button("Grant…", action: grant)
+                }
+            }
+        } label: {
+            Text(title)
+            Text(detail)
+        }
+    }
+}
+
 /// Under a hotkey row: the system's warning triangle and what clashes. Never blocks.
 private struct ConflictNote: View {
     let text: String
@@ -62,10 +87,34 @@ struct GeneralSettings: View {
     @Environment(AppState.self) private var state
     /// R29: a warning under each hotkey row, by action name ("capture" for the capture hotkey).
     @State private var conflicts: [String: String] = [:]
+    /// The two grants Deixis needs, re-read while the window is open so a change in System Settings shows at once.
+    @State private var accessibilityGranted = AccessibilityReader.isTrusted(prompt: false)
+    @State private var screenRecordingGranted = ScreenCapture.hasPermission()
 
     var body: some View {
         @Bindable var preferences = state.preferences
         Form {
+            Section {
+                PermissionRow(
+                    title: "Accessibility",
+                    detail: "Reads what is under your cursor and listens for the hotkey.",
+                    granted: accessibilityGranted
+                ) {
+                    _ = AccessibilityReader.isTrusted(prompt: true)
+                    openPrivacyPane("Privacy_Accessibility")
+                }
+                PermissionRow(
+                    title: "Screen Recording",
+                    detail: "Captures the pixels of the element.",
+                    granted: screenRecordingGranted
+                ) {
+                    _ = ScreenCapture.requestPermission()
+                    openPrivacyPane("Privacy_ScreenCapture")
+                }
+                if !accessibilityGranted || !screenRecordingGranted {
+                    Footnote(text: "macOS ties each grant to the app's signature. After an update, or if a switch is on but Deixis still cannot capture, remove Deixis from the list and add /Applications/Deixis.app again.")
+                }
+            }
             Section {
                 // System Settings row: title and description in the label, the control trailing.
                 LabeledContent {
@@ -153,8 +202,25 @@ struct GeneralSettings: View {
         }
         .formStyle(.grouped)
         .task { refreshConflicts() }
+        .task {
+            while !Task.isCancelled {
+                refreshPermissions()
+                try? await Task.sleep(for: .seconds(1))
+            }
+        }
         .onChange(of: preferences.hotkey) { refreshConflicts() }
         .onChange(of: preferences.actionHotkeys) { refreshConflicts() }
+    }
+
+    private func refreshPermissions() {
+        accessibilityGranted = AccessibilityReader.isTrusted(prompt: false)
+        screenRecordingGranted = ScreenCapture.hasPermission()
+    }
+
+    private func openPrivacyPane(_ pane: String) {
+        if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?\(pane)") {
+            NSWorkspace.shared.open(url)
+        }
     }
 
     /// The clash inside Deixis that the recorder refuses; a clash with macOS is only shown afterwards.
