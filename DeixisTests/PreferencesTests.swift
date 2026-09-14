@@ -23,6 +23,58 @@ final class PreferencesTests: XCTestCase {
         XCTAssertEqual(p.myApps, [])
         XCTAssertEqual(p.organization, .none)
         XCTAssertTrue(p.adjustSelection)
+        XCTAssertEqual(p.actionHotkeys, Preferences.defaultActionHotkeys)
+        XCTAssertEqual(p.actionHotkeys["point"]?.title, "⌃⌥1")
+        XCTAssertEqual(p.actionHotkeys["snap"]?.title, "⌃⌥2")
+        XCTAssertEqual(p.actionHotkeys["text"]?.title, "⌃⌥3")
+        XCTAssertEqual(p.actionHotkeys["color"]?.title, "⌃⌥4")
+        XCTAssertEqual(p.actionHotkeys["cut"]?.title, "⌃⌥5")
+        XCTAssertNil(Preferences.defaultActionHotkey("nope"))
+    }
+
+    // R29: a recorded hotkey and a cleared one both survive a relaunch; the rest stay default.
+    func testActionHotkeyRecordAndClearPersist() {
+        let defaults = isolatedDefaults()
+        let p = Preferences(defaults: defaults)
+        var changes = 0
+        p.onActionHotkeysChange = { changes += 1 }
+        let custom = Hotkey.chord(keyCode: 1, modifiers: [.command, .shift], key: "S")
+        p.setActionHotkey(custom, for: "snap")
+        p.setActionHotkey(custom, for: "snap")
+        p.setActionHotkey(nil, for: "text")
+        XCTAssertEqual(changes, 2, "only real changes restart the monitor")
+
+        let again = Preferences(defaults: defaults)
+        XCTAssertEqual(again.actionHotkeys["snap"], custom)
+        XCTAssertNil(again.actionHotkeys["text"], "a cleared action stays cleared")
+        XCTAssertEqual(again.actionHotkeys["point"], Preferences.defaultActionHotkey("point"))
+        XCTAssertEqual(again.actionHotkeys["color"], Preferences.defaultActionHotkey("color"))
+        XCTAssertEqual(again.actionHotkeys["cut"], Preferences.defaultActionHotkey("cut"))
+
+        again.setActionHotkey(Preferences.defaultActionHotkey("snap"), for: "snap")
+        again.setActionHotkey(Preferences.defaultActionHotkey("text"), for: "text")
+        XCTAssertEqual(Preferences(defaults: defaults).actionHotkeys, Preferences.defaultActionHotkeys)
+    }
+
+    // v0.3 early builds stored only what the user recorded; those stay, the rest take the defaults.
+    func testLegacyActionHotkeysMigrate() throws {
+        let defaults = isolatedDefaults()
+        let custom = Hotkey.chord(keyCode: 7, modifiers: [.command, .option], key: "X")
+        defaults.set(try JSONEncoder().encode(["cut": custom]), forKey: Preferences.Key.actionHotkeys)
+        let p = Preferences(defaults: defaults)
+        XCTAssertEqual(p.actionHotkeys["cut"], custom)
+        XCTAssertEqual(p.actionHotkeys["snap"], Preferences.defaultActionHotkey("snap"))
+        XCTAssertEqual(p.actionHotkeys.count, 5)
+    }
+
+    func testActionUsingHotkey() {
+        let p = Preferences(defaults: isolatedDefaults())
+        XCTAssertEqual(p.action(using: .doubleTap(.control)), "capture")
+        XCTAssertNil(p.action(using: .doubleTap(.control), excluding: "capture"))
+        XCTAssertEqual(p.action(using: Preferences.defaultActionHotkey("snap")!), "snap")
+        XCTAssertNil(p.action(using: Preferences.defaultActionHotkey("snap")!, excluding: "snap"))
+        XCTAssertEqual(p.action(using: Preferences.defaultActionHotkey("snap")!, excluding: "text"), "snap")
+        XCTAssertNil(p.action(using: .chord(keyCode: 0, modifiers: [.command], key: "A")))
     }
 
     // 2

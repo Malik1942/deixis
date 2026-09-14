@@ -44,6 +44,10 @@ final class FloatingBall {
     var onMoved: ((CGPoint) -> Void)?
     /// A ring segment was chosen; `clipboardOnly` when ⌥ was held.
     var onAction: ((Ring.Segment, Bool) -> Void)?
+    /// R29: each segment's hotkey, shown beside its name on the ring.
+    var ringHints: [Ring.Segment: String] = [:] {
+        didSet { ring.hints = ringHints }
+    }
     /// Settings "Auto-hide": idle, the disc tucks into the nearest edge. Off, it stays where it is.
     var autoHide = true {
         didSet {

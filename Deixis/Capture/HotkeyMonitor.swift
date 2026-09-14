@@ -1,88 +1,133 @@
 import AppKit
 
-/// R1: the capture hotkey. A double-tap of one modifier within 350 ms (Control by default) or a
-/// recorded chord (v0.3). Global monitors for other apps, local monitors for our own windows.
-/// Global key monitors need Accessibility trust, which Deixis already requires.
+/// R1/R29: the hotkeys. Each binding is a double-tap of one modifier within 350 ms (Control by
+/// default, for Point) or a chord (⌃⌥ and a digit by default, one per action). One event tap
+/// serves every binding: a matched chord is swallowed so it never also reaches the frontmost app;
+/// double-taps pass through, since a modifier press is harmless. Without Accessibility trust the
+/// tap cannot be made and `NSEvent` monitors observe instead.
 @MainActor
 final class HotkeyMonitor {
+    struct Binding {
+        let hotkey: Hotkey
+        let fire: @MainActor () -> Void
+
+        init(_ hotkey: Hotkey, fire: @escaping @MainActor () -> Void) {
+            self.hotkey = hotkey
+            self.fire = fire
+        }
+    }
+
     static let window: TimeInterval = 0.35
     private static let rightCommandKeyCode: UInt16 = 54
+    private static let all: NSEvent.ModifierFlags = [.control, .command, .option, .shift]
 
-    let hotkey: Hotkey
-    private let onFire: @MainActor () -> Void
-    private var globalMonitor: Any?
-    private var localMonitor: Any?
-    private var modifierWasDown = false
-    private var lastModifierDown: TimeInterval?
+    let bindings: [Binding]
+    private var tap: KeyEventTap?
+    private var monitors: [Any] = []
+    private var heldModifiers: NSEvent.ModifierFlags = []
+    private var lastTap: (modifier: HotkeyModifier, rightKey: Bool, time: TimeInterval)?
 
-    init(hotkey: Hotkey = .default, onFire: @escaping @MainActor () -> Void) {
-        self.hotkey = hotkey
-        self.onFire = onFire
+    /// True while the tap is in place, so matched chords stop at Deixis.
+    var swallowsChords: Bool { tap != nil }
+
+    init(bindings: [Binding]) {
+        self.bindings = bindings
+    }
+
+    /// One binding, for the tests and the simple case.
+    convenience init(hotkey: Hotkey, onFire: @escaping @MainActor () -> Void) {
+        self.init(bindings: [Binding(hotkey, fire: onFire)])
     }
 
     func start() {
-        guard globalMonitor == nil else { return }
-        switch hotkey {
-        case .doubleTap:
-            globalMonitor = NSEvent.addGlobalMonitorForEvents(matching: .flagsChanged) { [weak self] event in
-                let flags = event.modifierFlags, keyCode = event.keyCode, timestamp = event.timestamp
-                MainActor.assumeIsolated { self?.handleFlags(flags, keyCode: keyCode, timestamp: timestamp) }
-            }
-            localMonitor = NSEvent.addLocalMonitorForEvents(matching: .flagsChanged) { [weak self] event in
-                let flags = event.modifierFlags, keyCode = event.keyCode, timestamp = event.timestamp
-                MainActor.assumeIsolated { self?.handleFlags(flags, keyCode: keyCode, timestamp: timestamp) }
-                return event
-            }
-        case .chord:
-            globalMonitor = NSEvent.addGlobalMonitorForEvents(matching: .keyDown) { [weak self] event in
-                let flags = event.modifierFlags, keyCode = event.keyCode
-                _ = MainActor.assumeIsolated { self?.handleKey(flags, keyCode: keyCode) }
-            }
-            localMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
-                let flags = event.modifierFlags, keyCode = event.keyCode
-                let consumed = MainActor.assumeIsolated { self?.handleKey(flags, keyCode: keyCode) ?? false }
-                return consumed ? nil : event
-            }
+        guard tap == nil, monitors.isEmpty, !bindings.isEmpty else { return }
+        heldModifiers = []
+        lastTap = nil
+        if let tap = KeyEventTap(handler: { [weak self] event in self?.handle(event) ?? false }) {
+            self.tap = tap
+            return
+        }
+        let mask: NSEvent.EventTypeMask = [.keyDown, .flagsChanged]
+        if let global = NSEvent.addGlobalMonitorForEvents(matching: mask, handler: { [weak self] event in
+            guard let keyEvent = KeyEventTap.KeyEvent(event) else { return }
+            MainActor.assumeIsolated { _ = self?.handle(keyEvent) }
+        }) {
+            monitors.append(global)
+        }
+        if let local = NSEvent.addLocalMonitorForEvents(matching: mask, handler: { [weak self] event in
+            guard let keyEvent = KeyEventTap.KeyEvent(event) else { return event }
+            let swallow = MainActor.assumeIsolated { self?.handle(keyEvent) ?? false }
+            return swallow ? nil : event
+        }) {
+            monitors.append(local)
         }
     }
 
     func stop() {
-        if let globalMonitor { NSEvent.removeMonitor(globalMonitor) }
-        if let localMonitor { NSEvent.removeMonitor(localMonitor) }
-        globalMonitor = nil
-        localMonitor = nil
+        tap?.stop()
+        tap = nil
+        for monitor in monitors { NSEvent.removeMonitor(monitor) }
+        monitors.removeAll()
+        heldModifiers = []
+        lastTap = nil
+    }
+
+    /// Returns true when the event was one of our chords, so the caller swallows it.
+    func handle(_ event: KeyEventTap.KeyEvent) -> Bool {
+        switch event.kind {
+        case .flagsChanged:
+            handleFlags(event.flags, keyCode: event.keyCode, timestamp: event.timestamp)
+            return false
+        case .keyDown:
+            return handleKey(event.flags, keyCode: event.keyCode, isRepeat: event.isRepeat)
+        }
     }
 
     // MARK: Double-tap
 
-    /// Fires on the second rising edge of the modifier inside the window, with no other modifier held.
+    /// Fires on the second rising edge of the same modifier inside the window, with no other
+    /// modifier held at either press.
     func handleFlags(_ flags: NSEvent.ModifierFlags, keyCode: UInt16, timestamp: TimeInterval) {
-        guard case .doubleTap(let modifier) = hotkey else { return }
-        if modifier == .rightCommand, keyCode != Self.rightCommandKeyCode { return }
-        let flag = Self.flag(for: modifier)
-        let down = flags.contains(flag)
-        let all: NSEvent.ModifierFlags = [.control, .command, .option, .shift]
-        let otherModifier = !flags.intersection(all.subtracting(flag)).isEmpty
-        defer { modifierWasDown = down }
-        guard down, !modifierWasDown else { return }
-        guard !otherModifier else { lastModifierDown = nil; return }
-        if let last = lastModifierDown, timestamp - last <= Self.window {
-            lastModifierDown = nil
-            onFire()
+        let held = flags.intersection(Self.all)
+        let rising = held.subtracting(heldModifiers)
+        heldModifiers = held
+        guard !rising.isEmpty else { return }
+        guard rising == held, let modifier = Self.modifier(for: rising) else {
+            lastTap = nil
+            return
+        }
+        let rightKey = modifier == .command && keyCode == Self.rightCommandKeyCode
+        if let last = lastTap, last.modifier == modifier, timestamp - last.time <= Self.window {
+            lastTap = nil
+            let bothRight = last.rightKey && rightKey
+            for binding in bindings {
+                switch binding.hotkey {
+                case .doubleTap(let wanted) where wanted == modifier: binding.fire()
+                case .doubleTap(.rightCommand) where modifier == .command && bothRight: binding.fire()
+                default: break
+                }
+            }
         } else {
-            lastModifierDown = timestamp
+            lastTap = (modifier, rightKey, timestamp)
         }
     }
 
     // MARK: Chord
 
-    /// Returns true when the event was the hotkey (and fires).
+    /// Returns true when the key with these modifiers is a bound chord (and fires it, unless the
+    /// key is auto-repeating: a held chord fires once and stays swallowed).
     @discardableResult
-    func handleKey(_ flags: NSEvent.ModifierFlags, keyCode: UInt16) -> Bool {
-        guard case .chord(let wantedCode, let wantedModifiers, _) = hotkey,
-              Self.matches(keyCode: keyCode, flags: flags, wantedCode: wantedCode, wantedModifiers: wantedModifiers)
-        else { return false }
-        onFire()
+    func handleKey(_ flags: NSEvent.ModifierFlags, keyCode: UInt16, isRepeat: Bool = false) -> Bool {
+        let matched = bindings.filter { binding in
+            if case .chord(let wantedCode, let wantedModifiers, _) = binding.hotkey {
+                return Self.matches(keyCode: keyCode, flags: flags, wantedCode: wantedCode, wantedModifiers: wantedModifiers)
+            }
+            return false
+        }
+        guard !matched.isEmpty else { return false }
+        if !isRepeat {
+            for binding in matched { binding.fire() }
+        }
         return true
     }
 
@@ -90,12 +135,14 @@ final class HotkeyMonitor {
         keyCode == wantedCode && KeyModifiers(flags) == wantedModifiers
     }
 
-    static func flag(for modifier: HotkeyModifier) -> NSEvent.ModifierFlags {
-        switch modifier {
-        case .control: .control
-        case .option: .option
-        case .shift: .shift
-        case .command, .rightCommand: .command
+    /// The one modifier in `flags`; nil for none or several. Right Command is told apart by key code, not flag.
+    static func modifier(for flags: NSEvent.ModifierFlags) -> HotkeyModifier? {
+        switch flags {
+        case [.control]: .control
+        case [.option]: .option
+        case [.shift]: .shift
+        case [.command]: .command
+        default: nil
         }
     }
 }
