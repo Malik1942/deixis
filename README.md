@@ -55,7 +55,7 @@ Point is the primary action. Four one-shot actions share its gesture and sit on 
 - **Color**: a magnifier follows the cursor; arrows nudge by a pixel, click copies the value. Hex, rgb, hsl, or SwiftUI, in sRGB or Display P3, chosen in Settings.
 - **Cut**: drag or click; the subject is cut onto a transparent background, PNG to the clipboard and the folder.
 - **Retention**: images older than the setting (30 days by default) move to the Trash on launch and daily. Pinned captures ("Pin last capture" in the menu) and captures an agent marked resolved stay.
-- Each action can have its own hotkey, recorded in Settings; none is assigned by default.
+- Each action has a hotkey: ⌃⌥ and its number in the menu, ⌃⌥1 Point through ⌃⌥5 Cut. The ring shows the numbers. Re-record or clear any of them in Settings, which warns when a chord is also a macOS shortcut.
 
 ## See what changed
 

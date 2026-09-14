@@ -32,16 +32,16 @@ private struct StatusMenu: View {
     @Environment(\.openSettings) private var openSettings
 
     var body: some View {
-        Button("Capture (\(state.preferences.hotkey.symbol))") {
+        Button(captureTitle) {
             state.beginCapture()
         }
         Button("Capture after") { state.captureAfter() }
         Button("Show before & after") { state.showBeforeAfter() }
         Divider()
-        Button("Snap") { state.beginAction(.snap) }
-        Button("Text") { state.beginAction(.text) }
-        Button("Color") { state.beginColorPick() }
-        Button("Cut") { state.beginAction(.cut) }
+        Button(title("Snap", "snap")) { state.beginAction(.snap) }
+        Button(title("Text", "text")) { state.beginAction(.text) }
+        Button(title("Color", "color")) { state.beginColorPick() }
+        Button(title("Cut", "cut")) { state.beginAction(.cut) }
         Divider()
         Button("Pin last capture") { state.pinLastCapture() }
         Button("Open capture folder") {
@@ -57,6 +57,19 @@ private struct StatusMenu: View {
             NSApp.terminate(nil)
         }
         .keyboardShortcut("q")
+    }
+
+    /// "Capture (⌃⌃ or ⌃⌥1)": the capture hotkey and, when Point has one, its action hotkey.
+    private var captureTitle: String {
+        var keys = [state.preferences.hotkey.symbol]
+        if let point = state.preferences.actionHotkeys["point"]?.symbol { keys.append(point) }
+        return "Capture (\(keys.joined(separator: " or ")))"
+    }
+
+    /// "Snap (⌃⌥2)"; just the name when the action has no hotkey.
+    private func title(_ name: String, _ action: String) -> String {
+        guard let symbol = state.preferences.actionHotkeys[action]?.symbol else { return name }
+        return "\(name) (\(symbol))"
     }
 }
 

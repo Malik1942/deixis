@@ -24,8 +24,24 @@ private struct Footnote: View {
     }
 }
 
+/// Under a hotkey row: the system's warning triangle and what clashes. Never blocks.
+private struct ConflictNote: View {
+    let text: String
+    var body: some View {
+        HStack(alignment: .firstTextBaseline, spacing: 4) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .foregroundStyle(.yellow)
+            Text(text)
+        }
+        .font(.footnote)
+        .foregroundStyle(.secondary)
+    }
+}
+
 struct GeneralSettings: View {
     @Environment(AppState.self) private var state
+    /// R29: a warning under each hotkey row, by action name ("capture" for the capture hotkey).
+    @State private var conflicts: [String: String] = [:]
 
     var body: some View {
         @Bindable var preferences = state.preferences
@@ -36,11 +52,13 @@ struct GeneralSettings: View {
                     HotkeyRecorder(
                         hotkey: Binding(get: { preferences.hotkey }, set: { preferences.hotkey = $0 ?? .default }),
                         fallback: .default,
+                        rejects: { rejection(for: $0, action: "capture") },
                         onBegin: { state.pauseHotkey() }, onEnd: { state.resumeHotkey() }
                     )
                 } label: {
                     Text("Capture hotkey")
                     Text("Press a key with modifiers, or double-tap one modifier. Double-tap Command is used by Codex; double-tap Option by Claude Desktop.")
+                    if let warning = conflicts["capture"] { ConflictNote(text: warning) }
                 }
                 Toggle(isOn: $preferences.adjustSelection) {
                     Text("Adjust selection before capturing")
@@ -50,14 +68,20 @@ struct GeneralSettings: View {
             }
             Section {
                 ForEach(Preferences.hotkeyActions, id: \.self) { action in
-                    LabeledContent(action.capitalized) {
+                    LabeledContent {
                         HotkeyRecorder(
-                            hotkey: Binding(get: { preferences.actionHotkeys[action] }, set: { preferences.actionHotkeys[action] = $0 }),
+                            hotkey: Binding(get: { preferences.actionHotkeys[action] }, set: { preferences.setActionHotkey($0, for: action) }),
+                            fallback: Preferences.defaultActionHotkey(action),
+                            clearable: true,
+                            rejects: { rejection(for: $0, action: action) },
                             onBegin: { state.pauseHotkey() }, onEnd: { state.resumeHotkey() }
                         )
+                    } label: {
+                        Text(action.capitalized)
+                        if let warning = conflicts[action] { ConflictNote(text: warning) }
                     }
                 }
-                Footnote(text: "Snap, Text, Color, and Cut are also on the ball: press and hold it. Hotkeys are optional.")
+                Footnote(text: "Control-Option and the action's number, in menu order; the ring shows each number. Point also answers to the capture hotkey above. Snap, Text, Color, and Cut are on the ball too: press and hold it.")
             }
             Section {
                 LabeledContent("Capture folder") {
@@ -108,6 +132,25 @@ struct GeneralSettings: View {
             }
         }
         .formStyle(.grouped)
+        .task { refreshConflicts() }
+        .onChange(of: preferences.hotkey) { refreshConflicts() }
+        .onChange(of: preferences.actionHotkeys) { refreshConflicts() }
+    }
+
+    /// The clash inside Deixis that the recorder refuses; a clash with macOS is only shown afterwards.
+    private func rejection(for hotkey: Hotkey, action: String) -> String? {
+        state.preferences.action(using: hotkey, excluding: action).map { HotkeyConflict.deixis(action: $0).message }
+    }
+
+    private func refreshConflicts() {
+        let preferences = state.preferences
+        var found: [String: String] = [:]
+        found["capture"] = HotkeyConflicts.check(preferences.hotkey, for: "capture", in: preferences).first?.message
+        for action in Preferences.hotkeyActions {
+            guard let hotkey = preferences.actionHotkeys[action] else { continue }
+            found[action] = HotkeyConflicts.check(hotkey, for: action, in: preferences).first?.message
+        }
+        conflicts = found
     }
 
     private func chooseFolder(_ preferences: Preferences) {
@@ -127,8 +170,12 @@ struct GeneralSettings: View {
 /// Records the next key press or modifier double-tap as the hotkey. Esc cancels.
 struct HotkeyRecorder: View {
     @Binding var hotkey: Hotkey?
-    /// What "Default" restores; nil means the action can be left unassigned ("Clear").
+    /// What "Reset" restores.
     var fallback: Hotkey? = nil
+    /// Whether the action may be left without a hotkey ("Clear"); implied when there is no fallback.
+    var clearable = false
+    /// A reason to refuse what was just pressed (shown in the button, recording goes on), or nil to take it.
+    var rejects: (Hotkey) -> String? = { _ in nil }
     let onBegin: () -> Void
     let onEnd: () -> Void
 
@@ -154,7 +201,8 @@ struct HotkeyRecorder: View {
             if !recording {
                 if let fallback, hotkey != fallback {
                     Button("Reset") { hotkey = fallback }
-                } else if fallback == nil, hotkey != nil {
+                }
+                if hotkey != nil, clearable || fallback == nil {
                     Button("Clear") { hotkey = nil }
                 }
             }
@@ -210,7 +258,12 @@ struct HotkeyRecorder: View {
                 hint = "Add ⌘, ⌥, ⌃ or ⇧"
                 return
             }
-            hotkey = .chord(keyCode: keyCode, modifiers: modifiers, key: name)
+            let chord = Hotkey.chord(keyCode: keyCode, modifiers: modifiers, key: name)
+            if let reason = rejects(chord) {
+                hint = reason
+                return
+            }
+            hotkey = chord
             stop()
         case .flagsChanged:
             let modifiers = KeyModifiers(flags)
@@ -226,7 +279,13 @@ struct HotkeyRecorder: View {
             }
             guard let single else { lastTap = nil; return }
             if let last = lastTap, last.modifier == single, timestamp - last.time <= HotkeyMonitor.window {
-                hotkey = .doubleTap(single)
+                let tap = Hotkey.doubleTap(single)
+                if let reason = rejects(tap) {
+                    hint = reason
+                    lastTap = nil
+                    return
+                }
+                hotkey = tap
                 stop()
             } else {
                 lastTap = (single, timestamp)
