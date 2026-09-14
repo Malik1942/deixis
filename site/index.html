@@ -227,21 +227,21 @@
   .term .k { color: #6ab0ff; }
 
   /* payload with what each line is for */
-  .payload-wrap { display: grid; grid-template-columns: 1.35fr 1fr; gap: 28px; align-items: start; }
+  .payload-wrap { display: grid; gap: 24px; }
   pre.payload {
     margin: 0; background: var(--code-bg); border: 1px solid var(--hair); border-radius: 12px;
     padding: 18px 20px; overflow-x: auto; line-height: 1.6; font-size: 13px;
   }
   pre.payload .h { color: var(--muted); }
   pre.payload .k { color: var(--accent); }
-  .notes { display: grid; gap: 14px; padding-top: 6px; }
+  .notes { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 32px; }
   .note { display: grid; gap: 2px; font-size: 15px; padding-left: 14px; border-left: 2px solid var(--hair); }
   .note b { font-weight: 600; }
   .note span { color: var(--muted); }
 
   /* the fallback ladder: what the label reads at each rung */
   .ladder { display: grid; gap: 10px; }
-  .rung { display: grid; grid-template-columns: 26px 1fr 1.3fr; gap: 16px; align-items: center; padding: 14px 16px; border-radius: 12px; background: var(--surface); box-shadow: 0 0 0 1px var(--hair); }
+  .rung { display: grid; grid-template-columns: 26px auto 1fr; gap: 18px; align-items: center; padding: 14px 16px; border-radius: 12px; background: var(--surface); box-shadow: 0 0 0 1px var(--hair); }
   .rung .n { color: var(--muted); font-variant-numeric: tabular-nums; font-size: 13px; }
   .rung .chip { justify-self: start; background: var(--hud); border: 1px solid var(--hud-edge); border-radius: 6px; padding: 3px 8px; font-size: 12px; white-space: nowrap; }
   .rung .chip code { font-size: 0.95em; }
@@ -249,31 +249,41 @@
   .rung p { color: var(--muted); font-size: 14px; }
   .rung b { color: var(--ink); font-weight: 600; }
 
-  .actions { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
-  .action { display: grid; gap: 10px; padding: 20px 18px; background: var(--surface); border-radius: 16px; box-shadow: 0 0 0 1px var(--hair); align-content: start; }
+  .actions { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+  .action { display: grid; gap: 8px; padding: 18px 16px; background: var(--surface); border-radius: 16px; box-shadow: 0 0 0 1px var(--hair); align-content: start; }
   .action svg { width: 36px; height: 36px; color: var(--accent); }
   .action h3 { font-size: 19px; }
   .action p { font-size: 14px; color: var(--muted); }
   .action .keeps { font-size: 12px; color: var(--muted); margin-top: 2px; }
   .rulebox { margin-top: 18px; font-size: 15px; color: var(--muted); }
 
-  .split { display: grid; grid-template-columns: 1.1fr 1fr; gap: 40px; align-items: center; }
-  .ba { position: relative; aspect-ratio: 4 / 3; border-radius: 16px; overflow: hidden; background: var(--frame); box-shadow: var(--shadow); }
-  .ba .pane { position: absolute; inset: 14% 0 0 0; display: grid; place-items: center; }
-  .ba .pane.before { right: 46%; }
-  .ba .pane.after { left: 54%; }
-  .ba .btn-old { width: 62%; height: 15%; background: var(--accent); border-radius: 6px; opacity: .85; }
-  .ba .btn-new { width: 62%; height: 15%; background: var(--accent); border-radius: 980px; }
-  .ba .divider { position: absolute; top: 14%; bottom: 0; left: 50%; width: 2px; background: var(--surface); box-shadow: 0 0 0 1px var(--hair); }
-  .ba .knob { position: absolute; top: 50%; left: 50%; width: 26px; height: 26px; transform: translate(-50%, -50%); border-radius: 50%; background: var(--surface); box-shadow: 0 1px 4px rgba(0,0,0,.25); }
-  .ba .note { position: absolute; top: 0; left: 0; right: 0; height: 14%; display: flex; align-items: center; padding-inline: 16px; font-size: 13px; color: var(--muted); background: var(--surface); border-bottom: 1px solid var(--hair); }
-  .ba .tags { position: absolute; bottom: 10px; left: 12px; right: 12px; display: flex; gap: 8px; font-size: 11.5px; color: var(--muted); }
-  .ba .tags span { background: var(--surface); border-radius: 6px; padding: 3px 7px; box-shadow: 0 0 0 1px var(--hair); }
-  .ba .side { position: absolute; top: 16%; font-size: 11px; color: var(--muted); text-transform: none; }
-  .ba .side.l { left: 12px; } .ba .side.r { left: calc(50% + 12px); }
+  .split { display: grid; grid-template-columns: 1.15fr 1fr; gap: 40px; align-items: center; }
+  .ba {
+    border-radius: 14px; overflow: hidden; background: var(--surface); box-shadow: var(--shadow), 0 0 0 1px var(--hair);
+    font-size: 12px; color: var(--muted);
+  }
+  .ba .chrome { height: 30px; background: var(--frame-chrome); border-bottom: 1px solid var(--hair); display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; padding-inline: 10px; }
+  .ba .chrome .dots { display: flex; gap: 6px; }
+  .ba .chrome .dots i { width: 10px; height: 10px; border-radius: 50%; background: var(--hair); display: block; }
+  .ba .chrome .title { font-weight: 600; color: var(--muted); font-size: 12px; }
+  .ba .memo { padding: 12px 14px 10px; color: var(--ink); font-size: 14px; }
+  .ba .panes { position: relative; display: grid; grid-template-columns: 1fr 1fr; gap: 2px; background: var(--hair); margin-inline: 14px; border-radius: 8px; overflow: hidden; }
+  .ba .pane { position: relative; aspect-ratio: 45 / 26; background: var(--frame); display: grid; place-items: center; padding: 10%; }
+  .ba .pane .tag { position: absolute; top: 8px; left: 10px; font-size: 11px; color: var(--muted); }
+  .ba .pane .btn-old { width: 78%; height: 30%; background: var(--accent); border-radius: 6px; opacity: .85; }
+  .ba .pane .btn-new { width: 78%; height: 30%; background: var(--accent); border-radius: 980px; }
+  .ba .divider { position: absolute; top: 0; bottom: 0; left: 50%; width: 2px; background: var(--surface); transform: translateX(-1px); }
+  .ba .knob { position: absolute; top: 50%; left: 50%; width: 22px; height: 22px; transform: translate(-50%, -50%); border-radius: 50%; background: var(--surface); box-shadow: 0 1px 4px rgba(0,0,0,.25); display: grid; place-items: center; }
+  .ba .knob::before { content: ""; width: 8px; height: 8px; border-left: 1.5px solid var(--muted); border-right: 1.5px solid var(--muted); }
+  .ba .facts { display: grid; gap: 6px; padding: 12px 14px 14px; font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 11.5px; }
+  .ba .facts .stat { color: var(--ink); }
+  .ba .facts .stat b { font-weight: 600; }
+  .ba .facts .plus { color: #30a46c; } .ba .facts .minus { color: #e5484d; }
+  .ba .facts .file { display: flex; justify-content: space-between; gap: 12px; }
 
   .shot { display: grid; justify-items: center; }
-  .shot img { max-width: 100%; width: 588px; height: auto; display: block; }
+  .shot img { max-width: 100%; width: 588px; height: auto; display: block;
+    -webkit-mask-image: linear-gradient(to bottom, #000 98%, transparent 100%); mask-image: linear-gradient(to bottom, #000 98%, transparent 100%); }
 
   .grid2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 24px 40px; }
   .grid2 .item { display: grid; grid-template-columns: 28px 1fr; gap: 4px 14px; align-items: start; }
@@ -297,7 +307,7 @@
   @media (max-width: 720px) {
     .hero { padding-block: 56px 36px; }
     .app-icon { width: 96px; height: 96px; border-radius: 21.5px; }
-    .grid2, .payload-wrap { grid-template-columns: 1fr; }
+    .grid2, .notes { grid-template-columns: 1fr; }
     .steps { grid-template-columns: 1fr; gap: 16px; }
     .step { grid-template-columns: 224px 1fr; align-items: center; gap: 20px; }
     .step .vis { height: 96px; padding: 12px; }
@@ -411,14 +421,14 @@ make this rounded, match the other pills</pre>
     <div class="ladder">
       <div class="rung"><span class="n">1</span><span class="chip">button · <code>id=captureButton</code></span><p><b>Element</b> with a declared identifier. The best case.</p></div>
       <div class="rung"><span class="n">2</span><span class="chip">button · "Save changes"</span><p><b>Label only.</b> The nearest labeled neighbors are named too.</p></div>
-      <div class="rung"><span class="n">3</span><span class="chip">frame · 450×130 · 6 elements</span><p><b>Drawn frame.</b> Drag on the overlay; every element inside is listed.</p></div>
-      <div class="rung"><span class="n">4</span><span class="chip">text · "Save changes" "Cancel"</span><p><b>Text and neighbors.</b> Words in the image are recognized and listed.</p></div>
-      <div class="rung"><span class="n">5</span><span class="chip dash">element: null</span><p><b>Image.</b> The payload says so, and still carries the image and your note.</p></div>
+      <div class="rung"><span class="n">3</span><span class="chip">frame · 450×130 · 6 elements</span><p><b>Drawn frame.</b> Drag on the overlay; everything inside is listed.</p></div>
+      <div class="rung"><span class="n">4</span><span class="chip">text · "Save changes" "Cancel"</span><p><b>Text and neighbors.</b> Words in the image are recognized.</p></div>
+      <div class="rung"><span class="n">5</span><span class="chip dash">element: null</span><p><b>Image.</b> The payload says so, and still carries your note.</p></div>
     </div>
   </section>
 
-  <section class="wide">
-    <div class="sect-head col" style="margin-inline: auto;">
+  <section class="col">
+    <div class="sect-head">
       <h2>Four more, on the same gesture</h2>
       <p class="lede">Press and hold the ball for the ring.</p>
     </div>
@@ -440,18 +450,24 @@ make this rounded, match the other pills</pre>
         <h3>Cut</h3><p>The subject on a transparent background.</p><p class="keeps">Keeps a file</p>
       </div>
     </div>
-    <p class="rulebox col" style="margin-inline: auto;">One rule decides what stays: actions that make an image keep a file for 30 days. Actions that make text or a value keep nothing.</p>
+    <p class="rulebox">One rule decides what stays: actions that make an image keep a file for 30 days. Actions that make text or a value keep nothing.</p>
   </section>
 
   <section class="col">
     <div class="split">
-      <div class="ba" aria-label="Before and after: the same button, square-cornered before and pill-shaped after, with a slide divider">
-        <div class="note">make this rounded, match the other pills</div>
-        <span class="side l">Before</span><span class="side r">After</span>
-        <div class="pane before"><div class="btn-old"></div></div>
-        <div class="pane after"><div class="btn-new"></div></div>
-        <div class="divider"></div><div class="knob"></div>
-        <div class="tags"><span>2 files changed</span><span>+12 −4</span><span>a3f9c1e → working tree</span></div>
+      <div class="ba" role="img" aria-label="The Before and After window: the note on top, two captures of the same button side by side with a slide divider, square-cornered before and pill-shaped after, and the git diff stat beneath">
+        <div class="chrome"><div class="dots"><i></i><i></i><i></i></div><span class="title">Before &amp; After</span><span></span></div>
+        <div class="memo">make this rounded, match the other pills</div>
+        <div class="panes">
+          <div class="pane"><span class="tag">Before</span><div class="btn-old"></div></div>
+          <div class="pane"><span class="tag">After</span><div class="btn-new"></div></div>
+          <div class="divider"></div><div class="knob"></div>
+        </div>
+        <div class="facts">
+          <div class="stat"><b>2 files changed</b> · <span class="plus">+12</span> <span class="minus">−4</span> · a3f9c1e → working tree</div>
+          <div class="file"><span>Sources/Capture/CaptureButton.swift</span><span><span class="plus">+9</span> <span class="minus">−3</span></span></div>
+          <div class="file"><span>Sources/DesignSystem/Pill.swift</span><span><span class="plus">+3</span> <span class="minus">−1</span></span></div>
+        </div>
       </div>
       <div class="sect-head" style="margin: 0;">
         <h2>See what changed</h2>
@@ -467,7 +483,7 @@ make this rounded, match the other pills</pre>
       <p class="lede">The one place Deixis is a window. Every default works on first launch.</p>
     </div>
     <figure class="shot" style="margin: 0;">
-      <img src="assets/settings-dark.png" width="1176" height="1036" alt="Deixis Settings window, General tab: capture hotkey set to double-tap Control, a toggle to adjust the selection before capturing, and per-action hotkeys for Snap, Text, Color, and Cut">
+      <img src="assets/settings-dark.png" width="1176" height="912" alt="Deixis Settings window, General tab: capture hotkey set to double-tap Control, a toggle to adjust the selection before capturing, and per-action hotkeys for Snap, Text, Color, and Cut">
     </figure>
   </section>
 
