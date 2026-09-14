@@ -146,8 +146,9 @@ enum MarkdownBuilder {
         return String(createdAt.prefix(16)).replacingOccurrences(of: "T", with: " ")
     }
 
-    /// Integers print without a fraction; anything else keeps one decimal.
+    /// Rounded to one decimal; integers print without a fraction (57.9999 → 58, 893.67 → 893.7).
     static func number(_ d: Double) -> String {
-        d.rounded() == d ? String(Int(d)) : String(format: "%.1f", d)
+        let tenths = (d * 10).rounded() / 10
+        return tenths == tenths.rounded() ? String(Int(tenths)) : String(format: "%.1f", tenths)
     }
 }

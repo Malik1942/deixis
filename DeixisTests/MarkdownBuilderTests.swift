@@ -165,6 +165,13 @@ final class MarkdownBuilderTests: XCTestCase {
         XCTAssertFalse(md.contains("### Elements in frame"))
     }
 
+    func testNumberFormatting() {
+        XCTAssertEqual(MarkdownBuilder.number(57.99999), "58")
+        XCTAssertEqual(MarkdownBuilder.number(58.0), "58")
+        XCTAssertEqual(MarkdownBuilder.number(893.6667), "893.7")
+        XCTAssertEqual(MarkdownBuilder.number(0.04), "0")
+    }
+
     func testCaptureJSONRoundTripsWithExplicitNulls() throws {
         let c = capture(element: nil)
         let encoder = JSONEncoder()
