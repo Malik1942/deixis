@@ -40,7 +40,8 @@ final class Ring {
 
     enum Tokens {
         static let outerRadius: CGFloat = 92
-        static let innerRadius: CGFloat = 22
+        /// The center is the disc as it looks under the cursor, so the ring reads as growing from it.
+        static var innerRadius: CGFloat { FloatingBall.Tokens.diameter / 2 * FloatingBall.Tokens.hoverScale }
         static let holdDelay: TimeInterval = 0.3
         static let labelDelay: TimeInterval = 0.2
         static let iconRadius: CGFloat = 54
@@ -58,7 +59,7 @@ final class Ring {
         panel.level = .screenSaver
         panel.isOpaque = false
         panel.backgroundColor = .clear
-        panel.hasShadow = false
+        panel.hasShadow = true // the same lift the disc has
         panel.ignoresMouseEvents = true
         panel.hidesOnDeactivate = false
         panel.isReleasedWhenClosed = false
@@ -77,6 +78,7 @@ final class Ring {
         view.showLabels(false)
         view.highlight(nil)
         panel.orderFrontRegardless()
+        view.unfold()
         NSAnimationContext.runAnimationGroup { context in
             context.duration = DesignTokens.reveal
             context.timingFunction = CAMediaTimingFunction(name: .easeOut)
@@ -93,7 +95,7 @@ final class Ring {
     /// The segment under `point` (AppKit screen), updating the highlight.
     @discardableResult
     func hover(at point: CGPoint, optionHeld: Bool) -> Segment? {
-        let segment = Self.segment(for: CGPoint(x: point.x - center.x, y: point.y - center.y))
+        let segment = Self.segment(for: CGPoint(x: point.x - center.x, y: point.y - center.y), innerRadius: Tokens.innerRadius)
         hovered = segment
         view.highlight(segment)
         view.showOptionBadge(optionHeld)
@@ -102,6 +104,7 @@ final class Ring {
 
     func close() {
         labelTask?.cancel()
+        view.fold()
         NSAnimationContext.runAnimationGroup { context in
             context.duration = DesignTokens.dismiss
             context.timingFunction = CAMediaTimingFunction(name: .easeIn)
@@ -123,9 +126,10 @@ final class Ring {
     }
 }
 
-/// `label.bg` disc with four wedges, outline symbols, labels that fade in, the filled hand at center.
+/// The disc's glass at ring size (the system's clear glass on macOS 26, `label.bg` before) with
+/// four wedges, outline symbols, labels that fade in, and the filled hand at center. It unfolds
+/// from the disc on the system spring and folds back on close.
 final class RingView: NSView {
-    private let material = NSVisualEffectView()
     private let wedges = WedgeView()
     private var icons: [Ring.Segment: NSImageView] = [:]
     private var labels: [Ring.Segment: NSTextField] = [:]
@@ -135,13 +139,21 @@ final class RingView: NSView {
     override init(frame frameRect: NSRect) {
         super.init(frame: frameRect)
         wantsLayer = true
-        layer?.cornerRadius = frameRect.width / 2
-        layer?.masksToBounds = true
-        material.material = .hudWindow
-        material.blendingMode = .behindWindow
-        material.state = .active
-        material.frame = bounds
-        addSubview(material)
+        if #available(macOS 26.0, *) {
+            let glass = NSGlassEffectView(frame: bounds)
+            glass.style = .clear
+            glass.cornerRadius = frameRect.width / 2
+            addSubview(glass)
+        } else {
+            let material = NSVisualEffectView(frame: bounds)
+            material.material = .hudWindow
+            material.blendingMode = .behindWindow
+            material.state = .active
+            material.wantsLayer = true
+            material.layer?.cornerRadius = frameRect.width / 2
+            material.layer?.masksToBounds = true
+            addSubview(material)
+        }
         wedges.frame = bounds
         addSubview(wedges)
 
@@ -180,12 +192,12 @@ final class RingView: NSView {
             }
         }
 
-        if let image = NSImage(systemSymbolName: "hand.point.up.left.fill", accessibilityDescription: "Point") {
-            image.isTemplate = true
-            hand.image = image.withSymbolConfiguration(.init(pointSize: 14, weight: .regular))
-        }
+        // The same hand, at the same size, as the disc shows when awake.
+        hand.image = DiscView.handImage
+        hand.imageScaling = .scaleProportionallyUpOrDown
         hand.contentTintColor = .labelColor
-        hand.frame = NSRect(x: center.x - 10, y: center.y - 10, width: 20, height: 20)
+        let handSide = FloatingBall.Tokens.diameter - 2 * FloatingBall.Tokens.iconInset
+        hand.frame = NSRect(x: center.x - handSide / 2, y: center.y - handSide / 2, width: handSide, height: handSide)
         addSubview(hand)
     }
 
@@ -206,6 +218,37 @@ final class RingView: NSView {
 
     func showOptionBadge(_ visible: Bool) {
         for badge in badges.values { badge.alphaValue = visible ? 1 : 0 }
+    }
+
+    // MARK: Motion
+
+    /// Grows out of the disc: from the disc's size to full on the system spring.
+    func unfold() {
+        guard let layer else { return }
+        layer.removeAnimation(forKey: "fold")
+        layer.transform = CATransform3DIdentity
+        guard !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion else { return }
+        let spring = CASpringAnimation(keyPath: "transform")
+        spring.fromValue = centeredScale(FloatingBall.Tokens.diameter / bounds.width, in: bounds)
+        spring.toValue = CATransform3DIdentity
+        spring.mass = 1
+        spring.stiffness = Spring.wake.stiffness
+        spring.damping = Spring.wake.dampingCoefficient
+        spring.duration = spring.settlingDuration
+        layer.add(spring, forKey: "unfold")
+    }
+
+    /// Settles back toward the disc while the panel fades.
+    func fold() {
+        guard let layer, !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion else { return }
+        let ease = CABasicAnimation(keyPath: "transform")
+        ease.fromValue = layer.presentation()?.transform ?? CATransform3DIdentity
+        ease.toValue = centeredScale(0.85, in: bounds)
+        ease.duration = DesignTokens.dismiss
+        ease.timingFunction = CAMediaTimingFunction(name: .easeIn)
+        ease.fillMode = .forwards
+        ease.isRemovedOnCompletion = false
+        layer.add(ease, forKey: "fold")
     }
 }
 
