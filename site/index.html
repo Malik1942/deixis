@@ -15,11 +15,15 @@
     --stage: #0a84ff;
     --hud: rgba(255, 255, 255, 0.78);
     --hud-edge: rgba(0, 0, 0, 0.08);
+    --glass: rgba(255, 255, 255, 0.22);
+    --glass-edge: rgba(255, 255, 255, 0.55);
     --frame: #e9e9ee;
     --frame-chrome: #f7f7fa;
     --dim: rgba(0, 0, 0, 0.2);
     --code-bg: #ffffff;
+    --key-bg: #ffffff;
     --shadow: 0 1px 2px rgba(0,0,0,.06), 0 12px 32px rgba(0,0,0,.08);
+    --icon-shadow: 0 2px 4px rgba(0,0,0,.10), 0 14px 28px rgba(0,0,0,.16);
     --icon: url("assets/icon-light.png");
     color-scheme: light;
   }
@@ -34,11 +38,15 @@
       --stage: #0b6fe0;
       --hud: rgba(30, 30, 32, 0.78);
       --hud-edge: rgba(255, 255, 255, 0.12);
+      --glass: rgba(255, 255, 255, 0.10);
+      --glass-edge: rgba(255, 255, 255, 0.28);
       --frame: #2c2c2e;
       --frame-chrome: #3a3a3c;
       --dim: rgba(0, 0, 0, 0.32);
       --code-bg: #1c1c1e;
+      --key-bg: #2c2c2e;
       --shadow: 0 1px 2px rgba(0,0,0,.4), 0 12px 32px rgba(0,0,0,.5);
+      --icon-shadow: 0 2px 4px rgba(0,0,0,.4), 0 14px 28px rgba(0,0,0,.5);
       --icon: url("assets/icon-dark.png");
       color-scheme: dark;
     }
@@ -53,11 +61,15 @@
     --stage: #0b6fe0;
     --hud: rgba(30, 30, 32, 0.78);
     --hud-edge: rgba(255, 255, 255, 0.12);
+    --glass: rgba(255, 255, 255, 0.10);
+    --glass-edge: rgba(255, 255, 255, 0.28);
     --frame: #2c2c2e;
     --frame-chrome: #3a3a3c;
     --dim: rgba(0, 0, 0, 0.32);
     --code-bg: #1c1c1e;
+    --key-bg: #2c2c2e;
     --shadow: 0 1px 2px rgba(0,0,0,.4), 0 12px 32px rgba(0,0,0,.5);
+    --icon-shadow: 0 2px 4px rgba(0,0,0,.4), 0 14px 28px rgba(0,0,0,.5);
     --icon: url("assets/icon-dark.png");
     color-scheme: dark;
   }
@@ -79,6 +91,7 @@
     font-family: ui-monospace, "SF Mono", Menlo, Monaco, Consolas, monospace;
     font-size: 0.86em;
   }
+  svg { display: block; }
 
   .col { max-width: 760px; margin-inline: auto; }
   .wide { max-width: 980px; margin-inline: auto; }
@@ -90,22 +103,24 @@
   p { margin: 0; }
   .lede { font-size: 21px; line-height: 1.4; color: var(--muted); font-weight: 400; letter-spacing: -0.01em; }
   .muted { color: var(--muted); }
-  .eyebrow { font-size: 13px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); font-weight: 600; }
   .small { font-size: 14px; line-height: 1.45; }
 
   /* hero */
-  .hero { text-align: center; padding-block: 96px 56px; display: grid; gap: 22px; justify-items: center; }
+  .hero { text-align: center; padding-block: 88px 48px; display: grid; gap: 20px; justify-items: center; }
   .app-icon {
-    width: 112px; height: 112px;
+    width: 128px; height: 128px;
     background-image: var(--icon);
-    background-size: 128% 128%; /* the render carries the system margin */
-    background-position: center;
+    background-size: 100% 100%;          /* the render is the squircle itself, edge to edge; never crop it */
     background-repeat: no-repeat;
+    border-radius: 29px;                 /* 22.37% of the edge, so the shadow follows the squircle */
+    box-shadow: var(--icon-shadow);
   }
-  .hero h1 { max-width: 14ch; }
+  .hero .name { font-size: 21px; font-weight: 600; letter-spacing: -0.01em; margin-top: 6px; }
+  .hero .name span { color: var(--muted); font-weight: 400; }
+  .hero h1 { max-width: 22ch; }
   .hero h1 em { font-style: italic; font-weight: 600; }
-  .hero .lede { max-width: 34ch; }
-  .cta { display: flex; gap: 10px 22px; align-items: center; flex-wrap: wrap; justify-content: center; margin-top: 6px; }
+  .hero .lede { max-width: 38ch; }
+  .cta { display: flex; gap: 10px 22px; align-items: center; flex-wrap: wrap; justify-content: center; margin-top: 4px; }
   .btn {
     display: inline-block; text-decoration: none;
     background: var(--accent); color: #fff;
@@ -126,14 +141,13 @@
     background: var(--stage);
     box-shadow: var(--shadow);
     overflow: hidden;
-    margin-top: 40px;
+    margin-top: 36px;
   }
   .stage .app {
     position: absolute; inset: 9% 12% 0 12%;
     background: var(--surface);
     border-radius: 14px 14px 0 0;
     box-shadow: 0 8px 30px rgba(0,0,0,.18);
-    padding: 0;
     overflow: hidden;
   }
   .stage .chrome { height: 34px; background: var(--frame-chrome); border-bottom: 1px solid var(--hair); display: flex; align-items: center; gap: 7px; padding-inline: 12px; }
@@ -166,51 +180,84 @@
     position: absolute; left: 60%; bottom: 18.5%; width: 3%; min-width: 16px; aspect-ratio: 1; color: var(--ink);
     filter: drop-shadow(0 1px 1px rgba(0,0,0,.35));
   }
-  .stage.paused .highlight, .stage.paused .label, .stage.paused .cursor { animation: none; }
+  /* the ball, docked at the right edge as it rests */
+  .stage .ball {
+    position: absolute; right: -2.2%; top: 44%; width: 4.4%; min-width: 26px; aspect-ratio: 1; border-radius: 50%;
+    background: var(--glass); border: 1px solid var(--glass-edge);
+    -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
+    box-shadow: 0 1px 6px rgba(0,0,0,.18);
+  }
   figcaption { margin-top: 14px; font-size: 14px; color: var(--muted); text-align: center; }
 
   /* sections */
-  section { padding-block: 72px 0; }
-  .sect-head { display: grid; gap: 12px; margin-bottom: 32px; max-width: 640px; }
+  section { padding-block: 80px 0; }
+  .sect-head { display: grid; gap: 10px; margin-bottom: 32px; max-width: 640px; }
   .sect-head .lede { font-size: 19px; }
-  hr.rule { border: 0; border-top: 1px solid var(--hair); margin: 88px auto 0; max-width: 760px; }
 
-  .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 28px; }
-  .step { display: grid; gap: 8px; align-content: start; }
-  .step .n { font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
-  .step kbd {
-    font-family: inherit; font-size: 13px; font-weight: 600;
-    border: 1px solid var(--hair); border-bottom-width: 2px; border-radius: 6px; padding: 1px 7px; background: var(--surface);
+  /* three steps, each with the thing you see */
+  .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
+  .step { display: grid; gap: 12px; align-content: start; }
+  .step .vis {
+    height: 108px; border-radius: 14px; background: var(--surface); box-shadow: 0 0 0 1px var(--hair);
+    display: grid; place-items: center; padding: 16px; overflow: hidden;
   }
+  .step h3 { font-size: 19px; }
+  .step p { font-size: 15px; color: var(--muted); }
+  .step .n { font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  kbd {
+    font-family: inherit; font-size: 13px; font-weight: 600; color: var(--ink);
+    border: 1px solid var(--hair); border-bottom-width: 2px; border-radius: 6px; padding: 1px 7px; background: var(--key-bg);
+  }
+  .keys { display: flex; align-items: center; gap: 8px; }
+  .keys kbd { font-size: 22px; padding: 6px 14px; border-radius: 9px; }
+  .keys .plus { color: var(--muted); font-size: 13px; }
+  .hud {
+    background: var(--hud); border: 1px solid var(--hud-edge); border-radius: 8px; padding: 8px 12px;
+    font-size: 13px; color: var(--ink); white-space: nowrap; display: flex; align-items: center; gap: 10px;
+    box-shadow: 0 4px 14px rgba(0,0,0,.10);
+  }
+  .hud .caret { width: 1.5px; height: 15px; background: var(--accent); }
+  .hud kbd { font-size: 11px; padding: 0 5px; }
+  .term {
+    width: 100%; background: #1c1c1e; color: #f5f5f7; border-radius: 8px; padding: 10px 12px;
+    font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 11.5px; line-height: 1.5; text-align: left;
+  }
+  .term .p { color: #a1a1a6; }
+  .term .k { color: #6ab0ff; }
 
+  /* payload with what each line is for */
+  .payload-wrap { display: grid; grid-template-columns: 1.35fr 1fr; gap: 28px; align-items: start; }
   pre.payload {
     margin: 0; background: var(--code-bg); border: 1px solid var(--hair); border-radius: 12px;
-    padding: 20px 22px; overflow-x: auto; line-height: 1.55; font-size: 13.5px;
-    tab-size: 2;
+    padding: 18px 20px; overflow-x: auto; line-height: 1.6; font-size: 13px;
   }
   pre.payload .h { color: var(--muted); }
   pre.payload .k { color: var(--accent); }
-  .fields { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px 32px; margin-top: 28px; }
-  .field { display: grid; grid-template-columns: 132px 1fr; gap: 12px; font-size: 15px; padding-block: 8px; border-top: 1px solid var(--hair); }
-  .field b { font-weight: 600; }
+  .notes { display: grid; gap: 14px; padding-top: 6px; }
+  .note { display: grid; gap: 2px; font-size: 15px; padding-left: 14px; border-left: 2px solid var(--hair); }
+  .note b { font-weight: 600; }
+  .note span { color: var(--muted); }
 
-  .ladder { display: grid; border-top: 1px solid var(--hair); }
-  .rung { display: grid; grid-template-columns: 40px 200px 1fr; gap: 16px; align-items: baseline; padding-block: 16px; border-bottom: 1px solid var(--hair); }
-  .rung .n { color: var(--muted); font-variant-numeric: tabular-nums; font-size: 14px; }
-  .rung b { font-weight: 600; }
-  .rung p { color: var(--muted); font-size: 15px; }
+  /* the fallback ladder: what the label reads at each rung */
+  .ladder { display: grid; gap: 10px; }
+  .rung { display: grid; grid-template-columns: 26px 1fr 1.3fr; gap: 16px; align-items: center; padding: 14px 16px; border-radius: 12px; background: var(--surface); box-shadow: 0 0 0 1px var(--hair); }
+  .rung .n { color: var(--muted); font-variant-numeric: tabular-nums; font-size: 13px; }
+  .rung .chip { justify-self: start; background: var(--hud); border: 1px solid var(--hud-edge); border-radius: 6px; padding: 3px 8px; font-size: 12px; white-space: nowrap; }
+  .rung .chip code { font-size: 0.95em; }
+  .rung .chip.dash { border-style: dashed; color: var(--muted); }
+  .rung p { color: var(--muted); font-size: 14px; }
+  .rung b { color: var(--ink); font-weight: 600; }
 
-  .actions { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; }
-  .action { display: grid; gap: 6px; padding: 22px 20px; background: var(--surface); border-radius: 16px; box-shadow: 0 0 0 1px var(--hair); }
+  .actions { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+  .action { display: grid; gap: 10px; padding: 20px 18px; background: var(--surface); border-radius: 16px; box-shadow: 0 0 0 1px var(--hair); align-content: start; }
+  .action svg { width: 36px; height: 36px; color: var(--accent); }
   .action h3 { font-size: 19px; }
-  .action p { font-size: 15px; color: var(--muted); }
-  .action .keeps { font-size: 13px; margin-top: 8px; }
-  .rulebox { margin-top: 20px; font-size: 15px; color: var(--muted); }
+  .action p { font-size: 14px; color: var(--muted); }
+  .action .keeps { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .rulebox { margin-top: 18px; font-size: 15px; color: var(--muted); }
 
   .split { display: grid; grid-template-columns: 1.1fr 1fr; gap: 40px; align-items: center; }
-  .ba {
-    position: relative; aspect-ratio: 4 / 3; border-radius: 16px; overflow: hidden; background: var(--frame); box-shadow: var(--shadow);
-  }
+  .ba { position: relative; aspect-ratio: 4 / 3; border-radius: 16px; overflow: hidden; background: var(--frame); box-shadow: var(--shadow); }
   .ba .pane { position: absolute; inset: 14% 0 0 0; display: grid; place-items: center; }
   .ba .pane.before { right: 46%; }
   .ba .pane.after { left: 54%; }
@@ -221,17 +268,21 @@
   .ba .note { position: absolute; top: 0; left: 0; right: 0; height: 14%; display: flex; align-items: center; padding-inline: 16px; font-size: 13px; color: var(--muted); background: var(--surface); border-bottom: 1px solid var(--hair); }
   .ba .tags { position: absolute; bottom: 10px; left: 12px; right: 12px; display: flex; gap: 8px; font-size: 11.5px; color: var(--muted); }
   .ba .tags span { background: var(--surface); border-radius: 6px; padding: 3px 7px; box-shadow: 0 0 0 1px var(--hair); }
+  .ba .side { position: absolute; top: 16%; font-size: 11px; color: var(--muted); text-transform: none; }
+  .ba .side.l { left: 12px; } .ba .side.r { left: calc(50% + 12px); }
 
   .shot { display: grid; justify-items: center; }
   .shot img { max-width: 100%; width: 588px; height: auto; display: block; }
 
-  .grid2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 28px 40px; }
-  .grid2 .item { display: grid; gap: 6px; }
+  .grid2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 24px 40px; }
+  .grid2 .item { display: grid; grid-template-columns: 28px 1fr; gap: 4px 14px; align-items: start; }
+  .grid2 .item svg { width: 24px; height: 24px; color: var(--accent); grid-row: span 2; margin-top: 2px; }
+  .grid2 .item h3 { font-size: 17px; }
   .grid2 .item p { color: var(--muted); font-size: 15px; }
 
   table { border-collapse: collapse; width: 100%; font-size: 15px; }
   th, td { text-align: left; padding: 12px 12px 12px 0; border-bottom: 1px solid var(--hair); vertical-align: top; }
-  th { font-weight: 600; font-size: 13px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+  th { font-weight: 600; font-size: 13px; color: var(--muted); }
   .tablewrap { overflow-x: auto; }
 
   ul.plain { margin: 0; padding-left: 1.1em; display: grid; gap: 10px; color: var(--muted); font-size: 15px; }
@@ -242,12 +293,12 @@
   footer .word { max-width: 60ch; }
 
   @media (max-width: 720px) {
-    .hero { padding-block: 64px 40px; }
-    .steps, .actions, .grid2, .fields { grid-template-columns: 1fr; }
+    .hero { padding-block: 56px 36px; }
+    .app-icon { width: 96px; height: 96px; border-radius: 21.5px; }
+    .steps, .actions, .grid2, .payload-wrap { grid-template-columns: 1fr; }
     .split { grid-template-columns: 1fr; }
-    .rung { grid-template-columns: 32px 1fr; }
+    .rung { grid-template-columns: 26px 1fr; }
     .rung p { grid-column: 2; }
-    .field { grid-template-columns: 1fr; gap: 2px; }
   }
   @media (prefers-reduced-motion: no-preference) {
     .stage .highlight { animation: settle 220ms ease-out both; }
@@ -260,9 +311,9 @@
 <main>
   <header class="hero col">
     <div class="app-icon" role="img" aria-label="Deixis app icon"></div>
-    <div class="eyebrow">Deixis for macOS</div>
+    <p class="name">Deixis <span>for Mac</span></p>
     <h1>Agents don't understand <em>this</em>. Deixis&nbsp;does.</h1>
-    <p class="lede">Point at one element in any app, type a note, press Enter. Your coding agent gets the element, not a screenshot.</p>
+    <p class="lede">Point at one element in any app. Your coding agent gets the element, not a screenshot.</p>
     <div class="cta">
       <a class="btn" href="https://github.com/Malik1942/deixis/releases/latest">Download for Mac</a>
       <a class="link" href="https://github.com/Malik1942/deixis">View on GitHub</a>
@@ -273,7 +324,7 @@
   <figure class="wide" style="margin: 0;">
     <!-- Hero demo. When the recording exists, replace this drawn stage with:
          <video autoplay muted loop playsinline poster="assets/demo-poster.png"><source src="assets/demo.mp4" type="video/mp4"></video> -->
-    <div class="stage" aria-label="The Deixis overlay: a highlighted button with its role and identifier in a label beneath">
+    <div class="stage" aria-label="The Deixis overlay: a highlighted button with its role and identifier in a label beneath, and the ball resting at the screen edge">
       <div class="app">
         <div class="chrome"><i></i><i></i><i></i></div>
         <div class="body">
@@ -288,30 +339,33 @@
       <div class="highlight"></div>
       <svg class="cursor" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M9 2.5c-.9 0-1.6.7-1.6 1.6v8.2l-1.3-1.4c-.7-.7-1.8-.7-2.5 0-.6.6-.7 1.6-.1 2.3l4.6 5.6c.8 1 2 1.6 3.3 1.6h4.4c2.4 0 4.3-1.9 4.3-4.3v-4.2c0-.9-.7-1.6-1.6-1.6-.4 0-.8.2-1.1.4-.2-.7-.8-1.2-1.6-1.2-.5 0-.9.2-1.2.5-.3-.6-.9-1-1.6-1-.5 0-.9.2-1.2.4V4.1c0-.9-.7-1.6-1.6-1.6z"/></svg>
       <div class="label">button · <code>id=captureButton</code></div>
+      <div class="ball" aria-hidden="true"></div>
     </div>
     <figcaption>Hover shows the element and its identifier before you click. Nothing is written until Enter.</figcaption>
   </figure>
 
   <section class="col">
     <div class="sect-head">
-      <h2>One gesture. Three seconds.</h2>
-      <p class="lede">Deixis lives in the menu bar and in a small glass ball at the edge of the screen. It appears, is used, and is gone.</p>
+      <h2>Three seconds, start to paste</h2>
     </div>
     <div class="steps">
       <div class="step">
+        <div class="vis"><div class="keys"><kbd>⌃</kbd><span class="plus">twice</span></div></div>
         <span class="n">1</span>
         <h3>Point</h3>
-        <p class="muted">Double-tap <kbd>⌃</kbd> or click the ball. Hover to see the highlight and the label. Click the element.</p>
+        <p>Double-tap Control, or click the ball. Hover, then click the element.</p>
       </div>
       <div class="step">
+        <div class="vis"><div class="hud">make this rounded<span class="caret"></span><kbd>↩</kbd></div></div>
         <span class="n">2</span>
         <h3>Note</h3>
-        <p class="muted">Type what should change. <kbd>Enter</kbd> captures. <kbd>Esc</kbd> cancels with nothing written.</p>
+        <p>Type what should change. Enter captures. Esc cancels, nothing written.</p>
       </div>
       <div class="step">
+        <div class="vis"><div class="term"><span class="p">&gt;</span> <span class="k">## Deixis capture (fix)</span><br><span class="p">&gt;</span> Image: ~/Pictures/Deixis/…<br><span class="p">&gt;</span> button · id=captureButton</div></div>
         <span class="n">3</span>
         <h3>Paste</h3>
-        <p class="muted">The clipboard holds a Markdown payload and the image path. Paste into Claude Code, Cursor, or Codex.</p>
+        <p>Into Claude Code, Cursor, or Codex. The image path comes first.</p>
       </div>
     </div>
   </section>
@@ -319,12 +373,13 @@
   <section class="col">
     <div class="sect-head">
       <h2>What your agent receives</h2>
-      <p class="lede">Role, label, accessibility identifier, frame, and ancestry, plus a cropped PNG. Enough to find the right file on the first try.</p>
+      <p class="lede">Enough to find the right file on the first try.</p>
     </div>
+    <div class="payload-wrap">
 <pre class="payload"><span class="h">## Deixis capture (fix)</span>
-<span class="k">Image:</span> /Users/you/Pictures/Deixis/deixis-simulator-20260913-153012-k7q2.png
+<span class="k">Image:</span> ~/Pictures/Deixis/deixis-simulator-20260913-153012-k7q2.png
 <span class="k">App:</span> Simulator (com.example.myapp) · Window: iPhone 17 Pro
-<span class="k">Captured:</span> 2026-09-13 15:30 · Image region: 450×130 pt @2x (element + 40 pt)
+<span class="k">Captured:</span> 2026-09-13 15:30 · Image region: 450×130 pt @2x
 
 <span class="h">### Target element</span>
 button · id=captureButton
@@ -333,45 +388,60 @@ button · id=captureButton
 
 <span class="h">### Note</span>
 make this rounded, match the other pills</pre>
-    <div class="fields">
-      <div class="field"><b>Image first</b><span class="muted">Terminal agents get only the text on paste, so the path leads.</span></div>
-      <div class="field"><b>Fix or reference</b><span class="muted">Your own apps are inferred: the Simulator, anything built on this Mac, anything signed with your Team ID.</span></div>
-      <div class="field"><b>Project line</b><span class="muted">When a project folder is found through DerivedData or an Xcode project, the payload carries it.</span></div>
-      <div class="field"><b>Sidecar</b><span class="muted">Every capture also lands in Pictures as a PNG and a JSON file that validates against a published schema.</span></div>
+      <div class="notes">
+        <div class="note"><b>Image first</b><span>Terminal agents get only the text on paste. The path leads, so the agent can open the PNG.</span></div>
+        <div class="note"><b>Fix or reference</b><span>Your own apps are inferred: the Simulator, anything built on this Mac, anything signed with your Team ID.</span></div>
+        <div class="note"><b>Identifier and path</b><span>The accessibility identifier is what the agent greps for. The path says where in the tree it sits.</span></div>
+        <div class="note"><b>On disk too</b><span>A PNG and a JSON sidecar in Pictures, tagged in Finder, validating against a published schema.</span></div>
+      </div>
     </div>
   </section>
 
   <section class="col">
     <div class="sect-head">
       <h2>When there is no element</h2>
-      <p class="lede">Figma, games, and custom-drawn views expose little. Deixis steps down a ladder and tells the agent which rung it reached.</p>
+      <p class="lede">Deixis steps down a ladder and says which rung it reached. The label tells you before you click.</p>
     </div>
     <div class="ladder">
-      <div class="rung"><span class="n">1</span><b>Element</b><p>The smallest real control under the cursor, with its declared identifier.</p></div>
-      <div class="rung"><span class="n">2</span><b>Cluster</b><p>The nearest labeled elements, when the target itself has only a label or a symbol name.</p></div>
-      <div class="rung"><span class="n">3</span><b>Drawn frame</b><p>Drag on the overlay to capture a region and every element inside it.</p></div>
-      <div class="rung"><span class="n">4</span><b>Text and neighbors</b><p>The text in the image is recognized and listed. The closest labeled elements are named.</p></div>
-      <div class="rung"><span class="n">5</span><b>Image</b><p>The payload says <code>element: null</code>, and still gives the agent the image and your note.</p></div>
+      <div class="rung"><span class="n">1</span><span class="chip">button · <code>id=captureButton</code></span><p><b>Element</b> with a declared identifier. The best case.</p></div>
+      <div class="rung"><span class="n">2</span><span class="chip">button · "Save changes"</span><p><b>Label only.</b> The nearest labeled neighbors are named too.</p></div>
+      <div class="rung"><span class="n">3</span><span class="chip">frame · 450×130 · 6 elements</span><p><b>Drawn frame.</b> Drag on the overlay; every element inside is listed.</p></div>
+      <div class="rung"><span class="n">4</span><span class="chip">text · "Save changes" "Cancel"</span><p><b>Text and neighbors.</b> Words in the image are recognized and listed.</p></div>
+      <div class="rung"><span class="n">5</span><span class="chip dash">element: null</span><p><b>Image.</b> The payload says so, and still carries the image and your note.</p></div>
     </div>
   </section>
 
   <section class="wide">
     <div class="sect-head col" style="margin-inline: auto;">
       <h2>Four more, on the same gesture</h2>
-      <p class="lede">Press and hold the ball for the ring. One rule decides what stays: actions that make an image keep a file for 30 days; actions that make text or a value keep nothing.</p>
+      <p class="lede">Press and hold the ball for the ring.</p>
     </div>
     <div class="actions">
-      <div class="action"><h3>Snap</h3><p>Drag a region or click a window. PNG to the clipboard and the folder.</p><p class="keeps muted">Keeps a file</p></div>
-      <div class="action"><h3>Text</h3><p>Recognized lines from a region or an element, straight to the clipboard.</p><p class="keeps muted">Keeps nothing</p></div>
-      <div class="action"><h3>Color</h3><p>A magnifier under the cursor. Hex, rgb, hsl, or SwiftUI, in sRGB or Display P3.</p><p class="keeps muted">Keeps nothing</p></div>
-      <div class="action"><h3>Cut</h3><p>The subject, cut onto a transparent background.</p><p class="keeps muted">Keeps a file</p></div>
+      <div class="action">
+        <svg viewBox="0 0 36 36" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M8 13V9a1 1 0 0 1 1-1h4M23 8h4a1 1 0 0 1 1 1v4M28 23v4a1 1 0 0 1-1 1h-4M13 28H9a1 1 0 0 1-1-1v-4"/><rect x="13" y="13" width="10" height="10" rx="2" stroke-dasharray="2 3"/></svg>
+        <h3>Snap</h3><p>A region or a window, as a PNG.</p><p class="keeps">Keeps a file</p>
+      </div>
+      <div class="action">
+        <svg viewBox="0 0 36 36" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M9 11h18M9 18h18M9 25h11"/><path d="M27 22v7" stroke-width="2.5"/></svg>
+        <h3>Text</h3><p>Recognized lines, to the clipboard.</p><p class="keeps">Keeps nothing</p>
+      </div>
+      <div class="action">
+        <svg viewBox="0 0 36 36" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="18" cy="18" r="10"/><circle cx="18" cy="18" r="4" fill="currentColor" stroke="none"/><path d="M18 4v4M18 28v4M4 18h4M28 18h4" stroke-linecap="round"/></svg>
+        <h3>Color</h3><p>Hex, rgb, hsl, or SwiftUI. sRGB or P3.</p><p class="keeps">Keeps nothing</p>
+      </div>
+      <div class="action">
+        <svg viewBox="0 0 36 36" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="6" y="6" width="24" height="24" rx="5" stroke-dasharray="3 3"/><path d="M13 24c0-4 2-7 5-7s5 3 5 7M18 17a3 3 0 1 0 0-6 3 3 0 0 0 0 6z" fill="currentColor" stroke="none"/></svg>
+        <h3>Cut</h3><p>The subject on a transparent background.</p><p class="keeps">Keeps a file</p>
+      </div>
     </div>
+    <p class="rulebox col" style="margin-inline: auto;">One rule decides what stays: actions that make an image keep a file for 30 days. Actions that make text or a value keep nothing.</p>
   </section>
 
   <section class="col">
     <div class="split">
       <div class="ba" aria-label="Before and after: the same button, square-cornered before and pill-shaped after, with a slide divider">
         <div class="note">make this rounded, match the other pills</div>
+        <span class="side l">Before</span><span class="side r">After</span>
         <div class="pane before"><div class="btn-old"></div></div>
         <div class="pane after"><div class="btn-new"></div></div>
         <div class="divider"></div><div class="knob"></div>
@@ -379,8 +449,8 @@ make this rounded, match the other pills</pre>
       </div>
       <div class="sect-head" style="margin: 0;">
         <h2>See what changed</h2>
-        <p class="lede">After the agent's edit, choose Capture after. Deixis finds the same element again in the running app, captures it, records the git facts, and opens the two images side by side with one zoom.</p>
-        <p class="muted small">Deixis never commits, never installs hooks, never talks to the network.</p>
+        <p class="lede">After the agent's edit, choose Capture after. Deixis finds the same element in the running app, captures it again, and shows both with the diff beneath.</p>
+        <p class="muted small">It never commits, never installs hooks, never talks to the network.</p>
       </div>
     </div>
   </section>
@@ -388,7 +458,7 @@ make this rounded, match the other pills</pre>
   <section class="col">
     <div class="sect-head">
       <h2>Settings that look like Settings</h2>
-      <p class="lede">The one place Deixis is a window. The hotkey is recorded by pressing it. Everything else has a default that works on first launch.</p>
+      <p class="lede">The one place Deixis is a window. Every default works on first launch.</p>
     </div>
     <figure class="shot" style="margin: 0;">
       <img src="assets/settings-dark.png" width="1176" height="1036" alt="Deixis Settings window, General tab: capture hotkey set to double-tap Control, a toggle to adjust the selection before capturing, and per-action hotkeys for Snap, Text, Color, and Cut">
@@ -400,17 +470,29 @@ make this rounded, match the other pills</pre>
       <h2>Private by design</h2>
     </div>
     <div class="grid2">
-      <div class="item"><h3>Two permissions, both explained</h3><p>Accessibility reads what is under your cursor and listens for the hotkey. Screen Recording captures the pixels. There is no third prompt.</p></div>
-      <div class="item"><h3>Nothing leaves the machine</h3><p>No network, no telemetry, no accounts. Captures live in your Pictures folder, tagged in Finder, and move to the Trash after 30 days unless pinned.</p></div>
-      <div class="item"><h3>Signed and notarized</h3><p>Every build is signed with a Developer ID and notarized by Apple. Distributed as a dmg, not through the App Store.</p></div>
-      <div class="item"><h3>Lightweight</h3><p>No Dock icon. Idle memory under 30 MB. Nothing pulses, bounces, or waits for you.</p></div>
+      <div class="item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M12 3l7 3v5c0 5-3.5 8-7 10-3.5-2-7-5-7-10V6l7-3z"/><path d="M9 12l2 2 4-4"/></svg>
+        <h3>Two permissions, both explained</h3><p>Accessibility reads what is under your cursor. Screen Recording captures the pixels. There is no third prompt.</p>
+      </div>
+      <div class="item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18"/><path d="M4 4l16 16" stroke-width="2.4"/></svg>
+        <h3>Nothing leaves the machine</h3><p>No network, no telemetry, no accounts. Captures stay in your Pictures folder and go to the Trash after 30 days unless pinned.</p>
+      </div>
+      <div class="item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg>
+        <h3>Signed and notarized</h3><p>Every build is signed with a Developer ID and notarized by Apple. A dmg, not the App Store.</p>
+      </div>
+      <div class="item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 5v2M12 17v2M5 12h2M17 12h2"/></svg>
+        <h3>Quiet</h3><p>No Dock icon. Idle memory under 30 MB. Nothing pulses, bounces, or waits for you.</p>
+      </div>
     </div>
   </section>
 
   <section class="col">
     <div class="sect-head">
       <h2>Works where you paste</h2>
-      <p class="lede">The payload is plain Markdown. Status as of v0.4:</p>
+      <p class="lede">The payload is plain Markdown. Status as of version 0.4:</p>
     </div>
     <div class="tablewrap">
       <table>
@@ -430,9 +512,9 @@ make this rounded, match the other pills</pre>
       <h2>Known limitations</h2>
     </div>
     <ul class="plain">
-      <li><b>Element quality follows the app's accessibility.</b> SwiftUI, AppKit, and the iOS Simulator work well. Electron and Chromium apps build their tree on first contact, so the first hover can take about half a second to sharpen.</li>
+      <li><b>Element quality follows the app's accessibility.</b> SwiftUI, AppKit, and the iOS Simulator work well. Electron and Chromium apps build their tree on first contact, so the first hover can take half a second.</li>
       <li><b>Custom-drawn UIs expose little.</b> Figma, games, and canvases usually reach the bottom of the ladder. The payload says so.</li>
-      <li><b>Hover picks the smallest real control</b> and sticks to it across padding. Press Option to step to the parent.</li>
+      <li><b>Hover picks the smallest real control.</b> Press Option to step to the parent.</li>
     </ul>
   </section>
 
