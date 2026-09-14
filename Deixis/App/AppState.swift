@@ -11,9 +11,10 @@ final class AppState {
     }
 
     private(set) var phase: Phase = .idle
+    let preferences = Preferences()
 
     @ObservationIgnored private let reader = AccessibilityReader()
-    @ObservationIgnored private let store = FileStore()
+    @ObservationIgnored private var userTeamIDs: Set<String> = []
     @ObservationIgnored private let overlay = SelectionOverlay()
     @ObservationIgnored private let toast = Toast()
     @ObservationIgnored private var hotkey: HotkeyMonitor?
@@ -35,16 +36,26 @@ final class AppState {
     @ObservationIgnored private var openedSettingsPanes: Set<String> = []
     @ObservationIgnored private let ownPID = ProcessInfo.processInfo.processIdentifier
 
-    var captureDirectory: URL { store.directory }
+    var captureDirectory: URL { preferences.captureFolderURL }
 
     func start() {
+        Task.detached { [weak self] in
+            let teams = CodeSigning.userTeamIDs()
+            await MainActor.run { self?.userTeamIDs = teams }
+        }
+        preferences.onHotkeyChange = { [weak self] in self?.restartHotkey() }
         overlay.onHover = { [weak self] point in self?.hover(point) }
         overlay.onClick = { [weak self] point in self?.click(point) }
         overlay.onCancel = { [weak self] in self?.cancel() }
         overlay.onCommit = { [weak self] note in self?.commit(note: note) }
         overlay.onOptionPressed = { [weak self] in self?.optionPressed() }
         overlay.onRegion = { [weak self] rect, start in self?.region(rect, start: start) }
-        let monitor = HotkeyMonitor { [weak self] in self?.beginCapture() }
+        restartHotkey()
+    }
+
+    private func restartHotkey() {
+        hotkey?.stop()
+        let monitor = HotkeyMonitor(modifier: preferences.hotkeyModifier) { [weak self] in self?.beginCapture() }
         monitor.start()
         hotkey = monitor
     }
@@ -227,16 +238,22 @@ final class AppState {
         let elements = lockedElements
         let nearby = lockedNearby
         let anchor = element?.frame.cgRect ?? SelectionOverlay.fallbackRect(around: clickPoint)
+        let signals = ModeClassifier.signals(for: context, myApps: preferences.myApps, userTeamIDs: userTeamIDs)
+        let store = FileStore(directory: preferences.captureFolderURL)
         Task {
             do {
                 let image = try await cropTask.value
+                // v0.3 R17: fix or reference, and the project root, from signals; touches the disk.
+                let decision = await Task.detached { ModeInference.infer(signals) }.value
+                var source = context.source
+                source.projectRoot = decision.projectRoot
                 let now = Date()
                 var capture = Capture(
                     id: FileStore.makeID(date: now),
                     createdAt: FileStore.isoTimestamp(date: now),
-                    mode: ModeClassifier.classify(context.source),
+                    mode: decision.mode,
                     image: ImageInfo(path: "", widthPt: image.widthPt, heightPt: image.heightPt, scale: image.scale, crop: Frame(image.crop)),
-                    source: context.source,
+                    source: source,
                     element: element,
                     note: note,
                     elements: elements,
@@ -312,7 +329,8 @@ final class AppState {
     // MARK: Menu actions
 
     func openCaptureFolder() {
-        try? FileManager.default.createDirectory(at: store.directory, withIntermediateDirectories: true)
-        NSWorkspace.shared.open(store.directory)
+        let folder = preferences.captureFolderURL
+        try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        NSWorkspace.shared.open(folder)
     }
 }

@@ -1,26 +1,33 @@
 import AppKit
+import SwiftUI
 
-/// LSUIElement app: no Dock icon, no windows. A status item (R10) and the capture session.
+/// LSUIElement app: no Dock icon, no document windows. The only scene is Settings (v0.3 R19);
+/// the delegate keeps the status item (R10), the permission alerts, and `AppState`.
 @main
-@MainActor
-final class DeixisApp: NSObject, NSApplicationDelegate {
-    private static var delegate: DeixisApp?
+struct DeixisApp: App {
+    @NSApplicationDelegateAdaptor(AppDelegate.self) private var delegate
 
-    private let state = AppState()
-    private var statusItem: NSStatusItem?
-
-    static func main() {
-        let app = NSApplication.shared
-        let delegate = DeixisApp()
-        Self.delegate = delegate
-        app.delegate = delegate
-        app.run()
+    var body: some Scene {
+        Settings {
+            SettingsView()
+                .environment(delegate.state)
+        }
+        .windowResizability(.contentSize)
     }
+}
+
+@MainActor
+final class AppDelegate: NSObject, NSApplicationDelegate {
+    let state = AppState()
+    private var statusItem: NSStatusItem?
+    private var captureItem: NSMenuItem?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         statusItem = makeStatusItem()
         requestPermissionsIfNeeded()
         state.start()
+        state.preferences.onHotkeyChange = { [weak self] in self?.refreshCaptureTitle() }
+        refreshCaptureTitle()
     }
 
     // MARK: Menu bar
@@ -34,16 +41,24 @@ final class DeixisApp: NSObject, NSApplicationDelegate {
         }
 
         let menu = NSMenu()
-        let capture = NSMenuItem(title: "Capture (⌃⌃)", action: #selector(captureFromMenu), keyEquivalent: "")
+        let capture = NSMenuItem(title: "Capture", action: #selector(captureFromMenu), keyEquivalent: "")
         capture.target = self
         menu.addItem(capture)
+        captureItem = capture
         let folder = NSMenuItem(title: "Open capture folder", action: #selector(openFolder), keyEquivalent: "")
         folder.target = self
         menu.addItem(folder)
+        let settings = NSMenuItem(title: "Settings…", action: #selector(openSettings), keyEquivalent: ",")
+        settings.target = self
+        menu.addItem(settings)
         menu.addItem(.separator())
         menu.addItem(withTitle: "Quit Deixis", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         item.menu = menu
         return item
+    }
+
+    private func refreshCaptureTitle() {
+        captureItem?.title = "Capture (\(state.preferences.hotkeyModifier.symbol))"
     }
 
     @objc private func captureFromMenu() {
@@ -52,6 +67,11 @@ final class DeixisApp: NSObject, NSApplicationDelegate {
 
     @objc private func openFolder() {
         state.openCaptureFolder()
+    }
+
+    @objc private func openSettings() {
+        NSApp.activate()
+        NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
     }
 
     // MARK: Permissions
