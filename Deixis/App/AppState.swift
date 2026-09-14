@@ -307,7 +307,7 @@ final class AppState {
         session.onCancel = { [weak self] in self?.endColorPick() }
         colorSession = session
         session.start()
-        showHintIfNeeded(key: "color", text: "Click or ↩ copies · arrows nudge a pixel · esc cancels")
+        showHintIfNeeded(key: "color", text: "↩ copies · arrows nudge")
     }
 
     private func endColorPick() {
@@ -379,9 +379,9 @@ final class AppState {
 
     private static func hintText(for action: Action) -> String {
         switch action {
-        case .point: "Click or ↩ picks the element · drag for a frame · ⌥ for the parent · esc cancels"
-        case .snap, .cut: "Click or ↩ takes the window · drag for a frame · ⌥ for clipboard only · esc cancels"
-        case .text: "Click or ↩ takes the element · drag for a frame · esc cancels"
+        case .point: "↩ picks · drag for a frame · ⌥ for the parent"
+        case .snap, .cut: "↩ takes the window · drag for a frame"
+        case .text: "↩ takes the text · drag for a frame"
         }
     }
 
