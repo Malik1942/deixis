@@ -173,7 +173,7 @@ struct GeneralSettings: View {
                     }
                 }
                 .pickerStyle(.menu)
-                Footnote(text: "Each capture writes a PNG and a JSON sidecar here. Finder tags are always added: Deixis, the app, fix or reference, and the project when known. Older images go to the Trash; pinned and resolved captures stay.")
+                Footnote(text: "Each capture writes a PNG and a JSON sidecar here. Finder tags are always added: Deixis, the app, fix or reference, and the project when known. Older images go to the Trash; captures an agent marked resolved stay.")
             }
             Section {
                 Picker("Color format", selection: $preferences.colorFormat) {

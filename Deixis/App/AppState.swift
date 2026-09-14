@@ -273,18 +273,7 @@ final class AppState {
             beforeAfter.show(capture)
             return
         }
-        toast.show(HudText.plain("No verified capture yet · use Capture after"), near: Self.mainScreenCenterCG())
-    }
-
-    /// Menu bar: keep the newest capture out of the sweep.
-    func pinLastCapture() {
-        let folder = preferences.captureFolderURL
-        guard let newest = Lifecycle.newest(in: folder) else {
-            toast.show(HudText.plain("No capture to pin"), near: Self.mainScreenCenterCG())
-            return
-        }
-        Lifecycle.pin(newest.urls)
-        toast.show(HudText.copied(identifier: nil).string == "Copied" ? HudText.plain("Pinned · \(newest.urls[0].lastPathComponent)") : HudText.plain("Pinned"), near: Self.mainScreenCenterCG())
+        toast.show(HudText.plain("No verified capture yet · use See what changed"), near: Self.mainScreenCenterCG())
     }
 
     /// R25: the magnifier session. Click copies the pixel in the chosen format; Esc cancels.
@@ -356,7 +345,7 @@ final class AppState {
         }
     }
 
-    /// Menu bar "Deixis Help" and Settings: the same page, any time.
+    /// Settings › General "Deixis Help": the same page, any time.
     func showHelp() {
         help.show(state: self)
     }

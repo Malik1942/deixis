@@ -2,7 +2,7 @@ import AppKit
 import SwiftUI
 
 /// v0.5 R43: the one page that shows the whole product at once. Opens once after the permission
-/// alerts, and any time from the menu bar ("Deixis Help") or Settings. A standard window in the
+/// alerts, and any time from Settings › General. A standard window in the
 /// Settings idiom (grouped rows, system type, no art): read it, close it, nothing to click through.
 struct HelpView: View {
     @Environment(AppState.self) private var state
@@ -44,14 +44,15 @@ struct HelpView: View {
                     Row(symbol: "person.and.background.dotted", title: "Cut", detail: "The subject cut onto a transparent background.", key: preferences.actionHotkeys["cut"]?.symbol)
                     Row(symbol: "circle.circle", title: "The ring", detail: "All four are on the ball: hold it for half a second and release on one. A shorter press is Point.", key: nil)
                 }
-                Section("After the fix") {
-                    Row(symbol: "arrow.triangle.2.circlepath", title: "Capture after", detail: "In the menu bar, once your agent has edited: Deixis finds the same element again and shows before and after with the git diff.", key: nil)
+                Section("Afterwards") {
+                    Row(symbol: "arrow.triangle.2.circlepath", title: "See what changed", detail: "In the menu bar, once your agent has edited: Deixis finds the same element again and shows before and after with the git diff.", key: nil)
+                    Row(symbol: "clock.arrow.circlepath", title: "Images are kept for a while", detail: "Captures live in ~/Pictures/Deixis. Older images go to the Trash on launch and daily; change the period, or keep everything, in Settings.", key: preferences.retentionDays == 0 ? "Forever" : "\(preferences.retentionDays) days")
                 }
             }
             .formStyle(.grouped)
             Divider()
             HStack {
-                Text("Open this again from the menu bar: Deixis Help.")
+                Text("Open this again from Settings › General.")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
                 Spacer()

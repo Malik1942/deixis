@@ -41,7 +41,7 @@ struct DeixisApp: App {
     }
 }
 
-/// R10: Capture, Open capture folder, Settings…, Quit; v0.4 Capture after; v0.5 Deixis Help.
+/// R10: Capture, Open capture folder, Settings…, Quit; v0.4 See what changed and Show before & after (R44).
 private struct StatusMenu: View {
     @Environment(AppState.self) private var state
     @Environment(\.openSettings) private var openSettings
@@ -50,7 +50,7 @@ private struct StatusMenu: View {
         Button(captureTitle) {
             state.beginCapture()
         }
-        Button("Capture after") { state.captureAfter() }
+        Button("See what changed") { state.captureAfter() }
         Button("Show before & after") { state.showBeforeAfter() }
         Divider()
         Button(title("Snap", "snap")) { state.beginAction(.snap) }
@@ -58,7 +58,6 @@ private struct StatusMenu: View {
         Button(title("Color", "color")) { state.beginColorPick() }
         Button(title("Cut", "cut")) { state.beginAction(.cut) }
         Divider()
-        Button("Pin last capture") { state.pinLastCapture() }
         Button("Open capture folder") {
             state.openCaptureFolder()
         }
@@ -67,7 +66,6 @@ private struct StatusMenu: View {
             openSettings()
         }
         .keyboardShortcut(",")
-        Button("Deixis Help") { state.showHelp() }
         Divider()
         Button("Quit Deixis") {
             NSApp.terminate(nil)
