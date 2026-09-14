@@ -29,17 +29,43 @@ struct ModeEnvironment: Sendable {
     var directoryEntries: @Sendable (String) -> [String]
     /// Given a DerivedData project folder, the `WorkspacePath` from its info.plist.
     var derivedDataWorkspacePath: @Sendable (String) -> String?
+    /// Given a simulated app's bundle id, the project root of the DerivedData product that built it.
+    var simulatorProjectRoot: @Sendable (String) -> String? = { _ in nil }
+
+    static let derivedDataFolder = FileManager.default.homeDirectoryForCurrentUser
+        .appending(path: "Library/Developer/Xcode/DerivedData", directoryHint: .isDirectory)
 
     static let live = ModeEnvironment(
         directoryEntries: { path in (try? FileManager.default.contentsOfDirectory(atPath: path)) ?? [] },
-        derivedDataWorkspacePath: { folder in
-            let plist = URL(filePath: folder).appending(path: "info.plist")
-            guard let data = try? Data(contentsOf: plist),
-                  let dict = try? PropertyListSerialization.propertyList(from: data, format: nil) as? [String: Any]
-            else { return nil }
-            return dict["WorkspacePath"] as? String
+        derivedDataWorkspacePath: { folder in workspacePath(inDerivedDataFolder: folder) },
+        simulatorProjectRoot: { bundleId in
+            // Simulated apps run from the device container; the product that built them sits in
+            // DerivedData/<Project-hash>/Build/Products/<Config>-iphonesimulator/<App>.app.
+            let fm = FileManager.default
+            guard let projects = try? fm.contentsOfDirectory(at: derivedDataFolder, includingPropertiesForKeys: nil) else { return nil }
+            for project in projects {
+                let products = project.appending(path: "Build/Products")
+                guard let configs = try? fm.contentsOfDirectory(at: products, includingPropertiesForKeys: nil) else { continue }
+                for config in configs where config.lastPathComponent.contains("iphonesimulator") {
+                    guard let apps = try? fm.contentsOfDirectory(at: config, includingPropertiesForKeys: nil) else { continue }
+                    for app in apps where app.pathExtension == "app" {
+                        guard Bundle(url: app)?.bundleIdentifier == bundleId,
+                              let workspace = workspacePath(inDerivedDataFolder: project.path(percentEncoded: false)) else { continue }
+                        return ModeInference.directoryPath(URL(filePath: workspace).deletingLastPathComponent())
+                    }
+                }
+            }
+            return nil
         }
     )
+
+    static func workspacePath(inDerivedDataFolder folder: String) -> String? {
+        let plist = URL(filePath: folder).appending(path: "info.plist")
+        guard let data = try? Data(contentsOf: plist),
+              let dict = try? PropertyListSerialization.propertyList(from: data, format: nil) as? [String: Any]
+        else { return nil }
+        return dict["WorkspacePath"] as? String
+    }
 }
 
 enum ModeInference {
@@ -50,6 +76,7 @@ enum ModeInference {
 
     static func infer(_ s: ModeSignals, environment: ModeEnvironment = .live) -> ModeDecision {
         let root = s.bundlePath.flatMap { projectRoot(forBundleAt: $0, environment: environment) }
+            ?? s.simulatedBundleId.flatMap(environment.simulatorProjectRoot)
         if let id = s.bundleId, s.myApps.contains(id) { return ModeDecision(mode: .fix, projectRoot: root, rule: .myApps) }
         if let id = s.simulatedBundleId, s.myApps.contains(id) { return ModeDecision(mode: .fix, projectRoot: root, rule: .myApps) }
         if s.isSimulator || s.bundleId == simulatorBundleId { return ModeDecision(mode: .fix, projectRoot: root, rule: .simulator) }
