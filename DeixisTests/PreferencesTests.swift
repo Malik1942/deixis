@@ -20,6 +20,7 @@ final class PreferencesTests: XCTestCase {
         XCTAssertTrue(p.ballEnabled)
         XCTAssertNil(p.ballPosition)
         XCTAssertEqual(p.myApps, [])
+        XCTAssertEqual(p.organization, .none)
     }
 
     // 2
@@ -34,6 +35,7 @@ final class PreferencesTests: XCTestCase {
         p.ballEnabled = false
         p.ballPosition = CGPoint(x: 1200, y: 40)
         p.myApps = ["com.inspireocean.app"]
+        p.organization = .byProject
         XCTAssertEqual(hotkeyChanges, 1, "only a real change restarts the monitor")
 
         let again = Preferences(defaults: defaults)
@@ -43,6 +45,7 @@ final class PreferencesTests: XCTestCase {
         XCTAssertFalse(again.ballEnabled)
         XCTAssertEqual(again.ballPosition, CGPoint(x: 1200, y: 40))
         XCTAssertEqual(again.myApps, ["com.inspireocean.app"])
+        XCTAssertEqual(again.organization, .byProject)
         XCTAssertEqual(again.captureFolderURL.path(percentEncoded: false), "/tmp/captures/")
     }
 

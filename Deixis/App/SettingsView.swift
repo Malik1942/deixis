@@ -45,7 +45,13 @@ struct GeneralSettings: View {
                         Button("Choose…") { chooseFolder(preferences) }
                     }
                 }
-                Footnote(text: "Each capture writes a PNG and a JSON sidecar here.")
+                Picker("Organize captures", selection: $preferences.organization) {
+                    ForEach(CaptureOrganization.allCases, id: \.self) { option in
+                        Text(option.title).tag(option)
+                    }
+                }
+                .pickerStyle(.menu)
+                Footnote(text: "Each capture writes a PNG and a JSON sidecar here. Finder tags are always added: Deixis, the app, fix or reference, and the project when known.")
             }
             Section {
                 Toggle("Floating ball", isOn: $preferences.ballEnabled)

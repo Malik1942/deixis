@@ -262,7 +262,7 @@ final class AppState {
         let nearby = lockedNearby
         let anchor = element?.frame.cgRect ?? SelectionOverlay.fallbackRect(around: clickPoint)
         let signals = ModeClassifier.signals(for: context, myApps: preferences.myApps, userTeamIDs: userTeamIDs)
-        let store = FileStore(directory: preferences.captureFolderURL)
+        let store = FileStore(directory: preferences.captureFolderURL, organization: preferences.organization)
         Task {
             do {
                 let image = try await cropTask.value

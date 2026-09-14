@@ -39,6 +39,21 @@ enum HotkeyModifier: String, CaseIterable, Codable, Sendable {
     }
 }
 
+/// v0.3 R21: how captures are organized on disk. Finder tags are always written; this only adds
+/// subfolders for people who think in folders.
+enum CaptureOrganization: String, CaseIterable, Codable, Sendable {
+    case none, byApp, byProject, byMonth
+
+    var title: String {
+        switch self {
+        case .none: "One folder"
+        case .byApp: "By app"
+        case .byProject: "By project"
+        case .byMonth: "By month"
+        }
+    }
+}
+
 /// Modifier keys of a chord, AppKit-free so the store stays pure.
 struct KeyModifiers: OptionSet, Codable, Sendable, Hashable {
     let rawValue: UInt8
@@ -93,6 +108,7 @@ final class Preferences {
         static let ballEnabled = "ballEnabled"
         static let ballPosition = "ballPosition"
         static let myApps = "myApps"
+        static let organization = "organization"
     }
 
     static var defaultCaptureFolder: String { ModeInference.directoryPath(FileStore.defaultDirectory) }
@@ -136,6 +152,10 @@ final class Preferences {
         didSet { defaults.set(myApps, forKey: Key.myApps) }
     }
 
+    var organization: CaptureOrganization {
+        didSet { defaults.set(organization.rawValue, forKey: Key.organization) }
+    }
+
     var captureFolderURL: URL { URL(filePath: captureFolder, directoryHint: .isDirectory) }
 
     init(defaults: UserDefaults = .standard) {
@@ -155,5 +175,6 @@ final class Preferences {
             ballPosition = nil
         }
         myApps = defaults.stringArray(forKey: Key.myApps) ?? []
+        organization = defaults.string(forKey: Key.organization).flatMap(CaptureOrganization.init(rawValue:)) ?? .none
     }
 }
