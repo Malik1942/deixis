@@ -2,7 +2,8 @@ import AppKit
 import SwiftUI
 
 /// v0.3 R19: the one place Deixis is a window. PRD §6.3 "Settings": grouped forms, system
-/// controls at default sizes, footnotes under rows, nothing custom.
+/// controls at default sizes, footnotes under rows, nothing custom. Resizable from 480×360;
+/// the forms reflow with the width and the My Apps list takes the height.
 struct SettingsView: View {
     var body: some View {
         TabView {
@@ -11,7 +12,26 @@ struct SettingsView: View {
             MyAppsSettings()
                 .tabItem { Label("My Apps", systemImage: "app.badge.checkmark") }
         }
-        .frame(width: 520)
+        .frame(minWidth: 480, idealWidth: 520, maxWidth: .infinity, minHeight: 360, idealHeight: 560, maxHeight: .infinity)
+        .background(SettingsWindowConfigurator())
+    }
+}
+
+/// The `Settings` scene builds its window without a minimize button. This reaches the window
+/// once the view is in it and adds one; the scene itself remembers the frame.
+private struct SettingsWindowConfigurator: NSViewRepresentable {
+    func makeNSView(context: Context) -> ConfiguratorView { ConfiguratorView() }
+    func updateNSView(_ view: ConfiguratorView, context: Context) {}
+
+    final class ConfiguratorView: NSView {
+        private var configured: NSWindow?
+
+        override func viewDidMoveToWindow() {
+            super.viewDidMoveToWindow()
+            guard let window, window !== configured else { return }
+            configured = window
+            window.styleMask.insert([.miniaturizable, .resizable])
+        }
     }
 }
 
@@ -245,28 +265,28 @@ struct MyAppsSettings: View {
 
     var body: some View {
         @Bindable var preferences = state.preferences
-        Form {
-            Section {
-                List(preferences.myApps, id: \.self, selection: $selection) { bundleId in
-                    Text(bundleId)
-                }
-                .frame(minHeight: 160)
-                HStack(spacing: 8) {
-                    Button { addFromPanel(preferences) } label: { Image(systemName: "plus") }
-                    Button { remove(preferences) } label: { Image(systemName: "minus") }
-                        .disabled(selection == nil)
-                    Spacer()
-                    TextField("Bundle id", text: $typed)
-                        .textFieldStyle(.roundedBorder)
-                        .frame(width: 220)
-                        .onSubmit { addTyped(preferences) }
-                    Button("Add") { addTyped(preferences) }
-                        .disabled(typed.trimmingCharacters(in: .whitespaces).isEmpty)
-                }
-                Footnote(text: "Deixis already treats apps you build (Simulator, Xcode builds, your signing identity) as yours. Add anything it misses.")
+        // Not a Form: the list should take whatever height the window has.
+        VStack(alignment: .leading, spacing: 8) {
+            List(preferences.myApps, id: \.self, selection: $selection) { bundleId in
+                Text(bundleId)
             }
+            .listStyle(.bordered(alternatesRowBackgrounds: true))
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            HStack(spacing: 8) {
+                Button { addFromPanel(preferences) } label: { Image(systemName: "plus") }
+                Button { remove(preferences) } label: { Image(systemName: "minus") }
+                    .disabled(selection == nil)
+                Spacer()
+                TextField("Bundle id", text: $typed)
+                    .textFieldStyle(.roundedBorder)
+                    .frame(minWidth: 160, idealWidth: 220, maxWidth: 320)
+                    .onSubmit { addTyped(preferences) }
+                Button("Add") { addTyped(preferences) }
+                    .disabled(typed.trimmingCharacters(in: .whitespaces).isEmpty)
+            }
+            Footnote(text: "Deixis already treats apps you build (Simulator, Xcode builds, your signing identity) as yours. Add anything it misses.")
         }
-        .formStyle(.grouped)
+        .padding(20)
     }
 
     private func addFromPanel(_ preferences: Preferences) {
