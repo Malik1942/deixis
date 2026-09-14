@@ -102,7 +102,7 @@
   }
   svg { display: block; }
 
-  .col { max-width: 760px; margin-inline: auto; }
+  .col { max-width: 980px; margin-inline: auto; }   /* the same edges as the nav */
   .wide { max-width: 980px; margin-inline: auto; }
 
   h1, h2, h3 { margin: 0; text-wrap: balance; letter-spacing: -0.022em; }
@@ -133,6 +133,19 @@
   .nav .dl { display: inline-block; text-decoration: none; background: var(--accent); color: #fff; font-weight: 600; font-size: 13px; padding: 7px 14px; border-radius: 980px; }
   .nav a:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 4px; }
   @media (max-width: 720px) { .nav .links, .nav .by { display: none; } .nav .dl { margin-left: auto; } }
+
+  /* ribbon: the announcement strip under the nav */
+  .ribbon {
+    margin-inline: -20px; padding: 11px 20px;
+    text-align: center; font-size: 14px; line-height: 1.4; color: var(--ink);
+    background: color-mix(in srgb, var(--accent) 9%, var(--ground));
+    border-bottom: 1px solid color-mix(in srgb, var(--accent) 16%, var(--hair));
+  }
+  .ribbon p { margin: 0; text-wrap: balance; }
+  .ribbon b { font-weight: 600; }
+  .ribbon a { color: var(--accent); text-decoration: none; white-space: nowrap; }
+  .ribbon a:hover { text-decoration: underline; }
+  .ribbon a:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 4px; }
   html { scroll-behavior: smooth; scroll-padding-top: 64px; }
   @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
 
@@ -290,8 +303,9 @@
   .note span { color: var(--muted); }
 
   /* the fallback ladder: the target line the payload carries at each rung */
-  .ladder { display: grid; gap: 10px; }
-  .rung { display: grid; grid-template-columns: 26px auto 1fr; gap: 18px; align-items: center; padding: 14px 16px; border-radius: 12px; background: var(--surface); box-shadow: 0 0 0 1px var(--hair); }
+  .ladder { display: grid; background: var(--surface); border-radius: 14px; box-shadow: 0 0 0 1px var(--hair); overflow: hidden; }
+  .rung { display: grid; grid-template-columns: 26px 220px 1fr; gap: 18px; align-items: center; padding: 15px 18px; }
+  .rung + .rung { border-top: 1px solid var(--hair); }
   .rung .n { color: var(--muted); font-variant-numeric: tabular-nums; font-size: 13px; }
   .rung .chip { justify-self: start; background: var(--hud); border: 1px solid var(--hud-edge); border-radius: 6px; padding: 3px 8px; font-size: 12px; white-space: nowrap; }
   .rung .chip code { font-size: 0.95em; }
@@ -345,21 +359,27 @@
   .ba .facts .file { color: var(--muted); }
 
   .shot { display: grid; justify-items: center; }
-  .shot img { width: 100%; max-width: 720px; height: auto; display: block; }
+  .shot img { width: 100%; max-width: 980px; height: auto; display: block; }   /* the full column, like the hero stage */
 
-  .grid2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 24px 40px; }
-  .grid2 .item { display: grid; gap: 4px; align-content: start; }
+  .grid2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
+  .grid2 .item { display: grid; gap: 6px; align-content: start; padding: 18px 20px; background: var(--surface); border-radius: 16px; box-shadow: 0 0 0 1px var(--hair); }
   .grid2 .item h3 { font-size: 17px; }
   .grid2 .item p { color: var(--muted); font-size: 15px; }
 
-  table { border-collapse: collapse; width: 100%; font-size: 15px; }
-  th, td { text-align: left; padding: 12px 16px 12px 0; border-bottom: 1px solid var(--hair); vertical-align: top; }
-  td:first-child { white-space: nowrap; font-weight: 600; }
-  th { font-weight: 600; font-size: 13px; color: var(--muted); }
-  .tablewrap { overflow-x: auto; }
+  /* agents, one row each, the same rows as the ladder */
+  .agents { display: grid; background: var(--surface); border-radius: 14px; box-shadow: 0 0 0 1px var(--hair); overflow: hidden; }
+  .agent { display: grid; grid-template-columns: 240px 1fr auto; gap: 18px; align-items: center; padding: 15px 18px; font-size: 15px; }
+  .agent + .agent { border-top: 1px solid var(--hair); }
+  .agent b { font-weight: 600; }
+  .agent span { color: var(--muted); font-size: 14px; }
+  .agent .chip { justify-self: end; color: var(--ink); background: var(--hud); border: 1px solid var(--hud-edge); border-radius: 6px; padding: 3px 8px; font-size: 12px; white-space: nowrap; }
+  .agent .chip.dash { border-style: dashed; color: var(--muted); }
 
-  ul.plain { margin: 0; padding-left: 1.1em; display: grid; gap: 10px; color: var(--muted); font-size: 15px; }
-  ul.plain b { color: var(--ink); font-weight: 600; }
+  /* limitations, one card each */
+  .limits { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+  .limit { display: grid; gap: 6px; align-content: start; padding: 18px 20px; background: var(--surface); border-radius: 16px; box-shadow: 0 0 0 1px var(--hair); }
+  .limit h3 { font-size: 17px; }
+  .limit p { font-size: 14px; color: var(--muted); }
 
   footer { margin-top: 96px; padding-top: 32px; border-top: 1px solid var(--hair); display: grid; gap: 18px; font-size: 14px; color: var(--muted); }
   footer .row { display: flex; gap: 20px; flex-wrap: wrap; align-items: center; }
@@ -368,7 +388,10 @@
   @media (max-width: 720px) {
     .hero { padding-block: 56px 36px; }
     .app-icon { width: 96px; height: 96px; border-radius: 21.5px; }
-    .grid2, .notes { grid-template-columns: 1fr; }
+    .grid2, .notes, .limits { grid-template-columns: 1fr; }
+    .agent { grid-template-columns: 1fr auto; gap: 6px 12px; }
+    .agent .chip { grid-row: 1; grid-column: 2; }
+    .agent > span:not(.chip) { grid-column: 1 / -1; }
     .steps { grid-template-columns: 1fr; gap: 16px; }
     .step { grid-template-columns: 224px 1fr; align-items: center; gap: 20px; }
     .step .vis { height: 108px; padding: 28px 12px 12px; }
@@ -407,6 +430,9 @@
     <a class="dl" href="https://github.com/Malik1942/deixis/releases/latest">Download</a>
   </div>
 </nav>
+<div class="ribbon">
+  <p><b>Made for the Palantir Product Design Show&nbsp;&amp;&nbsp;Tell.</b> v0.4 built in 3 hours. <a href="https://github.com/Malik1942/deixis/tags">See the commits&nbsp;›</a></p>
+</div>
 <main id="top">
   <header class="hero col">
     <div class="app-icon" role="img" aria-label="Deixis app icon"></div>
@@ -464,9 +490,11 @@
   </section>
 
   <section class="wide" id="point">
-    <div class="sect-head col" style="margin-inline: auto;">
-      <h2>Point, up close</h2>
-      <p class="lede">The overlay over Calculator. Every frame is a real capture.</p>
+    <div class="col">
+      <div class="sect-head">
+        <h2>Point, up close</h2>
+        <p class="lede">The overlay over Calculator. Every frame is a real capture.</p>
+      </div>
     </div>
     <div class="frames">
       <div class="frame">
@@ -637,18 +665,13 @@ make this rounded, match the other pills</pre>
   <section class="col">
     <div class="sect-head">
       <h2>Works where you paste</h2>
-      <p class="lede">The payload is plain Markdown, so any agent takes it on paste. Whether it also opens the image, as of version 0.4:</p>
+      <p class="lede">The payload is plain Markdown, so any agent takes it on paste. Whether it also opens the image, as of version 0.5:</p>
     </div>
-    <div class="tablewrap">
-      <table>
-        <thead><tr><th>Agent</th><th>Image</th><th>Status</th></tr></thead>
-        <tbody>
-          <tr><td>Claude Code</td><td>Reads the PNG from the path</td><td>Expected to work, check pending</td></tr>
-          <tr><td>Cursor</td><td>Reads the path</td><td>Untested</td></tr>
-          <tr><td>Codex CLI</td><td>Views the image at the path</td><td>Untested</td></tr>
-          <tr><td>Gemini CLI, Antigravity</td><td>Untested</td><td>Untested</td></tr>
-        </tbody>
-      </table>
+    <div class="agents">
+      <div class="agent"><b>Claude Code</b><span>Reads the PNG from the path, check pending</span><span class="chip">Expected to work</span></div>
+      <div class="agent"><b>Cursor</b><span>Reads the path</span><span class="chip dash">Untested</span></div>
+      <div class="agent"><b>Codex CLI</b><span>Views the image at the path</span><span class="chip dash">Untested</span></div>
+      <div class="agent"><b>Gemini CLI, Antigravity</b><span>Untested</span><span class="chip dash">Untested</span></div>
     </div>
   </section>
 
@@ -656,18 +679,18 @@ make this rounded, match the other pills</pre>
     <div class="sect-head">
       <h2>Known limitations</h2>
     </div>
-    <ul class="plain">
-      <li><b>Element quality follows the app's accessibility.</b> SwiftUI, AppKit, and the iOS Simulator work well. Electron and Chromium apps build their tree on first contact, so the first hover can take half a second.</li>
-      <li><b>Custom-drawn UIs expose little.</b> Figma, games, and canvases usually reach the bottom of the ladder. The payload says so.</li>
-      <li><b>Hover picks the smallest real control.</b> Press Option to step to the parent.</li>
-    </ul>
+    <div class="limits">
+      <div class="limit"><h3>Element quality follows the app's accessibility</h3><p>SwiftUI, AppKit, and the iOS Simulator work well. Electron and Chromium apps build their tree on first contact, so the first hover can take half a second.</p></div>
+      <div class="limit"><h3>Custom-drawn UIs expose little</h3><p>Figma, games, and canvases usually reach the bottom of the ladder. The payload says so.</p></div>
+      <div class="limit"><h3>Hover picks the smallest real control</h3><p>Press Option to step to the parent.</p></div>
+    </div>
   </section>
 
   <footer class="col">
     <div class="row">
       <a class="btn" href="https://github.com/Malik1942/deixis/releases/latest">Download for Mac</a>
       <a class="link" href="https://github.com/Malik1942/deixis">GitHub</a>
-      <span>Version 0.4.0</span>
+      <span>Version 0.5.0</span>
       <a class="link" href="https://www.malikzhang.com" style="margin-left: auto;">Built by Malik</a>
     </div>
     <p class="word">Deixis is the linguistics term for words like <em>this</em>, <em>here</em>, and <em>that one</em>, which only mean something when someone is pointing.</p>
