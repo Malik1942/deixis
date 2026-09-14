@@ -379,9 +379,9 @@ final class AppState {
 
     private static func hintText(for action: Action) -> String {
         switch action {
-        case .point: "Click or ↩ picks the element · drag draws a frame · ⌥ steps to the parent · esc cancels"
-        case .snap, .cut: "Click or ↩ takes the window · drag draws a frame · ⌥ at release keeps it off disk · esc cancels"
-        case .text: "Click or ↩ takes the element · drag draws a frame · esc cancels"
+        case .point: "Click or ↩ picks the element · drag for a frame · ⌥ for the parent · esc cancels"
+        case .snap, .cut: "Click or ↩ takes the window · drag for a frame · ⌥ for clipboard only · esc cancels"
+        case .text: "Click or ↩ takes the element · drag for a frame · esc cancels"
         }
     }
 
