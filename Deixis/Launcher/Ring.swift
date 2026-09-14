@@ -36,6 +36,16 @@ final class Ring {
         }
 
         var acceptsClipboardOnly: Bool { self == .snap || self == .cut }
+
+        /// The name in `Preferences.hotkeyActions`.
+        var actionName: String {
+            switch self {
+            case .snap: "snap"
+            case .text: "text"
+            case .color: "color"
+            case .cut: "cut"
+            }
+        }
     }
 
     enum Tokens {
@@ -52,6 +62,10 @@ final class Ring {
     private var labelTask: Task<Void, Never>?
     private(set) var center = CGPoint.zero
     private(set) var hovered: Segment?
+    /// R29: each segment's hotkey, shown beside its name.
+    var hints: [Segment: String] = [:] {
+        didSet { view.setHints(hints) }
+    }
 
     init() {
         let side = Tokens.outerRadius * 2
@@ -218,6 +232,20 @@ final class RingView: NSView {
 
     func showOptionBadge(_ visible: Bool) {
         for badge in badges.values { badge.alphaValue = visible ? 1 : 0 }
+    }
+
+    /// "Snap  ⌃⌥2": the hotkey after the name, smaller and quieter, the label kept centered.
+    func setHints(_ hints: [Ring.Segment: String]) {
+        for (segment, label) in labels {
+            let text = NSMutableAttributedString(string: segment.title, attributes: [.font: DesignTokens.sans, .foregroundColor: NSColor.secondaryLabelColor])
+            if let hint = hints[segment] {
+                text.append(NSAttributedString(string: "  " + hint, attributes: [.font: NSFont.systemFont(ofSize: 11), .foregroundColor: NSColor.tertiaryLabelColor]))
+            }
+            let midX = label.frame.midX
+            label.attributedStringValue = text
+            label.sizeToFit()
+            label.frame.origin.x = midX - label.frame.width / 2
+        }
     }
 
     // MARK: Motion

@@ -31,8 +31,7 @@ final class AppState {
     @ObservationIgnored private var userTeamIDs: Set<String> = []
     @ObservationIgnored private let overlay = SelectionOverlay()
     @ObservationIgnored private let toast = Toast()
-    @ObservationIgnored private var hotkey: HotkeyMonitor?
-    @ObservationIgnored private var actionMonitors: [HotkeyMonitor] = []
+    @ObservationIgnored private var hotkeys: HotkeyMonitor?
     @ObservationIgnored private var ball: FloatingBall?
     @ObservationIgnored private var context: CaptureContext?
     @ObservationIgnored private var windows: [Geometry.WindowRecord] = []
@@ -84,25 +83,39 @@ final class AppState {
         restartHotkey()
     }
 
+    /// One monitor for the capture hotkey and every action hotkey (R29).
     private func restartHotkey() {
-        hotkey?.stop()
-        let monitor = HotkeyMonitor(hotkey: preferences.hotkey) { [weak self] in self?.beginCapture() }
-        monitor.start()
-        hotkey = monitor
-        for old in actionMonitors { old.stop() }
-        actionMonitors = preferences.actionHotkeys.compactMap { name, key in
-            let fire: @MainActor () -> Void
-            switch name {
-            case "snap": fire = { [weak self] in self?.beginAction(.snap) }
-            case "text": fire = { [weak self] in self?.beginAction(.text) }
-            case "color": fire = { [weak self] in self?.beginColorPick() }
-            case "cut": fire = { [weak self] in self?.beginAction(.cut) }
-            default: return nil
-            }
-            let actionMonitor = HotkeyMonitor(hotkey: key, onFire: fire)
-            actionMonitor.start()
-            return actionMonitor
+        hotkeys?.stop()
+        var bindings = [HotkeyMonitor.Binding(preferences.hotkey) { [weak self] in self?.beginCapture() }]
+        for (name, key) in preferences.actionHotkeys {
+            guard let fire = fire(forAction: name) else { continue }
+            bindings.append(HotkeyMonitor.Binding(key, fire: fire))
         }
+        let monitor = HotkeyMonitor(bindings: bindings)
+        monitor.start()
+        hotkeys = monitor
+        ball?.ringHints = ringHints()
+    }
+
+    /// What an action hotkey starts, by the action's name in `Preferences.hotkeyActions`.
+    private func fire(forAction name: String) -> (@MainActor () -> Void)? {
+        switch name {
+        case "point": return { [weak self] in self?.beginCapture() }
+        case "snap": return { [weak self] in self?.beginAction(.snap) }
+        case "text": return { [weak self] in self?.beginAction(.text) }
+        case "color": return { [weak self] in self?.beginColorPick() }
+        case "cut": return { [weak self] in self?.beginAction(.cut) }
+        default: return nil
+        }
+    }
+
+    /// The action hotkeys, shown on the ring beside each segment's name.
+    private func ringHints() -> [Ring.Segment: String] {
+        var hints: [Ring.Segment: String] = [:]
+        for segment in Ring.Segment.allCases {
+            if let hotkey = preferences.actionHotkeys[segment.actionName] { hints[segment] = hotkey.symbol }
+        }
+        return hints
     }
 
     /// v0.3 R20: the ball follows the Settings toggle; first launch places it at the lower right.
@@ -115,6 +128,7 @@ final class AppState {
             newBall.onPoint = { [weak self] in self?.beginCapture() }
             newBall.onMoved = { [weak self] origin in self?.preferences.ballPosition = origin }
             newBall.onAction = { [weak self] segment, clipboardOnly in self?.beginRingAction(segment, clipboardOnly: clipboardOnly) }
+            newBall.ringHints = ringHints()
             newBall.show(firstLaunch: firstLaunch)
             ball = newBall
         } else {
@@ -125,8 +139,7 @@ final class AppState {
 
     /// While the Settings recorder listens, the real hotkeys must not fire.
     func pauseHotkey() {
-        hotkey?.stop()
-        for monitor in actionMonitors { monitor.stop() }
+        hotkeys?.stop()
     }
     func resumeHotkey() { restartHotkey() }
 
