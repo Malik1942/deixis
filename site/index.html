@@ -1,3 +1,6 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Deixis</title>
 <meta name="description" content="Point at one element in any Mac app. Your coding agent gets the element, not a screenshot.">
 <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png">
@@ -226,8 +229,8 @@
   .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
   .step { display: grid; gap: 12px; align-content: start; }
   .step .vis {
-    position: relative; height: 108px; border-radius: 14px; background: var(--surface); box-shadow: 0 0 0 1px var(--hair);
-    display: grid; place-items: center; padding: 16px; overflow: hidden;
+    position: relative; height: 120px; border-radius: 14px; background: var(--surface); box-shadow: 0 0 0 1px var(--hair);
+    display: grid; place-items: center; padding: 32px 16px 14px; overflow: hidden;
   }
   .step .vis .n { position: absolute; top: 10px; left: 14px; font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
   .step .text { display: grid; gap: 4px; }
@@ -248,11 +251,11 @@
   .hud .caret { width: 1.5px; height: 15px; background: var(--accent); }
   .hud kbd { font-size: 11px; padding: 0 5px; }
   .term {
-    width: 100%; background: #1c1c1e; color: #f5f5f7; border-radius: 8px; padding: 10px 12px;
+    width: 100%; background: var(--ground); color: var(--ink); border: 1px solid var(--hair); border-radius: 8px; padding: 8px 12px;
     font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 11.5px; line-height: 1.5; text-align: left; white-space: nowrap; overflow: hidden;
   }
-  .term .p { color: #a1a1a6; }
-  .term .k { color: #6ab0ff; }
+  .term .h { color: var(--muted); }
+  .term .k { color: var(--accent); }
 
   /* the overlay, up close: four real frames */
   .frames { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
@@ -353,7 +356,7 @@
     .grid2, .notes { grid-template-columns: 1fr; }
     .steps { grid-template-columns: 1fr; gap: 16px; }
     .step { grid-template-columns: 224px 1fr; align-items: center; gap: 20px; }
-    .step .vis { height: 96px; padding: 12px; }
+    .step .vis { height: 108px; padding: 28px 12px 12px; }
     .step .hud { font-size: 12px; padding: 6px 10px; gap: 8px; }
     .step .term { font-size: 10.5px; padding: 8px 10px; }
     .actions, .states { grid-template-columns: 1fr 1fr; }
@@ -439,7 +442,7 @@
         <div class="text"><h3>Note</h3><p>Type what should change. Enter captures. Esc cancels, nothing written.</p></div>
       </div>
       <div class="step">
-        <div class="vis"><span class="n">3</span><div class="term"><span class="k">## Deixis capture (fix)</span><br>Image: ~/Pictures/Deixis/…<br>button · id=captureButton</div></div>
+        <div class="vis"><span class="n">3</span><div class="term"><span class="h">## Deixis capture (fix)</span><br><span class="k">Image:</span> ~/Pictures/Deixis/…<br>button · id=captureButton</div></div>
         <div class="text"><h3>Paste</h3><p>Into Claude Code, Cursor, or Codex. The image path comes first.</p></div>
       </div>
     </div>
