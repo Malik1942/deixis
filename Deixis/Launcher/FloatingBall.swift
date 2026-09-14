@@ -70,6 +70,7 @@ final class FloatingBall {
     private let glide: Glide
     private var globalMonitor: Any?
     private var localMonitor: Any?
+    private var screenObserver: NSObjectProtocol?
     private(set) var state: State = .rest
     private var freeOrigin: CGPoint
     /// Where the window was last sent (awake near an edge it sits inward of `freeOrigin`).
@@ -77,10 +78,13 @@ final class FloatingBall {
     private var dockTask: Task<Void, Never>?
     /// After a drop docks the disc, the cursor is still on it; stay docked until it has left.
     private var holdDock = false
+    /// The saved origin was off every connected display and had to be pulled onto one.
+    private let restoredOffScreen: Bool
 
     init(origin: CGPoint?) {
         let size = NSSize(width: Tokens.panelSide, height: Tokens.panelSide)
-        let start = origin ?? Self.firstLaunchOrigin()
+        let start = origin.map { Self.onScreenOrigin($0, screens: Self.visibleFrames) } ?? Self.firstLaunchOrigin()
+        restoredOffScreen = origin != nil && start != origin
         freeOrigin = start
         shownOrigin = start
         panel = NSPanel(contentRect: NSRect(origin: start, size: size), styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
@@ -98,6 +102,29 @@ final class FloatingBall {
         view.ball = self
     }
 
+    private static var visibleFrames: [CGRect] { NSScreen.screens.map(\.visibleFrame) }
+
+    /// A saved origin is trusted only while the disc's center falls on a connected display: after
+    /// a display goes away the disc would otherwise sit where nothing shows it. Off every screen,
+    /// the whole disc is brought inside the visible frame it lies nearest. A docked origin passes
+    /// (the disc's center stays a few points inside the edge it tucks into).
+    static func onScreenOrigin(_ origin: CGPoint, screens: [CGRect]) -> CGPoint {
+        guard !screens.isEmpty else { return origin }
+        let offset = Tokens.pad + Tokens.diameter / 2
+        let center = CGPoint(x: origin.x + offset, y: origin.y + offset)
+        if screens.contains(where: { $0.contains(center) }) { return origin }
+        func distance(to frame: CGRect) -> CGFloat {
+            hypot(max(frame.minX - center.x, 0, center.x - frame.maxX), max(frame.minY - center.y, 0, center.y - frame.maxY))
+        }
+        guard let nearest = screens.min(by: { distance(to: $0) < distance(to: $1) }) else { return origin }
+        let radius = Tokens.diameter / 2
+        let safe = CGPoint(
+            x: min(max(center.x, nearest.minX + radius), nearest.maxX - radius),
+            y: min(max(center.y, nearest.minY + radius), nearest.maxY - radius)
+        )
+        return CGPoint(x: safe.x - offset, y: safe.y - offset)
+    }
+
     static func firstLaunchOrigin() -> CGPoint {
         let frame = NSScreen.main?.visibleFrame ?? NSScreen.screens.first?.visibleFrame ?? .zero
         return CGPoint(
@@ -107,6 +134,7 @@ final class FloatingBall {
     }
 
     func show(firstLaunch: Bool) {
+        if restoredOffScreen { onMoved?(freeOrigin) }
         panel.alphaValue = 0
         view.apply(.rest, animated: false)
         panel.orderFrontRegardless()
@@ -147,13 +175,38 @@ final class FloatingBall {
             MainActor.assumeIsolated { self?.cursorMoved(to: point) }
             return event
         }
+        screenObserver = NotificationCenter.default.addObserver(
+            forName: NSApplication.didChangeScreenParametersNotification, object: nil, queue: .main
+        ) { [weak self] _ in
+            MainActor.assumeIsolated { self?.screensChanged() }
+        }
     }
 
     private func stopMonitors() {
         if let globalMonitor { NSEvent.removeMonitor(globalMonitor) }
         if let localMonitor { NSEvent.removeMonitor(localMonitor) }
+        if let screenObserver { NotificationCenter.default.removeObserver(screenObserver) }
         globalMonitor = nil
         localMonitor = nil
+        screenObserver = nil
+    }
+
+    /// A display came or went. A disc left where nothing shows it comes back onto the nearest
+    /// display, and the new spot is saved so the next launch starts there too.
+    private func screensChanged() {
+        guard !view.isDragging, !ringOpen else { return }
+        let frames = Self.visibleFrames
+        let safe = Self.onScreenOrigin(freeOrigin, screens: frames)
+        let shownOnScreen = frames.contains { $0.contains(discCenter) }
+        guard safe != freeOrigin || !shownOnScreen else { return }
+        glide.cancel()
+        dockTask?.cancel()
+        holdDock = false
+        freeOrigin = safe
+        shownOrigin = safe
+        panel.setFrameOrigin(safe)
+        onMoved?(safe)
+        if state == .docked { set(.rest) } else { scheduleDock() }
     }
 
     private var discCenter: CGPoint { CGPoint(x: panel.frame.midX, y: panel.frame.midY) }
