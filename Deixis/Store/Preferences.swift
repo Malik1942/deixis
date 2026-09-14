@@ -112,6 +112,7 @@ final class Preferences {
         static let colorFormat = "colorFormat"
         static let colorSpace = "colorSpace"
         static let retentionDays = "retentionDays"
+        static let adjustSelection = "adjustSelection"
     }
 
     static let retentionChoices = [7, 30, 90, 0]
@@ -174,6 +175,11 @@ final class Preferences {
         didSet { defaults.set(retentionDays, forKey: Key.retentionDays) }
     }
 
+    /// A dragged region for Snap, Text, or Cut waits with handles until Return.
+    var adjustSelection: Bool {
+        didSet { defaults.set(adjustSelection, forKey: Key.adjustSelection) }
+    }
+
     var captureFolderURL: URL { URL(filePath: captureFolder, directoryHint: .isDirectory) }
 
     init(defaults: UserDefaults = .standard) {
@@ -197,5 +203,6 @@ final class Preferences {
         colorFormat = defaults.string(forKey: Key.colorFormat).flatMap(ColorFormat.init(rawValue:)) ?? .hex
         colorSpace = defaults.string(forKey: Key.colorSpace).flatMap(ColorSpaceChoice.init(rawValue:)) ?? .sRGB
         retentionDays = defaults.object(forKey: Key.retentionDays) as? Int ?? 30
+        adjustSelection = defaults.object(forKey: Key.adjustSelection) as? Bool ?? true
     }
 }

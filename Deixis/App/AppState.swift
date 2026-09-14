@@ -183,6 +183,7 @@ final class AppState {
         guard phase == .idle else { return }
         action = requested
         overlay.mode = requested.overlayMode
+        overlay.adjustsRegion = preferences.adjustSelection
         guard AccessibilityReader.isTrusted(prompt: false) else {
             fail(.noAccessibilityPermission, nearRect: nil)
             return

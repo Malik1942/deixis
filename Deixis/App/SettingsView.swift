@@ -31,10 +31,18 @@ struct GeneralSettings: View {
         @Bindable var preferences = state.preferences
         Form {
             Section {
-                LabeledContent("Hotkey") {
+                // System Settings row: title and description in the label, the control trailing.
+                LabeledContent {
                     HotkeyRecorder(hotkey: $preferences.hotkey, onBegin: { state.pauseHotkey() }, onEnd: { state.resumeHotkey() })
+                } label: {
+                    Text("Capture hotkey")
+                    Text("Press a key with modifiers, or double-tap one modifier. Double-tap Command is used by Codex; double-tap Option by Claude Desktop.")
                 }
-                Footnote(text: "Press a key with modifiers, or double-tap one modifier. Double-tap Command is used by Codex; double-tap Option by Claude Desktop.")
+                Toggle(isOn: $preferences.adjustSelection) {
+                    Text("Adjust selection before capturing")
+                    Text("After you drag a region for Snap, Text, or Cut, handles let you fine-tune it. Press Return to capture, Esc to cancel.")
+                }
+                .toggleStyle(.switch)
             }
             Section {
                 LabeledContent("Capture folder") {
@@ -115,15 +123,21 @@ struct HotkeyRecorder: View {
     ]
 
     var body: some View {
+        // The width sits on the label so the bordered button itself is the fixed-width control;
+        // a frame on the button would leave invisible space around a short title.
         HStack(spacing: 8) {
-            Button(recording ? (hint ?? "Press keys…") : hotkey.title) {
-                recording ? stop() : begin()
-            }
-            .frame(minWidth: 180)
             if hotkey != .default, !recording {
-                Button("Default") { hotkey = .default }
+                Button("Reset") { hotkey = .default }
+            }
+            Button {
+                recording ? stop() : begin()
+            } label: {
+                Text(recording ? (hint ?? "Press keys…") : hotkey.title)
+                    .lineLimit(1)
+                    .frame(minWidth: 150)
             }
         }
+        .fixedSize()
     }
 
     private func begin() {
