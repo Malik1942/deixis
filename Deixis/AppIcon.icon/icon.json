@@ -1,0 +1,91 @@
+{
+  "fill-specializations": [
+    {
+      "value": {
+        "linear-gradient": [
+          "extended-srgb:0.96863,0.96863,0.97647,1.00000",
+          "extended-srgb:0.76863,0.76863,0.79608,1.00000"
+        ]
+      }
+    },
+    {
+      "appearance": "dark",
+      "value": {
+        "linear-gradient": [
+          "extended-srgb:0.21176,0.21176,0.23529,1.00000",
+          "extended-srgb:0.06275,0.06275,0.07451,1.00000"
+        ]
+      }
+    }
+  ],
+  "groups": [
+    {
+      "name": "Glass",
+      "layers": [
+        {
+          "glass": true,
+          "image-name": "disc-light.png",
+          "name": "disc",
+          "opacity": 0.18
+        }
+      ],
+      "shadow": {
+        "kind": "neutral",
+        "opacity": 0.35
+      },
+      "translucency": {
+        "enabled": true,
+        "value": 0.9
+      }
+    },
+    {
+      "name": "Glow",
+      "layers": [
+        {
+          "glass": false,
+          "image-name": "glow.png",
+          "name": "glow",
+          "opacity": 0.1
+        }
+      ],
+      "shadow": {
+        "kind": "none",
+        "opacity": 0.5
+      },
+      "translucency": {
+        "enabled": false,
+        "value": 0.5
+      }
+    },
+    {
+      "name": "Brackets",
+      "layers": [
+        {
+          "glass": false,
+          "image-name-specializations": [
+            {
+              "value": "brackets-light.png"
+            },
+            {
+              "appearance": "dark",
+              "value": "brackets-dark.png"
+            }
+          ],
+          "name": "brackets",
+          "opacity": 0.55
+        }
+      ],
+      "shadow": {
+        "kind": "none",
+        "opacity": 0.5
+      },
+      "translucency": {
+        "enabled": false,
+        "value": 0.5
+      }
+    }
+  ],
+  "supported-platforms": {
+    "squares": "shared"
+  }
+}
