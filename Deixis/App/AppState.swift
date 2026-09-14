@@ -47,6 +47,9 @@ final class AppState {
     @ObservationIgnored private var lockedElements: [RegionElement]?
     @ObservationIgnored private var lockedNearby: [RegionElement]?
     @ObservationIgnored private var action: Action = .point
+    @ObservationIgnored private var colorSession: ColorPickerSession?
+    /// R25: the last ten picked colors, in memory only.
+    @ObservationIgnored private(set) var recentColors: [ColorValue] = []
     @ObservationIgnored private var clickPoint: CGPoint = .zero
     @ObservationIgnored private var cropTask: Task<CroppedImage, any Error>?
     @ObservationIgnored private var openedSettingsPanes: Set<String> = []
@@ -103,6 +106,35 @@ final class AppState {
     /// R1/R5: collect context for the app the user was looking at, then show the overlay.
     func beginCapture() {
         beginAction(.point)
+    }
+
+    /// R25: the magnifier session. Click copies the pixel in the chosen format; Esc cancels.
+    func beginColorPick() {
+        guard phase == .idle, colorSession == nil else { return }
+        guard ScreenCapture.hasPermission() else {
+            fail(.noScreenRecordingPermission, nearRect: nil)
+            return
+        }
+        phase = .writing
+        let session = ColorPickerSession(space: preferences.colorSpace, format: preferences.colorFormat)
+        session.onPick = { [weak self] color in
+            guard let self else { return }
+            let text = ColorPicker.format(color, as: self.preferences.colorFormat)
+            PasteboardWriter.write(string: text)
+            recentColors = Array(([color] + recentColors).prefix(10))
+            endColorPick()
+            let cursor = Geometry.cgPoint(fromAppKit: NSEvent.mouseLocation, primaryHeight: SelectionOverlay.currentPrimaryHeight())
+            toast.show(HudText.copied(identifier: text), near: CGRect(origin: cursor, size: .zero))
+        }
+        session.onCancel = { [weak self] in self?.endColorPick() }
+        colorSession = session
+        session.start()
+    }
+
+    private func endColorPick() {
+        colorSession?.stop()
+        colorSession = nil
+        phase = .idle
     }
 
     /// R22: Snap, Text, and Cut open the same overlay in their mode.

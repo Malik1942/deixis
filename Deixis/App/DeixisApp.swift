@@ -37,6 +37,7 @@ private struct StatusMenu: View {
         }
         Button("Snap") { state.beginAction(.snap) }
         Button("Text") { state.beginAction(.text) }
+        Button("Color") { state.beginColorPick() }
         Button("Cut") { state.beginAction(.cut) }
         Divider()
         Button("Open capture folder") {

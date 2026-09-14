@@ -257,6 +257,8 @@ final class OverlayPanel: NSPanel {
 
 final class OverlayContentView: NSView, NSTextFieldDelegate {
     weak var owner: SelectionOverlay?
+    /// When set, this view serves the color picker instead of the selection overlay (R25).
+    weak var picker: ColorPickerSession?
 
     private let highlight = HighlightView()
     private let label = HudLabel()
@@ -304,11 +306,13 @@ final class OverlayContentView: NSView, NSTextFieldDelegate {
     }
 
     override func mouseMoved(with event: NSEvent) {
+        if let picker { picker.cursorMoved(NSEvent.mouseLocation); return }
         guard !locked, let window else { return }
         owner?.hover(atAppKit: window.convertPoint(toScreen: event.locationInWindow))
     }
 
     override func mouseDown(with event: NSEvent) {
+        if let picker { picker.clicked(); return }
         guard !locked else { return }
         dragStart = event.locationInWindow
         isDragging = false
@@ -366,6 +370,17 @@ final class OverlayContentView: NSView, NSTextFieldDelegate {
     }
 
     override func keyDown(with event: NSEvent) {
+        if let picker {
+            switch event.keyCode {
+            case 53: picker.cancelled()
+            case 123: picker.nudgeBy(dx: -1, dy: 0)
+            case 124: picker.nudgeBy(dx: 1, dy: 0)
+            case 125: picker.nudgeBy(dx: 0, dy: 1)
+            case 126: picker.nudgeBy(dx: 0, dy: -1)
+            default: break
+            }
+            return
+        }
         if event.keyCode == 53 { // Esc
             owner?.onCancel?()
         }

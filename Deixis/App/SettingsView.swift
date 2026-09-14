@@ -54,6 +54,17 @@ struct GeneralSettings: View {
                 Footnote(text: "Each capture writes a PNG and a JSON sidecar here. Finder tags are always added: Deixis, the app, fix or reference, and the project when known.")
             }
             Section {
+                Picker("Color format", selection: $preferences.colorFormat) {
+                    ForEach(ColorFormat.allCases, id: \.self) { Text($0.title).tag($0) }
+                }
+                .pickerStyle(.menu)
+                Picker("Color space", selection: $preferences.colorSpace) {
+                    ForEach(ColorSpaceChoice.allCases, id: \.self) { Text($0.title).tag($0) }
+                }
+                .pickerStyle(.menu)
+                Footnote(text: "The Color action copies the pixel under the cursor in this format.")
+            }
+            Section {
                 Toggle("Floating ball", isOn: $preferences.ballEnabled)
                     .toggleStyle(.switch)
                 Footnote(text: "A quiet disc that wakes when you approach. Click it to point. The hotkey works either way.")

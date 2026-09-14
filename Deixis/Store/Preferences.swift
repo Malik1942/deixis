@@ -109,6 +109,8 @@ final class Preferences {
         static let ballPosition = "ballPosition"
         static let myApps = "myApps"
         static let organization = "organization"
+        static let colorFormat = "colorFormat"
+        static let colorSpace = "colorSpace"
     }
 
     static var defaultCaptureFolder: String { ModeInference.directoryPath(FileStore.defaultDirectory) }
@@ -156,6 +158,14 @@ final class Preferences {
         didSet { defaults.set(organization.rawValue, forKey: Key.organization) }
     }
 
+    var colorFormat: ColorFormat {
+        didSet { defaults.set(colorFormat.rawValue, forKey: Key.colorFormat) }
+    }
+
+    var colorSpace: ColorSpaceChoice {
+        didSet { defaults.set(colorSpace.rawValue, forKey: Key.colorSpace) }
+    }
+
     var captureFolderURL: URL { URL(filePath: captureFolder, directoryHint: .isDirectory) }
 
     init(defaults: UserDefaults = .standard) {
@@ -176,5 +186,7 @@ final class Preferences {
         }
         myApps = defaults.stringArray(forKey: Key.myApps) ?? []
         organization = defaults.string(forKey: Key.organization).flatMap(CaptureOrganization.init(rawValue:)) ?? .none
+        colorFormat = defaults.string(forKey: Key.colorFormat).flatMap(ColorFormat.init(rawValue:)) ?? .hex
+        colorSpace = defaults.string(forKey: Key.colorSpace).flatMap(ColorSpaceChoice.init(rawValue:)) ?? .sRGB
     }
 }

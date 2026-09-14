@@ -26,6 +26,26 @@ enum ScreenCapture {
     @discardableResult
     static func requestPermission() -> Bool { CGRequestScreenCaptureAccess() }
 
+    /// The whole display containing `point`, own windows excluded, with its frame and scale.
+    static func displayImage(containing point: CGPoint) async throws -> (image: CGImage, frame: CGRect, scale: CGFloat) {
+        let content = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: true)
+        guard let display = content.displays.first(where: { $0.frame.contains(point) }) ?? content.displays.first else {
+            throw ScreenCaptureFailure.noDisplay
+        }
+        let ownPID = ProcessInfo.processInfo.processIdentifier
+        let ownWindows = content.windows.filter { $0.owningApplication?.processID == ownPID }
+        let filter = SCContentFilter(display: display, excludingWindows: ownWindows)
+        let scale = CGFloat(filter.pointPixelScale)
+        let configuration = SCStreamConfiguration()
+        configuration.width = Int((CGFloat(display.width) * scale).rounded())
+        configuration.height = Int((CGFloat(display.height) * scale).rounded())
+        configuration.showsCursor = false
+        configuration.scalesToFit = false
+        configuration.captureResolution = .best
+        let image = try await SCScreenshotManager.captureImage(contentFilter: filter, configuration: configuration)
+        return (image, display.frame, scale)
+    }
+
     /// Captures `rect` (global screen points) from the display that contains its center.
     static func crop(_ rect: CGRect) async throws -> CroppedImage {
         let content = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: true)
