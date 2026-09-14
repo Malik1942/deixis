@@ -145,9 +145,8 @@ final class ColorPickerSession {
 /// 15×15 native pixels at 10x on `label.bg`, a 1 px `separatorColor` grid, the center pixel
 /// outlined with `highlight.stroke`, the value in `label.mono` beneath.
 final class MagnifierView: NSView {
-    private var patch: CGImage?
-    private var offset = CGPoint.zero
     private let material = NSVisualEffectView()
+    private let grid = PixelGridView()
     private let value = NSTextField(labelWithString: "")
 
     override init(frame frameRect: NSRect) {
@@ -161,6 +160,8 @@ final class MagnifierView: NSView {
         material.frame = bounds
         material.autoresizingMask = [.width, .height]
         addSubview(material)
+        grid.frame = NSRect(x: 0, y: ColorPickerSession.Tokens.valueHeight, width: frameRect.width, height: frameRect.width)
+        addSubview(grid)
         value.font = DesignTokens.mono
         value.textColor = .labelColor
         value.alignment = .center
@@ -172,16 +173,22 @@ final class MagnifierView: NSView {
     required init?(coder: NSCoder) { fatalError("init(coder:) is not supported") }
 
     func update(patch: CGImage?, offset: CGPoint, value text: String) {
-        self.patch = patch
-        self.offset = offset
+        grid.patch = patch
+        grid.offset = offset
+        grid.needsDisplay = true
         value.stringValue = text
-        needsDisplay = true
     }
+}
+
+/// The zoomed pixels, grid, and center outline. A separate view so it paints above the material.
+final class PixelGridView: NSView {
+    var patch: CGImage?
+    var offset = CGPoint.zero
 
     override func draw(_ dirtyRect: NSRect) {
         let zoom = ColorPickerSession.Tokens.zoom
         let pixels = ColorPickerSession.Tokens.pixels
-        let area = NSRect(x: 0, y: ColorPickerSession.Tokens.valueHeight, width: bounds.width, height: bounds.width)
+        let area = bounds
         if let patch, let context = NSGraphicsContext.current?.cgContext {
             context.saveGState()
             context.interpolationQuality = .none
@@ -196,15 +203,15 @@ final class MagnifierView: NSView {
             context.restoreGState()
         }
         NSColor.separatorColor.setStroke()
-        let grid = NSBezierPath()
-        grid.lineWidth = 1
+        let lines = NSBezierPath()
+        lines.lineWidth = 1
         for i in 0...pixels {
             let x = area.minX + CGFloat(i) * zoom + 0.5
-            grid.move(to: NSPoint(x: x, y: area.minY)); grid.line(to: NSPoint(x: x, y: area.maxY))
+            lines.move(to: NSPoint(x: x, y: area.minY)); lines.line(to: NSPoint(x: x, y: area.maxY))
             let y = area.minY + CGFloat(i) * zoom + 0.5
-            grid.move(to: NSPoint(x: area.minX, y: y)); grid.line(to: NSPoint(x: area.maxX, y: y))
+            lines.move(to: NSPoint(x: area.minX, y: y)); lines.line(to: NSPoint(x: area.maxX, y: y))
         }
-        grid.stroke()
+        lines.stroke()
         let center = NSRect(x: area.minX + CGFloat(pixels / 2) * zoom, y: area.minY + CGFloat(pixels / 2) * zoom, width: zoom, height: zoom)
         NSColor.controlAccentColor.setStroke()
         let outline = NSBezierPath(rect: center.insetBy(dx: -1, dy: -1))
