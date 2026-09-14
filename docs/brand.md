@@ -23,11 +23,14 @@ fallback for macOS 15. Regeneration tools and the current renders live in `desig
 
 - Two elements: a clear glass disc, the ball made solid, and two selection corners with a 10 percent gap.
 - Disc at 62 percent of the canvas, 18 percent opacity, glass layer, soft center glow at 10 percent.
-- Brackets: label color at 55 percent, stroke 1.6 percent of the canvas, round caps, arms 17 percent long.
-- Background: neutral gradient, near-white to light gray, near-black to dark gray. No color, so the user's tint colors
-  the glass on macOS 26.
+- Brackets: white at 85 percent, stroke 1.6 percent of the canvas, round caps, arms 17 percent long.
+- Background: the product blue as a gradient, lit from the top. Light `#2A96FF` to `#0060DF`; dark `#1F86F0` to
+  `#0A4FBF`. The same blue the overlay draws around an element, so icon, overlay, and site share one color.
+  Chosen Sep 13, 2026 over a neutral gradient: the neutral version disappears in a Dock, and blue is the one color
+  the product already owns. The cost, accepted: the icon no longer changes between light and dark beyond the glass.
 - Rejected on the way here: a heavier hand-painted glass, a dot under the lens, an element with its hover outline,
-  brackets overlapping the disc. Every added element read as noise. The icon stays two elements.
+  brackets overlapping the disc, blue brackets on a neutral background (read as incoherent), a flat blue background
+  (less depth than the gradient). Every added element read as noise. The icon stays two elements.
 - Menu bar: `hand.point.up.left` as a template image, not derived from the icon. SF Symbols are licensed for
   interfaces, not icons or logos, so the icon is original artwork.
 
@@ -41,7 +44,8 @@ Mac the site and the app share a voice. No custom font is loaded.
 
 **Color.** Light: ground `#F5F5F7`, surface `#FFFFFF`, ink `#1D1D1F`, secondary `#6E6E73`, hairline `#D2D2D7`.
 Dark: ground `#000000`, surface `#1C1C1E`, ink `#F5F5F7`, secondary `#A1A1A6`, hairline `#3A3A3C`. Accent `#0A84FF`
-appears only where the product uses it: the highlight stroke in the illustration and the download button.
+appears where the product uses it: the highlight stroke in the illustration, the hero stage behind the drawn
+window, the download button, and the icon's background.
 
 **Type.** `-apple-system` stack, SF Mono via `ui-monospace` for the payload. Display weight 600 with `-0.022em`
 tracking. Scale: 60 / 40 / 21 / 17 / 15 / 13. Body 17 px at 1.5 line height in a 760 px column.

@@ -3,8 +3,8 @@
     {
       "value": {
         "linear-gradient": [
-          "extended-srgb:0.96863,0.96863,0.97647,1.00000",
-          "extended-srgb:0.76863,0.76863,0.79608,1.00000"
+          "extended-srgb:0.16471,0.58824,1.00000,1.00000",
+          "extended-srgb:0.00000,0.37647,0.87451,1.00000"
         ]
       }
     },
@@ -12,8 +12,8 @@
       "appearance": "dark",
       "value": {
         "linear-gradient": [
-          "extended-srgb:0.21176,0.21176,0.23529,1.00000",
-          "extended-srgb:0.06275,0.06275,0.07451,1.00000"
+          "extended-srgb:0.12157,0.52549,0.94118,1.00000",
+          "extended-srgb:0.03922,0.30980,0.74902,1.00000"
         ]
       }
     }
@@ -64,7 +64,7 @@
           "glass": false,
           "image-name-specializations": [
             {
-              "value": "brackets-light.png"
+              "value": "brackets-dark.png"
             },
             {
               "appearance": "dark",
@@ -72,7 +72,7 @@
             }
           ],
           "name": "brackets",
-          "opacity": 0.55
+          "opacity": 0.85
         }
       ],
       "shadow": {
