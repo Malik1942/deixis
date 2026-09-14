@@ -46,7 +46,7 @@ struct HelpView: View {
                 }
                 Section("Afterwards") {
                     Row(symbol: "arrow.triangle.2.circlepath", title: "See what changed", detail: "In the menu bar, once your agent has edited: Deixis finds the same element again and shows before and after with the git diff.", key: nil)
-                    Row(symbol: "clock.arrow.circlepath", title: "Images are kept for a while", detail: "Captures live in ~/Pictures/Deixis. Older images go to the Trash on launch and daily; change the period, or keep everything, in Settings.", key: preferences.retentionDays == 0 ? "Forever" : "\(preferences.retentionDays) days")
+                    Row(symbol: "clock.arrow.circlepath", title: "Old images are cleaned up", detail: "Older images go to the Trash. Change the period, or keep everything, in Settings.", key: preferences.retentionDays == 0 ? "Forever" : "\(preferences.retentionDays) days")
                 }
             }
             .formStyle(.grouped)
