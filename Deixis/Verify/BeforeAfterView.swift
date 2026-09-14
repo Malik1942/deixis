@@ -108,8 +108,8 @@ struct BeforeAfterView: View {
                 ZStack(alignment: .topLeading) {
                     picture(before)
                     picture(after)
-                        .mask(alignment: .leading) {
-                            Rectangle().frame(width: size.width * split)
+                        .mask(alignment: .trailing) {
+                            Rectangle().frame(width: size.width * (1 - split))
                         }
                     Rectangle()
                         .fill(Color.accentColor)
