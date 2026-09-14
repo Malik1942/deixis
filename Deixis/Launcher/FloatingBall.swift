@@ -289,6 +289,9 @@ final class BallView: NSView {
     @available(*, unavailable)
     required init?(coder: NSCoder) { fatalError("init(coder:) is not supported") }
 
+    /// The ball is never the key window; without this the first click only activates it.
+    override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
+
     override func viewDidChangeEffectiveAppearance() {
         super.viewDidChangeEffectiveAppearance()
         applyColors()

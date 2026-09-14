@@ -32,6 +32,7 @@ final class AppState {
     @ObservationIgnored private let overlay = SelectionOverlay()
     @ObservationIgnored private let toast = Toast()
     @ObservationIgnored private var hotkey: HotkeyMonitor?
+    @ObservationIgnored private var actionMonitors: [HotkeyMonitor] = []
     @ObservationIgnored private var ball: FloatingBall?
     @ObservationIgnored private var context: CaptureContext?
     @ObservationIgnored private var windows: [Geometry.WindowRecord] = []
@@ -65,6 +66,7 @@ final class AppState {
             await MainActor.run { self?.userTeamIDs = teams }
         }
         preferences.onHotkeyChange = { [weak self] in self?.restartHotkey() }
+        preferences.onActionHotkeysChange = { [weak self] in self?.restartHotkey() }
         preferences.onBallEnabledChange = { [weak self] in self?.updateBall() }
         updateBall()
         scheduleSweeps()
@@ -82,6 +84,20 @@ final class AppState {
         let monitor = HotkeyMonitor(hotkey: preferences.hotkey) { [weak self] in self?.beginCapture() }
         monitor.start()
         hotkey = monitor
+        for old in actionMonitors { old.stop() }
+        actionMonitors = preferences.actionHotkeys.compactMap { name, key in
+            let fire: @MainActor () -> Void
+            switch name {
+            case "snap": fire = { [weak self] in self?.beginAction(.snap) }
+            case "text": fire = { [weak self] in self?.beginAction(.text) }
+            case "color": fire = { [weak self] in self?.beginColorPick() }
+            case "cut": fire = { [weak self] in self?.beginAction(.cut) }
+            default: return nil
+            }
+            let actionMonitor = HotkeyMonitor(hotkey: key, onFire: fire)
+            actionMonitor.start()
+            return actionMonitor
+        }
     }
 
     /// v0.3 R20: the ball follows the Settings toggle; first launch places it at the lower right.
@@ -101,8 +117,11 @@ final class AppState {
         }
     }
 
-    /// While the Settings recorder listens, the real hotkey must not fire.
-    func pauseHotkey() { hotkey?.stop() }
+    /// While the Settings recorder listens, the real hotkeys must not fire.
+    func pauseHotkey() {
+        hotkey?.stop()
+        for monitor in actionMonitors { monitor.stop() }
+    }
     func resumeHotkey() { restartHotkey() }
 
     // MARK: Session

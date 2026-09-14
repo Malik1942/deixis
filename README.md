@@ -46,6 +46,17 @@ make this rounded, match the other pills
 - **The floating ball** rests as a faint disc, docks to the nearest edge when ignored, wakes as the cursor approaches, and starts a capture on click. Drag it to move it. Turn it off in Settings; the hotkey works either way.
 - **Drawn frames and text.** Drag on the overlay to capture a frame and every element inside it. When nothing has an identifier, the text in the image is recognized and listed, and the nearest labeled elements are named.
 
+## The other actions
+
+Point is the primary action. Four one-shot actions share its gesture and sit on the ball's ring (press and hold the ball) and in the menu bar. Actions that make an image keep a file for the retention period; actions that make text or a value keep nothing.
+
+- **Snap**: drag a region or click a window. PNG to the clipboard and the folder; hold ⌥ at release for clipboard only.
+- **Text**: drag a region or click an element. Recognized lines to the clipboard, nothing on disk.
+- **Color**: a magnifier follows the cursor; arrows nudge by a pixel, click copies the value. Hex, rgb, hsl, or SwiftUI, in sRGB or Display P3, chosen in Settings.
+- **Cut**: drag or click; the subject is cut onto a transparent background, PNG to the clipboard and the folder.
+- **Retention**: images older than the setting (30 days by default) move to the Trash on launch and daily. Pinned captures ("Pin last capture" in the menu) and captures an agent marked resolved stay.
+- Each action can have its own hotkey, recorded in Settings; none is assigned by default.
+
 ## Agent compatibility
 
 | Agent | Paste | Image | Status |

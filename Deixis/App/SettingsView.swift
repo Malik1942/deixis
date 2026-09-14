@@ -32,9 +32,24 @@ struct GeneralSettings: View {
         Form {
             Section {
                 LabeledContent("Hotkey") {
-                    HotkeyRecorder(hotkey: $preferences.hotkey, onBegin: { state.pauseHotkey() }, onEnd: { state.resumeHotkey() })
+                    HotkeyRecorder(
+                        hotkey: Binding(get: { preferences.hotkey }, set: { preferences.hotkey = $0 ?? .default }),
+                        fallback: .default,
+                        onBegin: { state.pauseHotkey() }, onEnd: { state.resumeHotkey() }
+                    )
                 }
                 Footnote(text: "Press a key with modifiers, or double-tap one modifier. Double-tap Command is used by Codex; double-tap Option by Claude Desktop.")
+            }
+            Section {
+                ForEach(Preferences.hotkeyActions, id: \.self) { action in
+                    LabeledContent(action.capitalized) {
+                        HotkeyRecorder(
+                            hotkey: Binding(get: { preferences.actionHotkeys[action] }, set: { preferences.actionHotkeys[action] = $0 }),
+                            onBegin: { state.pauseHotkey() }, onEnd: { state.resumeHotkey() }
+                        )
+                    }
+                }
+                Footnote(text: "Snap, Text, Color, and Cut are also on the ball: press and hold it. Hotkeys are optional.")
             }
             Section {
                 LabeledContent("Capture folder") {
@@ -95,7 +110,9 @@ struct GeneralSettings: View {
 
 /// Records the next key press or modifier double-tap as the hotkey. Esc cancels.
 struct HotkeyRecorder: View {
-    @Binding var hotkey: Hotkey
+    @Binding var hotkey: Hotkey?
+    /// What "Default" restores; nil means the action can be left unassigned ("Clear").
+    var fallback: Hotkey? = nil
     let onBegin: () -> Void
     let onEnd: () -> Void
 
@@ -116,12 +133,16 @@ struct HotkeyRecorder: View {
 
     var body: some View {
         HStack(spacing: 8) {
-            Button(recording ? (hint ?? "Press keys…") : hotkey.title) {
+            Button(recording ? (hint ?? "Press keys…") : (hotkey?.title ?? "None")) {
                 recording ? stop() : begin()
             }
             .frame(minWidth: 180)
-            if hotkey != .default, !recording {
-                Button("Default") { hotkey = .default }
+            if !recording {
+                if let fallback, hotkey != fallback {
+                    Button("Default") { hotkey = fallback }
+                } else if fallback == nil, hotkey != nil {
+                    Button("Clear") { hotkey = nil }
+                }
             }
         }
     }

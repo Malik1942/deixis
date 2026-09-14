@@ -112,7 +112,11 @@ final class Preferences {
         static let colorFormat = "colorFormat"
         static let colorSpace = "colorSpace"
         static let retentionDays = "retentionDays"
+        static let actionHotkeys = "actionHotkeys"
     }
+
+    /// The one-shot actions that can carry a hotkey (R29), in menu order.
+    static let hotkeyActions = ["snap", "text", "color", "cut"]
 
     static let retentionChoices = [7, 30, 90, 0]
 
@@ -123,6 +127,8 @@ final class Preferences {
     @ObservationIgnored var onHotkeyChange: (() -> Void)?
     /// Called after the ball toggle changes so it can show or hide at once.
     @ObservationIgnored var onBallEnabledChange: (() -> Void)?
+    /// Called after any per-action hotkey changes so the monitors can restart.
+    @ObservationIgnored var onActionHotkeysChange: (() -> Void)?
 
     var hotkey: Hotkey {
         didSet {
@@ -174,6 +180,14 @@ final class Preferences {
         didSet { defaults.set(retentionDays, forKey: Key.retentionDays) }
     }
 
+    /// R29: hotkeys for Snap, Text, Color, Cut by action name; unassigned by default.
+    var actionHotkeys: [String: Hotkey] {
+        didSet {
+            if let data = try? JSONEncoder().encode(actionHotkeys) { defaults.set(data, forKey: Key.actionHotkeys) }
+            if actionHotkeys != oldValue { onActionHotkeysChange?() }
+        }
+    }
+
     var captureFolderURL: URL { URL(filePath: captureFolder, directoryHint: .isDirectory) }
 
     init(defaults: UserDefaults = .standard) {
@@ -197,5 +211,10 @@ final class Preferences {
         colorFormat = defaults.string(forKey: Key.colorFormat).flatMap(ColorFormat.init(rawValue:)) ?? .hex
         colorSpace = defaults.string(forKey: Key.colorSpace).flatMap(ColorSpaceChoice.init(rawValue:)) ?? .sRGB
         retentionDays = defaults.object(forKey: Key.retentionDays) as? Int ?? 30
+        if let data = defaults.data(forKey: Key.actionHotkeys), let stored = try? JSONDecoder().decode([String: Hotkey].self, from: data) {
+            actionHotkeys = stored
+        } else {
+            actionHotkeys = [:]
+        }
     }
 }
