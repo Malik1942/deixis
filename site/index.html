@@ -1,4 +1,6 @@
+<meta charset="utf-8">
 <title>Deixis</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="description" content="Point at one element in any Mac app. Your coding agent gets the element, not a screenshot.">
 <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png">
 <link rel="icon" type="image/png" sizes="64x64" href="assets/favicon-64.png">
@@ -135,6 +137,12 @@
 
   /* hero */
   .hero { text-align: center; padding-block: 88px 48px; display: grid; gap: 20px; justify-items: center; }
+  .hero .eyebrow {
+    max-width: 64ch; margin-bottom: 2px;
+    font-size: 15px; font-weight: 400; line-height: 1.4; letter-spacing: -0.005em;
+    color: var(--muted); text-wrap: balance;
+  }
+  .hero .eyebrow b { color: var(--accent); font-weight: 600; }
   .app-icon {
     width: 128px; height: 128px;
     background-image: var(--icon);
@@ -391,6 +399,7 @@
 </nav>
 <main id="top">
   <header class="hero col">
+    <p class="eyebrow"><b>v0.4, built in 3 hours</b> for the Palantir Product Design Show &amp; Tell</p>
     <div class="app-icon" role="img" aria-label="Deixis app icon"></div>
     <p class="name">Deixis <span>for Mac</span></p>
     <h1>Agents don't understand <em>this</em>. Deixis&nbsp;does.</h1>
@@ -617,7 +626,7 @@ make this rounded, match the other pills</pre>
   <section class="col">
     <div class="sect-head">
       <h2>Works where you paste</h2>
-      <p class="lede">The payload is plain Markdown, so any agent takes it on paste. Whether it also opens the image, as of version 0.4:</p>
+      <p class="lede">The payload is plain Markdown, so any agent takes it on paste. Whether it also opens the image, as of version 0.5:</p>
     </div>
     <div class="tablewrap">
       <table>
@@ -647,7 +656,7 @@ make this rounded, match the other pills</pre>
     <div class="row">
       <a class="btn" href="https://github.com/Malik1942/deixis/releases/latest">Download for Mac</a>
       <a class="link" href="https://github.com/Malik1942/deixis">GitHub</a>
-      <span>Version 0.4.0</span>
+      <span>Version 0.5.0</span>
       <a class="link" href="https://www.malikzhang.com" style="margin-left: auto;">Built by Malik</a>
     </div>
     <p class="word">Deixis is the linguistics term for words like <em>this</em>, <em>here</em>, and <em>that one</em>, which only mean something when someone is pointing.</p>
