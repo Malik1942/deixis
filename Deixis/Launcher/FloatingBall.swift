@@ -267,7 +267,7 @@ final class FloatingBall {
         onPoint?()
     }
 
-    /// R27: mouse down starts the hold; 300 ms without a drag opens the ring.
+    /// R27: mouse down starts the hold; `Ring.Tokens.holdDelay` without a drag opens the ring.
     func pressBegan() {
         holdTask?.cancel()
         holdTask = Task { @MainActor in
@@ -308,6 +308,8 @@ final class FloatingBall {
     }
 
     var origin: CGPoint { panel.frame.origin }
+    /// AppKit screen frame of the panel, for anchoring a toast to the ball.
+    var frame: CGRect { panel.frame }
 
     /// Dropped near a screen edge, the disc tucks into it at once and stays until the cursor has
     /// left. Otherwise the cursor is still on it, so it stays ready; leaving rests it.

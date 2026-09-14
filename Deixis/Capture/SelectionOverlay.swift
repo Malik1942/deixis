@@ -17,6 +17,8 @@ enum DesignTokens {
     static let dismiss: TimeInterval = 0.120
     static let hover: TimeInterval = 0.080
     static let toastLife: TimeInterval = 1.000
+    /// v0.5 R40: a one-line hint needs reading time.
+    static let hintLife: TimeInterval = 6.000
     static var mono: NSFont { .monospacedSystemFont(ofSize: 11, weight: .regular) }
     static var sans: NSFont { .systemFont(ofSize: 12) }
     /// Labels flip above the element when its bottom is within this distance of the screen bottom.
@@ -305,6 +307,10 @@ final class OverlayContentView: NSView, NSTextFieldDelegate {
 
     override var acceptsFirstResponder: Bool { true }
 
+    /// v0.5 R37: a click on a panel that is not key is still a click. Only the first display's panel
+    /// is made key; without this every other display dropped the first click.
+    override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
+
     override func updateTrackingAreas() {
         super.updateTrackingAreas()
         if let trackingArea { removeTrackingArea(trackingArea) }
@@ -467,6 +473,7 @@ final class OverlayContentView: NSView, NSTextFieldDelegate {
         if let picker {
             switch event.keyCode {
             case 53: picker.cancelled()
+            case 36, 76: picker.clicked() // v0.5 R38: Return copies, like the click
             case 123: picker.nudgeBy(dx: -1, dy: 0)
             case 124: picker.nudgeBy(dx: 1, dy: 0)
             case 125: picker.nudgeBy(dx: 0, dy: 1)
@@ -479,7 +486,13 @@ final class OverlayContentView: NSView, NSTextFieldDelegate {
             owner?.onCancel?()
             return
         }
-        guard editRegion != nil else { return }
+        guard editRegion != nil else {
+            // v0.5 R38: Return is a click at the cursor; the hover is the selection.
+            if event.keyCode == 36 || event.keyCode == 76, !locked {
+                owner?.click(atAppKit: NSEvent.mouseLocation)
+            }
+            return
+        }
         switch event.keyCode {
         case 36, 76: // Return, keypad Enter
             confirmRegion()
@@ -762,23 +775,16 @@ final class NoteFieldView: NSVisualEffectView {
 // MARK: - Toast
 
 /// PRD toast spec: a pill on `label.bg` near where the element was, `toast.life`, then `motion.dismiss`.
+/// v0.5 R40: the same pill carries the hints, at the bottom center of a display for `hint.life`.
 @MainActor
 final class Toast {
     private var panel: NSPanel?
     private var generation = 0
 
     /// `anchor` is in CG points; the pill sits just below it (above when near the screen bottom).
-    func show(_ text: NSAttributedString, near anchor: CGRect) {
-        panel?.orderOut(nil)
-        generation += 1
-        let current = generation
-
-        let label = HudLabel()
-        label.set(text)
+    func show(_ text: NSAttributedString, near anchor: CGRect, life: TimeInterval = DesignTokens.toastLife) {
+        let label = makeLabel(text)
         let size = label.hudSize
-        label.frame = CGRect(origin: .zero, size: size)
-        label.makePill()
-
         let primaryHeight = SelectionOverlay.currentPrimaryHeight()
         let rect = Geometry.appKitRect(fromCG: anchor, primaryHeight: primaryHeight)
         let screen = NSScreen.screens.first { $0.frame.contains(CGPoint(x: rect.midX, y: rect.midY)) } ?? NSScreen.main
@@ -787,8 +793,56 @@ final class Toast {
         if origin.y < bounds.minY + DesignTokens.flipMargin {
             origin.y = rect.maxY + DesignTokens.spaceM
         }
-        origin.x = min(max(origin.x, bounds.minX + DesignTokens.spaceM), bounds.maxX - size.width - DesignTokens.spaceM)
-        origin.y = min(max(origin.y, bounds.minY + DesignTokens.spaceM), bounds.maxY - size.height - DesignTokens.spaceM)
+        present(label, at: clamp(origin, size: size, in: bounds), life: life)
+    }
+
+    /// The bottom center of the display holding `point` (AppKit screen points): the ⌘⇧5 toolbar's
+    /// spot, clear of the hover label wherever the cursor is.
+    func show(_ text: NSAttributedString, atBottomOf point: CGPoint, life: TimeInterval) {
+        let label = makeLabel(text)
+        let size = label.hudSize
+        let screen = NSScreen.screens.first { $0.frame.contains(point) } ?? NSScreen.main
+        let bounds = screen?.visibleFrame ?? .zero
+        let origin = CGPoint(x: bounds.midX - size.width / 2, y: bounds.minY + DesignTokens.flipMargin)
+        present(label, at: clamp(origin, size: size, in: bounds), life: life)
+    }
+
+    /// Takes the pill down early, with `motion.dismiss`.
+    func hide() {
+        guard let panel else { return }
+        generation += 1
+        self.panel = nil
+        NSAnimationContext.runAnimationGroup { context in
+            context.duration = DesignTokens.dismiss
+            context.timingFunction = CAMediaTimingFunction(name: .easeIn)
+            panel.animator().alphaValue = 0
+        }
+        Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(Int(DesignTokens.dismiss * 1000) + 20))
+            panel.orderOut(nil)
+        }
+    }
+
+    private func makeLabel(_ text: NSAttributedString) -> HudLabel {
+        let label = HudLabel()
+        label.set(text)
+        label.frame = CGRect(origin: .zero, size: label.hudSize)
+        label.makePill()
+        return label
+    }
+
+    private func clamp(_ origin: CGPoint, size: CGSize, in bounds: CGRect) -> CGPoint {
+        CGPoint(
+            x: min(max(origin.x, bounds.minX + DesignTokens.spaceM), bounds.maxX - size.width - DesignTokens.spaceM),
+            y: min(max(origin.y, bounds.minY + DesignTokens.spaceM), bounds.maxY - size.height - DesignTokens.spaceM)
+        )
+    }
+
+    private func present(_ label: HudLabel, at origin: CGPoint, life: TimeInterval) {
+        panel?.orderOut(nil)
+        generation += 1
+        let current = generation
+        let size = label.hudSize
 
         let toastPanel = NSPanel(contentRect: CGRect(origin: origin, size: size), styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
         toastPanel.level = .screenSaver
@@ -810,7 +864,7 @@ final class Toast {
             toastPanel.animator().alphaValue = 1
         }
         Task { @MainActor in
-            try? await Task.sleep(for: .seconds(DesignTokens.toastLife))
+            try? await Task.sleep(for: .seconds(life))
             guard self.generation == current, let panel = self.panel else { return }
             await NSAnimationContext.runAnimationGroup { context in
                 context.duration = DesignTokens.dismiss
