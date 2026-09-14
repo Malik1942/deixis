@@ -15,9 +15,13 @@ struct Capture: Codable, Sendable, Equatable {
     var ocr: String? = nil
     var iterations: [Iteration] = []
     var resolved: Bool = false
+    /// Region captures: every element at least half inside the drawn frame (v0.2).
+    var elements: [RegionElement]? = nil
+    /// Null-element point captures: the nearest labeled neighbors (v0.2).
+    var nearby: [RegionElement]? = nil
 
     private enum CodingKeys: String, CodingKey {
-        case schemaVersion, id, createdAt, mode, image, source, element, note, ocr, iterations, resolved
+        case schemaVersion, id, createdAt, mode, image, source, element, note, ocr, iterations, resolved, elements, nearby
     }
 
     func encode(to encoder: any Encoder) throws {
@@ -33,6 +37,30 @@ struct Capture: Codable, Sendable, Equatable {
         try c.encode(ocr, forKey: .ocr)
         try c.encode(iterations, forKey: .iterations)
         try c.encode(resolved, forKey: .resolved)
+        try c.encodeIfPresent(elements, forKey: .elements)
+        try c.encodeIfPresent(nearby, forKey: .nearby)
+    }
+}
+
+/// One element inside a drawn frame, or one neighbor of a null element. No path: it is one of many.
+struct RegionElement: Codable, Sendable, Equatable {
+    var role: String
+    var rawRole: String
+    var label: String?
+    var identifier: String?
+    var identifierSource: IdentifierSource
+    var frame: Frame
+
+    private enum CodingKeys: String, CodingKey { case role, rawRole, label, identifier, identifierSource, frame }
+
+    func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(role, forKey: .role)
+        try c.encode(rawRole, forKey: .rawRole)
+        try c.encode(label, forKey: .label)
+        try c.encode(identifier, forKey: .identifier)
+        try c.encode(identifierSource, forKey: .identifierSource)
+        try c.encode(frame, forKey: .frame)
     }
 }
 

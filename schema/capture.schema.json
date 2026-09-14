@@ -68,7 +68,7 @@
         "string",
         "null"
       ],
-      "description": "Recognized text (v0.3 Text action). Always null when written by the v0.1 app."
+      "description": "Text recognized in the image, lines joined by newlines. Filled when the payload is vague: no element identifier anywhere. null otherwise."
     },
     "iterations": {
       "type": "array",
@@ -76,6 +76,22 @@
         "$ref": "#/$defs/iteration"
       },
       "description": "Verify records (v0.4), newest last. Always empty when written by the v0.1 app."
+    },
+    "elements": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/regionElement"
+      },
+      "maxItems": 12,
+      "description": "Region captures: every element at least 50 percent inside the drawn frame, reading order, at most 12."
+    },
+    "nearby": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/regionElement"
+      },
+      "maxItems": 3,
+      "description": "Null-element point captures: the nearest labeled or identified elements around the click point."
     }
   },
   "$defs": {
@@ -110,7 +126,7 @@
         },
         "crop": {
           "$ref": "#/$defs/frame",
-          "description": "The crop rectangle in global screen points, so element.frame can be placed inside the image."
+          "description": "The crop rectangle in global screen points: element plus padding for point captures, the drawn frame for region captures."
         }
       }
     },
@@ -395,6 +411,49 @@
             "string",
             "null"
           ]
+        }
+      }
+    },
+    "regionElement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "role",
+        "rawRole",
+        "label",
+        "identifier",
+        "identifierSource",
+        "frame"
+      ],
+      "properties": {
+        "role": {
+          "$ref": "#/$defs/role"
+        },
+        "rawRole": {
+          "type": "string"
+        },
+        "label": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "identifier": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "identifierSource": {
+          "type": "string",
+          "enum": [
+            "declared",
+            "possiblySymbolName",
+            "unknown"
+          ]
+        },
+        "frame": {
+          "$ref": "#/$defs/frame"
         }
       }
     }

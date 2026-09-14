@@ -28,6 +28,8 @@ final class AppState {
     @ObservationIgnored private var levels: [ResolvedElement?] = []
     @ObservationIgnored private var levelIndex = 0
     @ObservationIgnored private var lockedElement: ResolvedElement?
+    @ObservationIgnored private var lockedElements: [RegionElement]?
+    @ObservationIgnored private var lockedNearby: [RegionElement]?
     @ObservationIgnored private var clickPoint: CGPoint = .zero
     @ObservationIgnored private var cropTask: Task<CroppedImage, any Error>?
     @ObservationIgnored private var openedSettingsPanes: Set<String> = []
@@ -41,6 +43,7 @@ final class AppState {
         overlay.onCancel = { [weak self] in self?.cancel() }
         overlay.onCommit = { [weak self] note in self?.commit(note: note) }
         overlay.onOptionPressed = { [weak self] in self?.optionPressed() }
+        overlay.onRegion = { [weak self] rect, start in self?.region(rect, start: start) }
         let monitor = HotkeyMonitor { [weak self] in self?.beginCapture() }
         monitor.start()
         hotkey = monitor
@@ -153,6 +156,11 @@ final class AppState {
             }
             guard phase == .resolving else { return }
             lockedElement = element
+            if element == nil, let snapshot = lastHoverSnapshot {
+                // v0.2 R15: what sits around a point that has no element.
+                let neighborhood = snapshot.children ?? snapshot.siblings ?? []
+                lockedNearby = RegionResolver.nearby(point: point, among: neighborhood).map(\.element)
+            }
 
             // R5: the source is the app that owns the clicked window. The hotkey-time context is
             // the fallback when the click lands on the frontmost app or outside any window.
@@ -171,25 +179,74 @@ final class AppState {
         }
     }
 
+    /// v0.2 R11–R13: a drawn frame. Everything at least half inside becomes `elements`, the best of
+    /// it the primary `element`, and the frame itself is the crop.
+    private func region(_ rect: CGRect, start: CGPoint) {
+        guard phase == .hovering, let context else { return }
+        phase = .resolving
+        pendingHover = nil
+        clickPoint = CGPoint(x: rect.midX, y: rect.midY)
+        guard ScreenCapture.hasPermission() else {
+            fail(.noScreenRecordingPermission, nearRect: rect)
+            return
+        }
+        Task {
+            let window = Geometry.windowOwner(at: start, windows: windows, excludingPID: ownPID)
+            let pid = window?.ownerPID ?? context.frontPID
+            var snapshots = await reader.elements(in: rect, pid: pid)
+            var retry = 0
+            while snapshots.isEmpty, retry < 2 { // lazy tree
+                retry += 1
+                try? await Task.sleep(for: .milliseconds(100))
+                snapshots = await reader.elements(in: rect, pid: pid)
+            }
+            guard phase == .resolving else { return }
+            if pid != context.frontPID, let clicked = await ContextCollector.collect(reader: reader, pid: pid) {
+                guard phase == .resolving else { return }
+                self.context = clicked
+            }
+            let elements = RegionResolver.elements(in: rect, among: snapshots)
+            lockedElement = RegionResolver.primary(among: snapshots, in: rect)
+            lockedElements = elements
+
+            let display = SelectionOverlay.displayFrameCG(containing: clickPoint)
+            let crop = Geometry.cropRect(element: rect, clickPoint: clickPoint, window: nil, display: display, padding: 0)
+            cropTask = Task { try await ScreenCapture.crop(crop) }
+
+            overlay.showMarks(elements.map { $0.frame.cgRect })
+            overlay.showNoteField(anchoredTo: rect, around: clickPoint)
+            phase = .noting
+        }
+    }
+
     /// R6/R7/R8: only Enter writes. Files first, clipboard last.
     private func commit(note: String) {
         guard phase == .noting, let context, let cropTask else { return }
         phase = .writing
         let element = lockedElement
+        let elements = lockedElements
+        let nearby = lockedNearby
         let anchor = element?.frame.cgRect ?? SelectionOverlay.fallbackRect(around: clickPoint)
         Task {
             do {
                 let image = try await cropTask.value
                 let now = Date()
-                let capture = Capture(
+                var capture = Capture(
                     id: FileStore.makeID(date: now),
                     createdAt: FileStore.isoTimestamp(date: now),
                     mode: ModeClassifier.classify(context.source),
                     image: ImageInfo(path: "", widthPt: image.widthPt, heightPt: image.heightPt, scale: image.scale, crop: Frame(image.crop)),
                     source: context.source,
                     element: element,
-                    note: note
+                    note: note,
+                    elements: elements,
+                    nearby: nearby
                 )
+                // v0.2 R14: text in the image when nothing has an identifier.
+                let hasIdentifier = element?.identifier != nil || (elements?.contains { $0.identifier != nil } ?? false)
+                if !hasIdentifier, let lines = try? await TextRecognizer.lines(inPNG: image.png), !lines.isEmpty {
+                    capture.ocr = lines.joined(separator: "\n")
+                }
                 let written = try store.write(png: image.png, capture: capture)
                 PasteboardWriter.write(markdown: MarkdownBuilder.build(written), png: image.png)
                 reset()
@@ -214,6 +271,8 @@ final class AppState {
         pendingHover = nil
         cropTask = nil
         lockedElement = nil
+        lockedElements = nil
+        lockedNearby = nil
         lastHoverSnapshot = nil
         lastHoverElement = nil
         levels = []

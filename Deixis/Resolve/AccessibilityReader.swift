@@ -99,6 +99,31 @@ actor AccessibilityReader {
         return array.compactMap { CFGetTypeID($0) == AXUIElementGetTypeID() ? ($0 as! AXUIElement) : nil }
     }
 
+    /// v0.2 R12: every element of the app whose frame touches `region`, with its ancestors, walking
+    /// only through nodes that intersect the region. Frameless roots (the application) are descended.
+    func elements(in region: CGRect, pid: pid_t) -> [ElementSnapshot] {
+        let app = AXUIElementCreateApplication(pid)
+        enableAccessibilityIfNeeded(app: app, pid: pid)
+        var found: [ElementSnapshot] = []
+        var visited = 0
+        func walk(_ node: AXUIElement, ancestors: [AttributeSet], depth: Int) {
+            guard visited < 800, depth < 14 else { return }
+            visited += 1
+            let frame = frame(copy(node, Self.frameAttribute))
+            if let frame, frame.w > 0, frame.h > 0, !frame.cgRect.intersects(region) { return }
+            let attributes = lightAttributes(of: node)
+            if frame != nil, !ElementResolver.isContainer(attributes) {
+                found.append(ElementSnapshot(element: attributes, ancestors: Array(ancestors.prefix(ElementResolver.maxAncestors))))
+            }
+            let nextAncestors = [attributes] + ancestors
+            for child in children(of: node) {
+                walk(child, ancestors: nextAncestors, depth: depth + 1)
+            }
+        }
+        walk(app, ancestors: [], depth: 0)
+        return found
+    }
+
     /// Title of the app's focused window, falling back to its main window.
     func focusedWindowTitle(pid: pid_t) -> String? {
         let app = AXUIElementCreateApplication(pid)

@@ -101,6 +101,8 @@ final class SelectionOverlay {
     var onCommit: ((String) -> Void)?
     /// Option pressed while hovering: step the selection to the parent.
     var onOptionPressed: (() -> Void)?
+    /// A drawn frame (CG points) and the drag's start point, for the window hit-test.
+    var onRegion: ((CGRect, CGPoint) -> Void)?
 
     private var panels: [OverlayPanel] = []
     private var dismissing: [OverlayPanel] = []
@@ -179,6 +181,17 @@ final class SelectionOverlay {
         onClick?(Geometry.cgPoint(fromAppKit: point, primaryHeight: primaryHeight))
     }
 
+    func region(atAppKit rect: CGRect, start: CGPoint) {
+        onRegion?(Geometry.cgRect(fromAppKit: rect, primaryHeight: primaryHeight),
+                  Geometry.cgPoint(fromAppKit: start, primaryHeight: primaryHeight))
+    }
+
+    /// R12: 1 pt marks on every element kept inside the drawn frame (CG rects).
+    func showMarks(_ frames: [CGRect]) {
+        let rects = frames.map { Geometry.appKitRect(fromCG: $0, primaryHeight: primaryHeight) }
+        for panel in panels { panel.contentOverlay.showMarks(rects) }
+    }
+
     // MARK: Screen helpers
 
     static func currentPrimaryHeight() -> CGFloat {
@@ -238,6 +251,14 @@ final class OverlayContentView: NSView, NSTextFieldDelegate {
     private var trackingArea: NSTrackingArea?
     private var locked = false
 
+    // R11 region gesture
+    private static let dragThreshold: CGFloat = 6
+    private var dragStart: CGPoint?
+    private var isDragging = false
+    private let marquee = HighlightView()
+    private let sizeLabel = HudLabel()
+    private var marks: [HighlightView] = []
+
     override init(frame frameRect: NSRect) {
         super.init(frame: frameRect)
         wantsLayer = true
@@ -245,6 +266,11 @@ final class OverlayContentView: NSView, NSTextFieldDelegate {
         label.isHidden = true
         addSubview(highlight)
         addSubview(label)
+        marquee.cornerRadius = 0
+        marquee.isHidden = true
+        sizeLabel.isHidden = true
+        addSubview(marquee)
+        addSubview(sizeLabel)
     }
 
     @available(*, unavailable)
@@ -270,8 +296,60 @@ final class OverlayContentView: NSView, NSTextFieldDelegate {
     }
 
     override func mouseDown(with event: NSEvent) {
-        guard !locked, let window else { return }
-        owner?.click(atAppKit: window.convertPoint(toScreen: event.locationInWindow))
+        guard !locked else { return }
+        dragStart = event.locationInWindow
+        isDragging = false
+    }
+
+    override func mouseDragged(with event: NSEvent) {
+        guard !locked, let start = dragStart else { return }
+        let point = event.locationInWindow
+        if !isDragging {
+            guard hypot(point.x - start.x, point.y - start.y) > Self.dragThreshold else { return }
+            isDragging = true
+            highlight.isHidden = true
+            label.isHidden = true
+            marquee.isHidden = false
+            sizeLabel.isHidden = false
+        }
+        let rect = Self.normalized(start, point)
+        marquee.frame = rect
+        marquee.needsDisplay = true
+        sizeLabel.set(HudText.plain("\(Int(rect.width.rounded())) × \(Int(rect.height.rounded())) pt"))
+        sizeLabel.frame = anchoredFrame(size: sizeLabel.hudSize, below: rect)
+    }
+
+    override func mouseUp(with event: NSEvent) {
+        guard !locked, let window, let start = dragStart else { return }
+        dragStart = nil
+        if isDragging {
+            isDragging = false
+            sizeLabel.isHidden = true
+            let rect = Self.normalized(start, event.locationInWindow)
+            guard rect.width >= 2, rect.height >= 2 else { marquee.isHidden = true; return }
+            let screenRect = window.convertToScreen(convert(rect, to: nil))
+            owner?.region(atAppKit: screenRect, start: window.convertPoint(toScreen: start))
+        } else {
+            owner?.click(atAppKit: window.convertPoint(toScreen: event.locationInWindow))
+        }
+    }
+
+    private static func normalized(_ a: CGPoint, _ b: CGPoint) -> CGRect {
+        CGRect(x: min(a.x, b.x), y: min(a.y, b.y), width: abs(a.x - b.x), height: abs(a.y - b.y))
+    }
+
+    func showMarks(_ screenRects: [CGRect]) {
+        guard let window else { return }
+        marks.forEach { $0.removeFromSuperview() }
+        marks = screenRects.map { rect in
+            let mark = HighlightView()
+            mark.isFallback = true
+            mark.strokeWidth = 1
+            mark.cornerRadius = 3
+            mark.frame = convert(window.convertFromScreen(rect), from: nil)
+            addSubview(mark)
+            return mark
+        }
     }
 
     override func keyDown(with event: NSEvent) {
@@ -324,6 +402,7 @@ final class OverlayContentView: NSView, NSTextFieldDelegate {
         guard let window, noteField == nil else { return }
         locked = true
         label.isHidden = true
+        sizeLabel.isHidden = true
         let local = convert(window.convertFromScreen(screenRect), from: nil)
         let size = CGSize(width: max(local.width, DesignTokens.fieldMinWidth), height: NoteFieldView.height)
         let field = NoteFieldView(frame: anchoredFrame(size: size, below: local))
@@ -370,6 +449,8 @@ final class OverlayContentView: NSView, NSTextFieldDelegate {
 /// `highlight.stroke` at `highlight.radius`, no fill; dashed `highlight.fallback` for the no-element state.
 final class HighlightView: NSView {
     var isFallback = false { didSet { needsDisplay = true } }
+    var cornerRadius: CGFloat = DesignTokens.highlightRadius
+    var strokeWidth: CGFloat = DesignTokens.strokeWidth
 
     override init(frame frameRect: NSRect) {
         super.init(frame: frameRect)
@@ -381,9 +462,9 @@ final class HighlightView: NSView {
     required init?(coder: NSCoder) { fatalError("init(coder:) is not supported") }
 
     override func draw(_ dirtyRect: NSRect) {
-        let inset = bounds.insetBy(dx: DesignTokens.strokeWidth / 2, dy: DesignTokens.strokeWidth / 2)
-        let path = NSBezierPath(roundedRect: inset, xRadius: DesignTokens.highlightRadius, yRadius: DesignTokens.highlightRadius)
-        path.lineWidth = DesignTokens.strokeWidth
+        let inset = bounds.insetBy(dx: strokeWidth / 2, dy: strokeWidth / 2)
+        let path = NSBezierPath(roundedRect: inset, xRadius: cornerRadius, yRadius: cornerRadius)
+        path.lineWidth = strokeWidth
         if isFallback {
             path.setLineDash([6, 4], count: 2, phase: 0)
             DesignTokens.highlightFallback.setStroke()
