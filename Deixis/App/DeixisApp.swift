@@ -22,7 +22,22 @@ struct DeixisApp: App {
             SettingsView()
                 .environment(delegate.state)
         }
-        .windowResizability(.contentSize)
+        .windowResizability(.contentMinSize)
+        .commands {
+            // ⌘H in a UIElement app would hide every window, ball included, with no Dock icon to
+            // bring them back. In Settings it puts the window away instead; Settings… reopens it.
+            CommandGroup(replacing: .appVisibility) {
+                Button("Hide Settings") { NSApp.keyWindow?.orderOut(nil) }
+                    .keyboardShortcut("h")
+            }
+            // The generated Window menu's Minimize did nothing for the Settings window; these act
+            // on the key window directly. The menu is invisible in a UIElement app; only the keys matter.
+            CommandGroup(replacing: .windowSize) {
+                Button("Minimize") { NSApp.keyWindow?.miniaturize(nil) }
+                    .keyboardShortcut("m")
+                Button("Zoom") { NSApp.keyWindow?.zoom(nil) }
+            }
+        }
     }
 }
 
