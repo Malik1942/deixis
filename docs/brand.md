@@ -54,9 +54,10 @@ tracking. Scale: 60 / 40 / 21 / 17 / 15 / 13. Body 17 px at 1.5 line height in a
 cards; a card is used only where items repeat as a set (the four actions). Numbers appear only where the content is
 a real sequence: the three steps and the five rungs of the fallback ladder.
 
-**Illustrations.** The overlay moment is drawn in CSS from the app's tokens (`dim`, `highlight.stroke`, `label.bg`),
-not screenshotted, so it stays legible at any size and in both themes. The Settings window is a real capture.
-The hero video slot is marked in the HTML; the recording replaces the drawn stage when it exists.
+**Illustrations.** The hero stage is drawn in CSS from the app's tokens (`dim`, `highlight.stroke`, `label.bg`) and
+holds the slot for the demo video. Everything below it is a real capture: the overlay's four states over Calculator,
+the ball's four states, and the Settings window. Captures are staged over Apple's Tahoe Day wallpaper so they read
+as a Mac, not as one person's desktop.
 
 **Honesty.** Known limitations and the agent status table stay on the page. Statuses say "untested" until someone
 tests them.
@@ -69,6 +70,9 @@ tests them.
 | Site icon copies | `site/assets/icon-light.png`, `icon-dark.png` | 512, the page picks one per theme |
 | Favicons | `site/assets/favicon-32.png`, `favicon-64.png`, `apple-touch-icon.png` | same package, rendered at size |
 | Settings screenshot | `site/assets/settings-dark.png` | window capture with shadow, dark appearance |
+| Overlay frames | `site/assets/overlay-{hover,option,drag,note}.jpg` | real captures over Calculator on the Tahoe Day wallpaper, 3:2 |
+| Ball states | `site/assets/ball-{docked,awake,ready,ring}.png` | real captures over the same wallpaper, square |
+| Product glyphs | `site/assets/glyph-{snap,text,color,cut,hand}.png` | keyed out of the ring capture, tinted with the accent |
 | Demo video | `site/assets/demo.mp4` (to record) | 10 to 15 s: double-tap Control, click, note, paste into Claude Code |
 
 ## Not yet decided
