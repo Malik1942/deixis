@@ -344,19 +344,24 @@
   .shot { display: grid; justify-items: center; }
   .shot img { width: 100%; max-width: 980px; height: auto; display: block; }   /* the full column, like the hero stage */
 
-  .grid2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 24px 40px; }
-  .grid2 .item { display: grid; gap: 4px; align-content: start; }
+  .grid2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
+  .grid2 .item { display: grid; gap: 6px; align-content: start; padding: 18px 20px; background: var(--surface); border-radius: 16px; box-shadow: 0 0 0 1px var(--hair); }
   .grid2 .item h3 { font-size: 17px; }
   .grid2 .item p { color: var(--muted); font-size: 15px; }
 
-  table { border-collapse: collapse; width: 100%; font-size: 15px; }
-  th, td { text-align: left; padding: 12px 16px 12px 0; border-bottom: 1px solid var(--hair); vertical-align: top; }
-  td:first-child { white-space: nowrap; font-weight: 600; }
-  th { font-weight: 600; font-size: 13px; color: var(--muted); }
-  .tablewrap { overflow-x: auto; }
+  /* agents, one row each, the same rows as the ladder */
+  .agents { display: grid; gap: 10px; }
+  .agent { display: grid; grid-template-columns: 240px 1fr auto; gap: 18px; align-items: center; padding: 14px 16px; border-radius: 12px; background: var(--surface); box-shadow: 0 0 0 1px var(--hair); font-size: 15px; }
+  .agent b { font-weight: 600; }
+  .agent span { color: var(--muted); font-size: 14px; }
+  .agent .chip { justify-self: end; color: var(--ink); background: var(--hud); border: 1px solid var(--hud-edge); border-radius: 6px; padding: 3px 8px; font-size: 12px; white-space: nowrap; }
+  .agent .chip.dash { border-style: dashed; color: var(--muted); }
 
-  ul.plain { margin: 0; padding-left: 1.1em; display: grid; gap: 10px; color: var(--muted); font-size: 15px; max-width: 72ch; }
-  ul.plain b { color: var(--ink); font-weight: 600; }
+  /* limitations, one card each */
+  .limits { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+  .limit { display: grid; gap: 6px; align-content: start; padding: 18px 20px; background: var(--surface); border-radius: 16px; box-shadow: 0 0 0 1px var(--hair); }
+  .limit h3 { font-size: 17px; }
+  .limit p { font-size: 14px; color: var(--muted); }
 
   footer { margin-top: 96px; padding-top: 32px; border-top: 1px solid var(--hair); display: grid; gap: 18px; font-size: 14px; color: var(--muted); }
   footer .row { display: flex; gap: 20px; flex-wrap: wrap; align-items: center; }
@@ -365,7 +370,10 @@
   @media (max-width: 720px) {
     .hero { padding-block: 56px 36px; }
     .app-icon { width: 96px; height: 96px; border-radius: 21.5px; }
-    .grid2, .notes { grid-template-columns: 1fr; }
+    .grid2, .notes, .limits { grid-template-columns: 1fr; }
+    .agent { grid-template-columns: 1fr auto; gap: 6px 12px; }
+    .agent .chip { grid-row: 1; grid-column: 2; }
+    .agent > span:not(.chip) { grid-column: 1 / -1; }
     .steps { grid-template-columns: 1fr; gap: 16px; }
     .step { grid-template-columns: 224px 1fr; align-items: center; gap: 20px; }
     .step .vis { height: 96px; padding: 12px; }
@@ -639,16 +647,11 @@ make this rounded, match the other pills</pre>
       <h2>Works where you paste</h2>
       <p class="lede">The payload is plain Markdown, so any agent takes it on paste. Whether it also opens the image, as of version 0.5:</p>
     </div>
-    <div class="tablewrap">
-      <table>
-        <thead><tr><th>Agent</th><th>Image</th><th>Status</th></tr></thead>
-        <tbody>
-          <tr><td>Claude Code</td><td>Reads the PNG from the path</td><td>Expected to work, check pending</td></tr>
-          <tr><td>Cursor</td><td>Reads the path</td><td>Untested</td></tr>
-          <tr><td>Codex CLI</td><td>Views the image at the path</td><td>Untested</td></tr>
-          <tr><td>Gemini CLI, Antigravity</td><td>Untested</td><td>Untested</td></tr>
-        </tbody>
-      </table>
+    <div class="agents">
+      <div class="agent"><b>Claude Code</b><span>Reads the PNG from the path, check pending</span><span class="chip">Expected to work</span></div>
+      <div class="agent"><b>Cursor</b><span>Reads the path</span><span class="chip dash">Untested</span></div>
+      <div class="agent"><b>Codex CLI</b><span>Views the image at the path</span><span class="chip dash">Untested</span></div>
+      <div class="agent"><b>Gemini CLI, Antigravity</b><span>Untested</span><span class="chip dash">Untested</span></div>
     </div>
   </section>
 
@@ -656,11 +659,11 @@ make this rounded, match the other pills</pre>
     <div class="sect-head">
       <h2>Known limitations</h2>
     </div>
-    <ul class="plain">
-      <li><b>Element quality follows the app's accessibility.</b> SwiftUI, AppKit, and the iOS Simulator work well. Electron and Chromium apps build their tree on first contact, so the first hover can take half a second.</li>
-      <li><b>Custom-drawn UIs expose little.</b> Figma, games, and canvases usually reach the bottom of the ladder. The payload says so.</li>
-      <li><b>Hover picks the smallest real control.</b> Press Option to step to the parent.</li>
-    </ul>
+    <div class="limits">
+      <div class="limit"><h3>Element quality follows the app's accessibility</h3><p>SwiftUI, AppKit, and the iOS Simulator work well. Electron and Chromium apps build their tree on first contact, so the first hover can take half a second.</p></div>
+      <div class="limit"><h3>Custom-drawn UIs expose little</h3><p>Figma, games, and canvases usually reach the bottom of the ladder. The payload says so.</p></div>
+      <div class="limit"><h3>Hover picks the smallest real control</h3><p>Press Option to step to the parent.</p></div>
+    </div>
   </section>
 
   <footer class="col">
