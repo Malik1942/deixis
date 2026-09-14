@@ -93,8 +93,21 @@ enum HudText {
 
 /// R2: one transparent, non-activating panel per screen over the live desktop. Reports hover and
 /// click points in CG (accessibility) coordinates; draws highlight, label, and the note field.
+/// R22: what the overlay is open for. Point is the default; the one-shot actions reuse the gesture.
+enum OverlayMode: Equatable {
+    case point, snap, text, cut
+
+    var cursor: NSCursor {
+        switch self {
+        case .point, .text: .pointingHand
+        case .snap, .cut: .crosshair
+        }
+    }
+}
+
 @MainActor
 final class SelectionOverlay {
+    var mode: OverlayMode = .point
     var onHover: ((CGPoint) -> Void)?
     var onClick: ((CGPoint) -> Void)?
     var onCancel: (() -> Void)?
@@ -123,7 +136,7 @@ final class SelectionOverlay {
         }
         panels.first?.makeKey()
         panels.first?.makeFirstResponder(panels.first?.contentOverlay)
-        NSCursor.pointingHand.push()
+        mode.cursor.push()
         cursorPushed = true
         NSAnimationContext.runAnimationGroup { context in
             context.duration = DesignTokens.reveal
@@ -287,7 +300,7 @@ final class OverlayContentView: NSView, NSTextFieldDelegate {
     }
 
     override func resetCursorRects() {
-        addCursorRect(bounds, cursor: .pointingHand)
+        addCursorRect(bounds, cursor: owner?.mode.cursor ?? .pointingHand)
     }
 
     override func mouseMoved(with event: NSEvent) {

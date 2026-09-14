@@ -35,6 +35,10 @@ private struct StatusMenu: View {
         Button("Capture (\(state.preferences.hotkey.symbol))") {
             state.beginCapture()
         }
+        Button("Snap") { state.beginAction(.snap) }
+        Button("Text") { state.beginAction(.text) }
+        Button("Cut") { state.beginAction(.cut) }
+        Divider()
         Button("Open capture folder") {
             state.openCaptureFolder()
         }

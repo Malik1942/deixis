@@ -17,19 +17,34 @@ struct FileStore: Sendable {
 
     /// The folder a capture lands in: the root, or one subfolder per app, project, or month (R21).
     func folder(for capture: Capture) -> URL {
+        folder(appName: capture.source.app.name, projectRoot: capture.source.projectRoot, id: capture.id)
+    }
+
+    func folder(appName: String, projectRoot: String?, id: String) -> URL {
         switch organization {
         case .none:
             return directory
         case .byApp:
-            return directory.appending(path: Self.slug(capture.source.app.name), directoryHint: .isDirectory)
+            return directory.appending(path: Self.slug(appName), directoryHint: .isDirectory)
         case .byProject:
-            let name = capture.source.projectRoot.map { URL(filePath: $0).lastPathComponent } ?? Self.slug(capture.source.app.name)
+            let name = projectRoot.map { URL(filePath: $0).lastPathComponent } ?? Self.slug(appName)
             return directory.appending(path: name, directoryHint: .isDirectory)
         case .byMonth:
-            let stamp = capture.id
-            let month = stamp.count >= 6 ? "\(stamp.prefix(4))-\(stamp.dropFirst(4).prefix(2))" : "undated"
+            let month = id.count >= 6 ? "\(id.prefix(4))-\(id.dropFirst(4).prefix(2))" : "undated"
             return directory.appending(path: month, directoryHint: .isDirectory)
         }
+    }
+
+    /// Snap and Cut: an image file with Finder tags and no sidecar.
+    @discardableResult
+    func writeImage(png: Data, fileName: String, appName: String, tag: String) throws -> URL {
+        let id = String(fileName.dropLast(4).suffix(20))
+        let folder = folder(appName: appName, projectRoot: nil, id: id)
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        let url = folder.appending(path: fileName)
+        try png.write(to: url, options: .atomic)
+        Self.setFinderTags(["Deixis", appName, tag], on: url)
+        return url
     }
 
     /// Finder tags for a capture: Deixis, the app, the mode, and the project name when known.

@@ -4,6 +4,22 @@ import AppKit
 /// on disk, so a failed capture never touches the clipboard.
 @MainActor
 enum PasteboardWriter {
+    /// Snap and Cut: the image alone.
+    static func write(png: Data) {
+        let item = NSPasteboardItem()
+        item.setData(png, forType: .png)
+        let pasteboard = NSPasteboard.general
+        pasteboard.clearContents()
+        pasteboard.writeObjects([item])
+    }
+
+    /// Text and Color: a string alone.
+    static func write(string: String) {
+        let pasteboard = NSPasteboard.general
+        pasteboard.clearContents()
+        pasteboard.setString(string, forType: .string)
+    }
+
     static func write(markdown: String, png: Data) {
         let item = NSPasteboardItem()
         item.setData(png, forType: .png)

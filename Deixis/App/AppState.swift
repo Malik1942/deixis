@@ -10,6 +10,20 @@ final class AppState {
         case idle, hovering, resolving, noting, writing
     }
 
+    /// R22: which action the overlay is open for.
+    enum Action: Equatable {
+        case point, snap, text, cut
+
+        var overlayMode: OverlayMode {
+            switch self {
+            case .point: .point
+            case .snap: .snap
+            case .text: .text
+            case .cut: .cut
+            }
+        }
+    }
+
     private(set) var phase: Phase = .idle
     let preferences = Preferences()
 
@@ -32,6 +46,7 @@ final class AppState {
     @ObservationIgnored private var lockedElement: ResolvedElement?
     @ObservationIgnored private var lockedElements: [RegionElement]?
     @ObservationIgnored private var lockedNearby: [RegionElement]?
+    @ObservationIgnored private var action: Action = .point
     @ObservationIgnored private var clickPoint: CGPoint = .zero
     @ObservationIgnored private var cropTask: Task<CroppedImage, any Error>?
     @ObservationIgnored private var openedSettingsPanes: Set<String> = []
@@ -87,7 +102,14 @@ final class AppState {
 
     /// R1/R5: collect context for the app the user was looking at, then show the overlay.
     func beginCapture() {
+        beginAction(.point)
+    }
+
+    /// R22: Snap, Text, and Cut open the same overlay in their mode.
+    func beginAction(_ requested: Action) {
         guard phase == .idle else { return }
+        action = requested
+        overlay.mode = requested.overlayMode
         guard AccessibilityReader.isTrusted(prompt: false) else {
             fail(.noAccessibilityPermission, nearRect: nil)
             return
@@ -119,6 +141,18 @@ final class AppState {
         defer { hoverTask = nil }
         while phase == .hovering, let point = pendingHover {
             pendingHover = nil
+            if action == .snap || action == .cut {
+                // Window under the cursor, no accessibility needed.
+                lastHoverPoint = point
+                if let window = Geometry.windowOwner(at: point, windows: windows, excludingPID: ownPID) {
+                    let name = NSRunningApplication(processIdentifier: window.ownerPID)?.localizedName ?? "window"
+                    overlay.setHighlight(window.bounds, readout: Readout(role: "window", identifier: nil, suffix: name, isFallback: false), around: point)
+                } else {
+                    overlay.setHighlight(nil, readout: .describing(nil), around: point)
+                }
+                try? await Task.sleep(for: .milliseconds(33))
+                continue
+            }
             let fresh = await reader.snapshot(at: point, pid: targetPID(at: point))
             guard phase == .hovering else { return }
             let freshLevels = fresh.map { HitRefiner.selectionLevels(for: $0, at: point) } ?? []
@@ -166,6 +200,20 @@ final class AppState {
 
     private func click(_ point: CGPoint) {
         guard phase == .hovering, let context else { return }
+        switch action {
+        case .point:
+            break
+        case .snap, .cut:
+            let rect = Geometry.windowOwner(at: point, windows: windows, excludingPID: ownPID)?.bounds
+                ?? SelectionOverlay.displayFrameCG(containing: point)
+            runOneShot(on: rect, at: point, fromRegion: false)
+            return
+        case .text:
+            let rect = selectedElement()?.frame.cgRect.insetBy(dx: -HitRefiner.tolerance, dy: -HitRefiner.tolerance)
+                ?? SelectionOverlay.fallbackRect(around: point)
+            runOneShot(on: rect, at: point, fromRegion: false)
+            return
+        }
         phase = .resolving
         pendingHover = nil
         clickPoint = point
@@ -217,6 +265,10 @@ final class AppState {
     /// it the primary `element`, and the frame itself is the crop.
     private func region(_ rect: CGRect, start: CGPoint) {
         guard phase == .hovering, let context else { return }
+        if action != .point {
+            runOneShot(on: rect, at: start, fromRegion: true)
+            return
+        }
         phase = .resolving
         pendingHover = nil
         clickPoint = CGPoint(x: rect.midX, y: rect.midY)
@@ -251,6 +303,71 @@ final class AppState {
             overlay.showNoteField(anchoredTo: rect, around: clickPoint)
             phase = .noting
         }
+    }
+
+    // MARK: One-shot actions (R23, R24, R26)
+
+    /// Snap, Text, Cut: the overlay closes at once, the pixels are read, and the result goes to the
+    /// clipboard (and to disk for images unless ⌥ was held). Failures leave the clipboard untouched.
+    private func runOneShot(on rect: CGRect, at point: CGPoint, fromRegion: Bool) {
+        guard let context else { return }
+        let which = action
+        let optionHeld = NSEvent.modifierFlags.contains(.option)
+        let appName = Geometry.windowOwner(at: point, windows: windows, excludingPID: ownPID)
+            .flatMap { NSRunningApplication(processIdentifier: $0.ownerPID)?.localizedName } ?? context.source.app.name
+        let display = SelectionOverlay.displayFrameCG(containing: point)
+        let crop = Geometry.cropRect(element: rect, clickPoint: point, window: nil, display: display, padding: 0)
+        let store = FileStore(directory: preferences.captureFolderURL, organization: preferences.organization)
+        guard ScreenCapture.hasPermission() else {
+            fail(.noScreenRecordingPermission, nearRect: rect)
+            return
+        }
+        phase = .writing
+        overlay.dismiss()
+        Task {
+            do {
+                let image = try await ScreenCapture.crop(crop)
+                let id = FileStore.makeID(date: Date())
+                switch which {
+                case .snap:
+                    if !optionHeld {
+                        try store.writeImage(png: image.png, fileName: Screenshot.fileName(appName: appName, id: id), appName: appName, tag: "snap")
+                    }
+                    PasteboardWriter.write(png: image.png)
+                    let size = "\(MarkdownBuilder.number(image.widthPt))×\(MarkdownBuilder.number(image.heightPt))"
+                    finishOneShot(HudText.plain(optionHeld ? "Snapped · \(size) · clipboard only" : "Snapped · \(size)"), near: crop)
+                case .text:
+                    let lines = try await OCR.text(inPNG: image.png)
+                    guard !lines.isEmpty else {
+                        finishOneShot(HudText.plain("No text found"), near: crop)
+                        return
+                    }
+                    PasteboardWriter.write(string: lines.joined(separator: "\n"))
+                    finishOneShot(HudText.plain("Copied · \(lines.count) \(lines.count == 1 ? "line" : "lines")"), near: crop)
+                case .cut:
+                    let normalized = CGPoint(x: (point.x - crop.minX) / crop.width, y: (point.y - crop.minY) / crop.height)
+                    let subject = try await Cutout.subject(inPNG: image.png, at: normalized, wholeRegion: fromRegion)
+                    guard let subject else {
+                        finishOneShot(HudText.plain("No subject found"), near: crop)
+                        return
+                    }
+                    if !optionHeld {
+                        try store.writeImage(png: subject, fileName: Cutout.fileName(appName: appName, id: id), appName: appName, tag: "cut")
+                    }
+                    PasteboardWriter.write(png: subject)
+                    finishOneShot(HudText.plain(optionHeld ? "Cut · clipboard only" : "Cut"), near: crop)
+                case .point:
+                    reset()
+                }
+            } catch {
+                fail(.captureFailed(error), nearRect: crop)
+            }
+        }
+    }
+
+    private func finishOneShot(_ text: NSAttributedString, near rect: CGRect) {
+        reset()
+        toast.show(text, near: rect)
     }
 
     /// R6/R7/R8: only Enter writes. Files first, clipboard last.
@@ -306,6 +423,8 @@ final class AppState {
 
     private func reset() {
         phase = .idle
+        action = .point
+        overlay.mode = .point
         hoverTask?.cancel()
         hoverTask = nil
         pendingHover = nil
