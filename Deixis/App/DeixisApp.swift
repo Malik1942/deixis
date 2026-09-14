@@ -106,7 +106,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             _ = AccessibilityReader.isTrusted(prompt: true)
         }
         if !ScreenCapture.hasPermission() {
-            explain("Deixis captures the element through Screen Recording. Nothing leaves the machine.")
+            explain("Deixis captures the element through Screen Recording. Nothing leaves the machine. macOS applies this grant after Deixis reopens; it will offer to do that.")
             ScreenCapture.requestPermission()
         }
     }

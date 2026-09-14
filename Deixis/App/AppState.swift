@@ -73,6 +73,7 @@ final class AppState {
             self.ball?.autoHide = self.preferences.ballAutoHide
         }
         updateBall()
+        showLaunchHintIfNeeded()
         scheduleSweeps()
         overlay.onHover = { [weak self] point in self?.hover(point) }
         overlay.onClick = { [weak self] point in self?.click(point) }
@@ -306,9 +307,11 @@ final class AppState {
         session.onCancel = { [weak self] in self?.endColorPick() }
         colorSession = session
         session.start()
+        showHintIfNeeded(key: "color", text: "Click or ↩ copies · arrows nudge a pixel · esc cancels")
     }
 
     private func endColorPick() {
+        toast.hide()
         colorSession?.stop()
         colorSession = nil
         phase = .idle
@@ -334,6 +337,51 @@ final class AppState {
             context = collected
             windows = WindowList.onScreen()
             overlay.show()
+            showHintIfNeeded(key: Self.hintKey(for: requested), text: Self.hintText(for: requested))
+        }
+    }
+
+    // MARK: Hints (v0.5 R40)
+
+    private static let hintShowings = 3
+
+    /// Once, after the permission alerts: what to press. Waits for the ball's first-launch fade-in.
+    private func showLaunchHintIfNeeded() {
+        guard preferences.hintCount("launch") == 0 else { return }
+        preferences.markHintShown("launch")
+        Task { @MainActor in
+            try? await Task.sleep(for: .seconds(1))
+            let symbol = self.preferences.hotkey.symbol
+            if let ball = self.ball {
+                let anchor = Geometry.cgRect(fromAppKit: ball.frame, primaryHeight: SelectionOverlay.currentPrimaryHeight())
+                self.toast.show(HudText.plain("Point at anything: \(symbol), or click the ball"), near: anchor, life: DesignTokens.hintLife)
+            } else {
+                self.toast.show(HudText.plain("Point at anything: \(symbol), also in the menu bar"), near: Self.mainScreenCenterCG(), life: DesignTokens.hintLife)
+            }
+        }
+    }
+
+    /// The first three opens of a mode: the gestures, at the bottom of the display under the cursor.
+    private func showHintIfNeeded(key: String, text: String) {
+        guard preferences.hintCount(key) < Self.hintShowings else { return }
+        preferences.markHintShown(key)
+        toast.show(HudText.plain(text), atBottomOf: NSEvent.mouseLocation, life: DesignTokens.hintLife)
+    }
+
+    private static func hintKey(for action: Action) -> String {
+        switch action {
+        case .point: "overlay.point"
+        case .snap: "overlay.snap"
+        case .text: "overlay.text"
+        case .cut: "overlay.cut"
+        }
+    }
+
+    private static func hintText(for action: Action) -> String {
+        switch action {
+        case .point: "Click or ↩ picks the element · drag draws a frame · ⌥ steps to the parent · esc cancels"
+        case .snap, .cut: "Click or ↩ takes the window · drag draws a frame · ⌥ at release keeps it off disk · esc cancels"
+        case .text: "Click or ↩ takes the element · drag draws a frame · esc cancels"
         }
     }
 
@@ -437,6 +485,7 @@ final class AppState {
 
     private func click(_ point: CGPoint) {
         guard phase == .hovering, context != nil else { return }
+        toast.hide()
         switch action {
         case .point:
             break
@@ -504,6 +553,7 @@ final class AppState {
     /// it the primary `element`, and the frame itself is the crop.
     private func region(_ rect: CGRect, start: CGPoint) {
         guard phase == .hovering, let context else { return }
+        toast.hide()
         if action != .point {
             runOneShot(on: rect, at: start, fromRegion: true)
             return
@@ -664,6 +714,7 @@ final class AppState {
     /// Esc at any point: nothing on disk, clipboard untouched.
     func cancel() {
         guard phase != .idle else { return }
+        toast.hide()
         cropTask?.cancel()
         reset()
     }

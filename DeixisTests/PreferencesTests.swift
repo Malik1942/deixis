@@ -32,6 +32,21 @@ final class PreferencesTests: XCTestCase {
         XCTAssertNil(Preferences.defaultActionHotkey("nope"))
     }
 
+    // v0.5 R40: hint bookkeeping persists; the store counts, the caller caps.
+    func testHintCountsPersistAndDoNotCap() {
+        let defaults = isolatedDefaults()
+        let p = Preferences(defaults: defaults)
+        XCTAssertEqual(p.hintCount("launch"), 0)
+        p.markHintShown("launch")
+        XCTAssertEqual(p.hintCount("launch"), 1)
+        for _ in 0..<4 { p.markHintShown("overlay.point") }
+        XCTAssertEqual(p.hintCount("overlay.point"), 4)
+        let again = Preferences(defaults: defaults)
+        XCTAssertEqual(again.hintCount("launch"), 1)
+        XCTAssertEqual(again.hintCount("overlay.point"), 4)
+        XCTAssertEqual(again.hintCount("color"), 0)
+    }
+
     // R29: a recorded hotkey and a cleared one both survive a relaunch; the rest stay default.
     func testActionHotkeyRecordAndClearPersist() {
         let defaults = isolatedDefaults()

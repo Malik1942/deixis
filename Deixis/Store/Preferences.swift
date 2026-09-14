@@ -116,6 +116,7 @@ final class Preferences {
         static let adjustSelection = "adjustSelection"
         static let actionHotkeys = "actionHotkeys" // v0.3 early builds: only what the user recorded; migrated on read
         static let actionHotkeySettings = "actionHotkeySettings"
+        static let hintCounts = "hintCounts" // v0.5 R40
     }
 
     /// The actions that can carry a hotkey (R29), in menu and ring order; each one's digit is its position here.
@@ -247,6 +248,15 @@ final class Preferences {
         return Self.hotkeyActions.first { $0 != excluding && actionHotkeys[$0] == hotkey }
     }
 
+    /// v0.5 R40: how many times each hint has been shown, by key. The cap is the caller's.
+    private var hintCounts: [String: Int] {
+        didSet { defaults.set(hintCounts, forKey: Key.hintCounts) }
+    }
+
+    func hintCount(_ key: String) -> Int { hintCounts[key] ?? 0 }
+
+    func markHintShown(_ key: String) { hintCounts[key] = hintCount(key) + 1 }
+
     var captureFolderURL: URL { URL(filePath: captureFolder, directoryHint: .isDirectory) }
 
     init(defaults: UserDefaults = .standard) {
@@ -272,6 +282,7 @@ final class Preferences {
         colorSpace = defaults.string(forKey: Key.colorSpace).flatMap(ColorSpaceChoice.init(rawValue:)) ?? .sRGB
         retentionDays = defaults.object(forKey: Key.retentionDays) as? Int ?? 30
         adjustSelection = defaults.object(forKey: Key.adjustSelection) as? Bool ?? true
+        hintCounts = defaults.dictionary(forKey: Key.hintCounts) as? [String: Int] ?? [:]
         if let data = defaults.data(forKey: Key.actionHotkeySettings), let stored = try? JSONDecoder().decode([String: ActionHotkeySetting].self, from: data) {
             actionHotkeySettings = stored
         } else if let data = defaults.data(forKey: Key.actionHotkeys), let legacy = try? JSONDecoder().decode([String: Hotkey].self, from: data) {
