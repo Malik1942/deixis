@@ -51,6 +51,7 @@ final class AppState {
     @ObservationIgnored private var clipboardOnlyPreset = false
     @ObservationIgnored private var sweepTask: Task<Void, Never>?
     @ObservationIgnored private let beforeAfter = BeforeAfterWindow()
+    @ObservationIgnored private let help = HelpWindow()
     /// R25: the last ten picked colors, in memory only.
     @ObservationIgnored private(set) var recentColors: [ColorValue] = []
     @ObservationIgnored private var clickPoint: CGPoint = .zero
@@ -73,7 +74,7 @@ final class AppState {
             self.ball?.autoHide = self.preferences.ballAutoHide
         }
         updateBall()
-        showLaunchHintIfNeeded()
+        showHelpOnFirstLaunch()
         scheduleSweeps()
         overlay.onHover = { [weak self] point in self?.hover(point) }
         overlay.onClick = { [weak self] point in self?.click(point) }
@@ -272,18 +273,7 @@ final class AppState {
             beforeAfter.show(capture)
             return
         }
-        toast.show(HudText.plain("No verified capture yet · use Capture after"), near: Self.mainScreenCenterCG())
-    }
-
-    /// Menu bar: keep the newest capture out of the sweep.
-    func pinLastCapture() {
-        let folder = preferences.captureFolderURL
-        guard let newest = Lifecycle.newest(in: folder) else {
-            toast.show(HudText.plain("No capture to pin"), near: Self.mainScreenCenterCG())
-            return
-        }
-        Lifecycle.pin(newest.urls)
-        toast.show(HudText.copied(identifier: nil).string == "Copied" ? HudText.plain("Pinned · \(newest.urls[0].lastPathComponent)") : HudText.plain("Pinned"), near: Self.mainScreenCenterCG())
+        toast.show(HudText.plain("No verified capture yet · use See what changed"), near: Self.mainScreenCenterCG())
     }
 
     /// R25: the magnifier session. Click copies the pixel in the chosen format; Esc cancels.
@@ -345,20 +335,19 @@ final class AppState {
 
     private static let hintShowings = 3
 
-    /// Once, after the permission alerts: what to press. Waits for the ball's first-launch fade-in.
-    private func showLaunchHintIfNeeded() {
-        guard preferences.hintCount("launch") == 0 else { return }
-        preferences.markHintShown("launch")
+    /// R43: the one-page guide, once, after the permission alerts. Waits for the ball's fade-in.
+    private func showHelpOnFirstLaunch() {
+        guard preferences.hintCount("help") == 0 else { return }
+        preferences.markHintShown("help")
         Task { @MainActor in
             try? await Task.sleep(for: .seconds(1))
-            let symbol = self.preferences.hotkey.symbol
-            if let ball = self.ball {
-                let anchor = Geometry.cgRect(fromAppKit: ball.frame, primaryHeight: SelectionOverlay.currentPrimaryHeight())
-                self.toast.show(HudText.plain("Point at anything: \(symbol), or click the ball"), near: anchor, life: DesignTokens.hintLife)
-            } else {
-                self.toast.show(HudText.plain("Point at anything: \(symbol), also in the menu bar"), near: Self.mainScreenCenterCG(), life: DesignTokens.hintLife)
-            }
+            self.showHelp()
         }
+    }
+
+    /// Settings › General "Deixis Help": the same page, any time.
+    func showHelp() {
+        help.show(state: self)
     }
 
     /// The first three opens of a mode: the gestures, at the bottom of the display under the cursor.
