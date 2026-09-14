@@ -114,11 +114,24 @@ final class Preferences {
         static let colorSpace = "colorSpace"
         static let retentionDays = "retentionDays"
         static let adjustSelection = "adjustSelection"
-        static let actionHotkeys = "actionHotkeys"
+        static let actionHotkeys = "actionHotkeys" // v0.3 early builds: only what the user recorded; migrated on read
+        static let actionHotkeySettings = "actionHotkeySettings"
     }
 
-    /// The one-shot actions that can carry a hotkey (R29), in menu order.
-    static let hotkeyActions = ["snap", "text", "color", "cut"]
+    /// The actions that can carry a hotkey (R29), in menu and ring order; each one's digit is its position here.
+    static let hotkeyActions = ["point", "snap", "text", "color", "cut"]
+
+    /// R29: ⌃⌥ and the action's digit. Types nothing on any keyboard layout, macOS assigns nothing
+    /// there, and neither do Xcode, Figma, or the window managers. Nil for an unknown action.
+    static func defaultActionHotkey(_ action: String) -> Hotkey? {
+        guard let index = hotkeyActions.firstIndex(of: action) else { return nil }
+        let digitKeyCodes: [UInt16] = [18, 19, 20, 21, 23] // ANSI 1 2 3 4 5
+        return .chord(keyCode: digitKeyCodes[index], modifiers: [.control, .option], key: String(index + 1))
+    }
+
+    static var defaultActionHotkeys: [String: Hotkey] {
+        Dictionary(uniqueKeysWithValues: hotkeyActions.compactMap { action in defaultActionHotkey(action).map { (action, $0) } })
+    }
 
     static let retentionChoices = [7, 30, 90, 0]
 
@@ -197,12 +210,41 @@ final class Preferences {
         didSet { defaults.set(adjustSelection, forKey: Key.adjustSelection) }
     }
 
-    /// R29: hotkeys for Snap, Text, Color, Cut by action name; unassigned by default.
-    var actionHotkeys: [String: Hotkey] {
+    /// What the user changed about an action's hotkey: recorded another, or cleared it (`hotkey` nil).
+    struct ActionHotkeySetting: Codable, Equatable, Sendable {
+        var hotkey: Hotkey?
+    }
+
+    /// R29: only departures from the defaults are stored, so a cleared action stays cleared and
+    /// an untouched one follows any future default.
+    private var actionHotkeySettings: [String: ActionHotkeySetting] {
         didSet {
-            if let data = try? JSONEncoder().encode(actionHotkeys) { defaults.set(data, forKey: Key.actionHotkeys) }
-            if actionHotkeys != oldValue { onActionHotkeysChange?() }
+            if let data = try? JSONEncoder().encode(actionHotkeySettings) { defaults.set(data, forKey: Key.actionHotkeySettings) }
+            if actionHotkeySettings != oldValue { onActionHotkeysChange?() }
         }
+    }
+
+    /// The assigned hotkey of each action (Point, Snap, Text, Color, Cut) by name; a cleared action is absent.
+    var actionHotkeys: [String: Hotkey] {
+        var result = Self.defaultActionHotkeys
+        for (action, setting) in actionHotkeySettings { result[action] = setting.hotkey }
+        return result
+    }
+
+    /// Record `hotkey` for `action`, or clear it with nil. Recording the default forgets the departure.
+    func setActionHotkey(_ hotkey: Hotkey?, for action: String) {
+        if hotkey == Self.defaultActionHotkey(action) {
+            actionHotkeySettings[action] = nil
+        } else {
+            actionHotkeySettings[action] = ActionHotkeySetting(hotkey: hotkey)
+        }
+    }
+
+    /// The action already bound to `hotkey`, if any: "capture" for the capture hotkey, else the
+    /// action's name. `excluding` is the action being recorded, which may keep its own hotkey.
+    func action(using hotkey: Hotkey, excluding: String? = nil) -> String? {
+        if excluding != "capture", self.hotkey == hotkey { return "capture" }
+        return Self.hotkeyActions.first { $0 != excluding && actionHotkeys[$0] == hotkey }
     }
 
     var captureFolderURL: URL { URL(filePath: captureFolder, directoryHint: .isDirectory) }
@@ -230,10 +272,12 @@ final class Preferences {
         colorSpace = defaults.string(forKey: Key.colorSpace).flatMap(ColorSpaceChoice.init(rawValue:)) ?? .sRGB
         retentionDays = defaults.object(forKey: Key.retentionDays) as? Int ?? 30
         adjustSelection = defaults.object(forKey: Key.adjustSelection) as? Bool ?? true
-        if let data = defaults.data(forKey: Key.actionHotkeys), let stored = try? JSONDecoder().decode([String: Hotkey].self, from: data) {
-            actionHotkeys = stored
+        if let data = defaults.data(forKey: Key.actionHotkeySettings), let stored = try? JSONDecoder().decode([String: ActionHotkeySetting].self, from: data) {
+            actionHotkeySettings = stored
+        } else if let data = defaults.data(forKey: Key.actionHotkeys), let legacy = try? JSONDecoder().decode([String: Hotkey].self, from: data) {
+            actionHotkeySettings = legacy.mapValues { ActionHotkeySetting(hotkey: $0) }
         } else {
-            actionHotkeys = [:]
+            actionHotkeySettings = [:]
         }
     }
 }
