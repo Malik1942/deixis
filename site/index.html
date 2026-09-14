@@ -12,7 +12,9 @@
     --muted: #6e6e73;
     --hair: #d2d2d7;
     --accent: #0a84ff;
+    --accent: color(display-p3 0.04 0.52 1);
     --stage: #0a84ff;
+    --stage: color(display-p3 0.04 0.52 1);
     --hud: rgba(255, 255, 255, 0.78);
     --hud-edge: rgba(0, 0, 0, 0.08);
     --glass: rgba(255, 255, 255, 0.22);
@@ -35,7 +37,9 @@
       --muted: #a1a1a6;
       --hair: #3a3a3c;
       --accent: #0a84ff;
+      --accent: color(display-p3 0.04 0.52 1);
       --stage: #0b6fe0;
+      --stage: color(display-p3 0.05 0.44 0.88);
       --hud: rgba(30, 30, 32, 0.78);
       --hud-edge: rgba(255, 255, 255, 0.12);
       --glass: rgba(255, 255, 255, 0.10);
@@ -58,7 +62,9 @@
     --muted: #a1a1a6;
     --hair: #3a3a3c;
     --accent: #0a84ff;
+    --accent: color(display-p3 0.04 0.52 1);
     --stage: #0b6fe0;
+    --stage: color(display-p3 0.05 0.44 0.88);
     --hud: rgba(30, 30, 32, 0.78);
     --hud-edge: rgba(255, 255, 255, 0.12);
     --glass: rgba(255, 255, 255, 0.10);
@@ -248,6 +254,15 @@
   .term .p { color: #a1a1a6; }
   .term .k { color: #6ab0ff; }
 
+  /* the ball: four real states */
+  .states { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+  .state { display: grid; gap: 10px; align-content: start; }
+  .state .pic { aspect-ratio: 1; border-radius: 16px; overflow: hidden; background: #3a3a3e; box-shadow: 0 0 0 1px var(--hair); }
+  .state .pic img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .state h3 { font-size: 17px; }
+  .state p { font-size: 14px; color: var(--muted); }
+  .ballnote { margin-top: 20px; font-size: 15px; color: var(--muted); }
+
   /* payload with what each line is for */
   .payload-wrap { display: grid; gap: 24px; }
   pre.payload {
@@ -334,7 +349,7 @@
     .step .vis { height: 96px; padding: 12px; }
     .step .hud { font-size: 12px; padding: 6px 10px; gap: 8px; }
     .step .term { font-size: 10.5px; padding: 8px 10px; }
-    .actions { grid-template-columns: 1fr 1fr; }
+    .actions, .states { grid-template-columns: 1fr 1fr; }
     .split { grid-template-columns: 1fr; }
     .rung { grid-template-columns: 26px 1fr; }
     .rung p { grid-column: 2; }
@@ -356,6 +371,7 @@
     <a class="brand" href="#top"><span class="mark" aria-hidden="true"></span>Deixis</a>
     <div class="links">
       <a href="#how">How it works</a>
+      <a href="#ball">The ball</a>
       <a href="#payload">Payload</a>
       <a href="#actions">Actions</a>
       <a href="#privacy">Privacy</a>
@@ -418,6 +434,32 @@
         <div class="text"><h3>Paste</h3><p>Into Claude Code, Cursor, or Codex. The image path comes first.</p></div>
       </div>
     </div>
+  </section>
+
+  <section class="col" id="ball">
+    <div class="sect-head">
+      <h2>The ball</h2>
+      <p class="lede">A glass disc that lives at the edge of the screen and stays out of the way until you reach for it.</p>
+    </div>
+    <div class="states">
+      <div class="state">
+        <div class="pic"><img src="assets/ball-docked.png" width="200" height="200" alt="The ball docked: a half disc tucked into the screen edge"></div>
+        <h3>Docked</h3><p>After two seconds without use it tucks into the nearest edge, part of it showing.</p>
+      </div>
+      <div class="state">
+        <div class="pic"><img src="assets/ball-awake.png" width="220" height="220" alt="The ball awake: a full glass disc on the desktop"></div>
+        <h3>Awake</h3><p>Move toward it and it comes back out. Drag it anywhere.</p>
+      </div>
+      <div class="state">
+        <div class="pic"><img src="assets/ball-ready.png" width="220" height="220" alt="The ball ready: the pointing hand appears on the disc"></div>
+        <h3>Ready</h3><p>Under the cursor the hand appears. Click to point.</p>
+      </div>
+      <div class="state">
+        <div class="pic"><img src="assets/ball-ring.png" width="520" height="520" alt="The ring: Snap, Text, Color and Cut around the ball, revealed by pressing and holding"></div>
+        <h3>The ring</h3><p>Press and hold for Snap, Text, Color, and Cut. Release on one.</p>
+      </div>
+    </div>
+    <p class="ballnote">Real captures from macOS 26. The ball is on by default and can be turned off in Settings; the hotkey works either way.</p>
   </section>
 
   <section class="col" id="payload">
