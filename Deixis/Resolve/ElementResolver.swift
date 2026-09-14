@@ -33,6 +33,8 @@ struct ElementSnapshot: Codable, Sendable, Equatable {
     var children: [AttributeSet]? = nil
     /// The parent's children (including this element), read only when the parent spans the window.
     var siblings: [AttributeSet]? = nil
+    /// The on-screen window whose owner answered the hit test (R3). Not part of fixtures.
+    var window: Geometry.WindowRecord? = nil
 }
 
 /// Something that can hit-test a screen point and return a snapshot. The app's provider is the
@@ -187,6 +189,7 @@ enum ElementResolver {
         "AXMenuBarItem": "menuBarItem",
         "AXMenu": "menu",
         "AXMenuItem": "menuItem",
+        "AXDockItem": "dockItem",
         "AXWebArea": "webArea",
         "AXValueIndicator": "valueIndicator",
         "AXLayoutArea": "layoutArea",
@@ -200,6 +203,7 @@ enum ElementResolver {
         "AXSecureTextField": "secureTextField",
         "AXTabButton": "tab",
         "AXCloseButton": "closeButton",
+        "AXMenuExtra": "menuExtra",
     ]
 
     /// Maps a platform role (and subrole, when it is more specific) to the platform-neutral vocabulary.
@@ -357,9 +361,15 @@ enum HitRefiner {
         return frame.w * frame.h >= spanningFraction * window.w * window.h
     }
 
+    /// The window the hit sits in. Some trees have none: the Finder desktop is a scroll area straight
+    /// under the application, the menu bar likewise. The outermost framed ancestor stands in, so a
+    /// blank desktop is a spanning container (cluster or nothing) rather than a screen-sized element.
     static func windowFrame(in snapshot: ElementSnapshot) -> Frame? {
-        ([snapshot.element] + snapshot.ancestors)
-            .first { ElementResolver.mapRole($0.role ?? "", subrole: $0.subrole) == "window" }?.frame
+        let chain = [snapshot.element] + snapshot.ancestors
+        if let window = chain.first(where: { ElementResolver.mapRole($0.role ?? "", subrole: $0.subrole) == "window" }) {
+            return window.frame
+        }
+        return chain.last { ($0.frame?.w ?? 0) > 0 && ($0.frame?.h ?? 0) > 0 }?.frame
     }
 
     private static func area(_ r: CGRect) -> Double { r.isNull ? .infinity : r.width * r.height }

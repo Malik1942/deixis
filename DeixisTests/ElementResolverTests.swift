@@ -186,6 +186,30 @@ final class ElementResolverTests: XCTestCase {
         XCTAssertNil(onNothing[0], "nothing specific here: fallback square, element null on click")
     }
 
+    /// The Finder desktop: a screen-sized group under a scroll area, no window anywhere in the chain.
+    /// It counts as spanning its root, so blank desktop is "nothing here" and an icon area is a cluster.
+    func testDesktopWithoutWindowAncestorSpansItsRoot() throws {
+        let screen = Frame(x: 0, y: 0, w: 2056, h: 1329)
+        let desktop = AttributeSet(role: "AXGroup", description: "desktop", frame: screen, childCount: 2)
+        let scrollArea = AttributeSet(role: "AXScrollArea", description: "desktop", frame: screen)
+        let application = AttributeSet(role: "AXApplication", title: "Finder")
+        let icon = node("AXImage", x: 1958, y: 47, w: 64, h: 64)
+        let label = node("AXStaticText", x: 1950, y: 115, w: 80, h: 16)
+        let snapshot = ElementSnapshot(element: desktop, ancestors: [scrollArea, application], children: [icon, label])
+        XCTAssertEqual(HitRefiner.windowFrame(in: snapshot), screen)
+        let blank = HitRefiner.selectionLevels(for: snapshot, at: CGPoint(x: 1000, y: 600))
+        XCTAssertEqual(blank.map { $0?.role }, [nil, "group", "scrollArea"])
+        let nearIcon = HitRefiner.selectionLevels(for: snapshot, at: CGPoint(x: 1990, y: 100))
+        XCTAssertEqual(nearIcon.first??.role, "cluster", "icon and its label form one cluster")
+    }
+
+    func testDesktopAndMenuBarRoles() {
+        XCTAssertEqual(ElementResolver.mapRole("AXMenuBarItem", subrole: "AXMenuExtra"), "menuExtra")
+        XCTAssertEqual(ElementResolver.mapRole("AXMenuBarItem", subrole: nil), "menuBarItem")
+        XCTAssertEqual(ElementResolver.mapRole("AXDockItem", subrole: nil), "dockItem")
+        XCTAssertEqual(ElementResolver.mapRole("AXUnknown", subrole: nil), "unknown", "a widget's cell")
+    }
+
     func testZeroFrameResolvesToNil() {
         let ghost = ElementSnapshot(element: AttributeSet(role: "AXApplication", frame: Frame(x: 0, y: 0, w: 0, h: 0)), ancestors: [])
         XCTAssertNil(ElementResolver.resolve(ghost))

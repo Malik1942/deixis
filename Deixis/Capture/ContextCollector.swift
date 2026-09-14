@@ -4,9 +4,18 @@ import Darwin
 /// R5: what the user was looking at when the hotkey fired. Runs before the overlay appears.
 @MainActor
 enum ContextCollector {
+    /// Where the payload's window title comes from.
+    enum WindowTitle {
+        /// The app's focused window, falling back to its main window: right for a click in a normal window.
+        case focused
+        /// Already known, or known to be absent: a widget names its own window, a desktop icon or a
+        /// menu bar item sits in none, and the app's focused window would be unrelated.
+        case known(String?)
+    }
+
     /// With no `pid`, describes the frontmost app (hotkey time). With a `pid`, describes that app
     /// (the owner of the clicked window), so the source matches what was actually pointed at.
-    static func collect(reader: AccessibilityReader, pid targetPID: pid_t? = nil) async -> CaptureContext? {
+    static func collect(reader: AccessibilityReader, pid targetPID: pid_t? = nil, windowTitle: WindowTitle = .focused) async -> CaptureContext? {
         let app: NSRunningApplication?
         if let targetPID {
             app = NSRunningApplication(processIdentifier: targetPID)
@@ -17,7 +26,11 @@ enum ContextCollector {
         let bundleId = app.bundleIdentifier ?? "unknown"
         let name = app.localizedName ?? bundleId
         let pid = app.processIdentifier
-        let title = await reader.focusedWindowTitle(pid: pid)
+        let title: String?
+        switch windowTitle {
+        case .focused: title = await reader.focusedWindowTitle(pid: pid)
+        case .known(let known): title = known
+        }
 
         var simulator: SimulatorInfo?
         if bundleId == ModeClassifier.simulatorBundleId {
@@ -54,17 +67,28 @@ enum ContextCollector {
     }
 }
 
-/// On-screen windows, front to back, in CG coordinates. Feeds the window hit-test (R3) and crop clamp (R4).
+/// On-screen windows, front to back, in CG coordinates, in every layer: desktop icons (Finder),
+/// widgets (Notification Center), status items (Control Center and the apps that own them), the Dock,
+/// and normal windows. Feeds the window hit-test (R3) and crop clamp (R4).
 enum WindowList {
     static func onScreen() -> [Geometry.WindowRecord] {
-        let options: CGWindowListOption = [.optionOnScreenOnly, .excludeDesktopElements]
-        guard let list = CGWindowListCopyWindowInfo(options, kCGNullWindowID) as? [[String: Any]] else { return [] }
+        // Read before the overlay comes up, so this is the app whose menu titles are showing.
+        let menuBarOwner = NSWorkspace.shared.menuBarOwningApplication?.processIdentifier
+        let menuBarLayer = Int(CGWindowLevelForKey(.mainMenuWindow))
+        guard let list = CGWindowListCopyWindowInfo([.optionOnScreenOnly], kCGNullWindowID) as? [[String: Any]] else { return [] }
         return list.compactMap { info in
             guard let pid = info[kCGWindowOwnerPID as String] as? pid_t,
                   let layer = info[kCGWindowLayer as String] as? Int,
                   let boundsDict = info[kCGWindowBounds as String],
-                  let bounds = CGRect(dictionaryRepresentation: boundsDict as! CFDictionary)
+                  let bounds = CGRect(dictionaryRepresentation: boundsDict as! CFDictionary),
+                  (info[kCGWindowAlpha as String] as? Double ?? 1) > 0
             else { return nil }
+            if NSRunningApplication(processIdentifier: pid) == nil {
+                // Window Server draws the menu bar backdrop, the cursor, and the display backstop.
+                // Only the menu bar is a target, and its titles belong to the app that owns the menu bar.
+                guard layer == menuBarLayer, let menuBarOwner else { return nil }
+                return Geometry.WindowRecord(ownerPID: menuBarOwner, layer: layer, bounds: bounds)
+            }
             return Geometry.WindowRecord(ownerPID: pid, layer: layer, bounds: bounds)
         }
     }
