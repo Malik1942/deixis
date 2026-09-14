@@ -38,6 +38,14 @@ Path: application > window > group > group > button#captureButton
 make this rounded, match the other pills
 ```
 
+## Settings and the ball
+
+- **Settings** (⌘, from the menu bar): the hotkey, recorded by pressing it, either a key with modifiers or a double-tap of one modifier; the capture folder and how it is organized; the floating ball toggle; and My Apps.
+- **Fix or reference is inferred.** Anything in the iOS Simulator, anything built on this Mac (found through DerivedData or a folder with an Xcode project or Package.swift), and anything signed with your own Team ID counts as yours. My Apps is only for what inference misses. When a project folder is found, the payload carries a `Project:` line.
+- **Captures are tagged in Finder** with Deixis, the app, fix or reference, and the project. Optionally sorted into subfolders by app, project, or month.
+- **The floating ball** rests as a faint disc, docks to the nearest edge when ignored, wakes as the cursor approaches, and starts a capture on click. Drag it to move it. Turn it off in Settings; the hotkey works either way.
+- **Drawn frames and text.** Drag on the overlay to capture a frame and every element inside it. When nothing has an identifier, the text in the image is recognized and listed, and the nearest labeled elements are named.
+
 ## Agent compatibility
 
 | Agent | Paste | Image | Status |
