@@ -1,5 +1,7 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Deixis</title>
-<meta name="description" content="Point at one element in any Mac app. Your coding agent gets the element, not a screenshot.">
+<meta name="description" content="Point at one element in any app. Your coding agent gets the element, not a screenshot.">
 <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png">
 <link rel="icon" type="image/png" sizes="64x64" href="assets/favicon-64.png">
 <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
@@ -11,8 +13,8 @@
     --ink: #1d1d1f;
     --muted: #6e6e73;
     --hair: #d2d2d7;
-    --accent: #0a84ff;
-    --accent: color(display-p3 0.04 0.52 1);
+    --accent: #007aff;
+    --accent: color(display-p3 0 0.478 1);
     --stage: #0a84ff;
     --stage: color(display-p3 0.04 0.52 1);
     --hud: rgba(255, 255, 255, 0.78);
@@ -46,7 +48,7 @@
       --glass-edge: rgba(255, 255, 255, 0.28);
       --frame: #2c2c2e;
       --frame-chrome: #3a3a3c;
-      --dim: rgba(0, 0, 0, 0.32);
+      --dim: rgba(0, 0, 0, 0.2);
       --code-bg: #1c1c1e;
       --key-bg: #2c2c2e;
       --shadow: 0 1px 2px rgba(0,0,0,.4), 0 12px 32px rgba(0,0,0,.5);
@@ -71,7 +73,7 @@
     --glass-edge: rgba(255, 255, 255, 0.28);
     --frame: #2c2c2e;
     --frame-chrome: #3a3a3c;
-    --dim: rgba(0, 0, 0, 0.32);
+    --dim: rgba(0, 0, 0, 0.2);
     --code-bg: #1c1c1e;
     --key-bg: #2c2c2e;
     --shadow: 0 1px 2px rgba(0,0,0,.4), 0 12px 32px rgba(0,0,0,.5);
@@ -191,26 +193,25 @@
     border-radius: 980px; background: var(--accent); opacity: .92;
     display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 600; font-size: clamp(11px, 1.6vw, 15px);
   }
+  /* highlight.stroke: 2 pt accent on the element's frame at highlight.radius 6 pt, no fill */
   .stage .highlight {
-    position: absolute; left: calc(33% - 4px); bottom: calc(17% - 4px); width: calc(34% + 8px); height: calc(8.5% + 8px);
-    border-radius: 980px; border: 2px solid var(--accent);
-    box-shadow: 0 0 0 1px rgba(255,255,255,.25) inset;
+    position: absolute; left: 33%; bottom: 17%; width: 34%; height: 8.5%;
+    border-radius: 6px; border: 2px solid var(--accent);
   }
+  /* the hover label: 8 pt below the element, aligned to its left edge; role in sans, identifier in mono */
   .stage .label {
-    position: absolute; left: 50%; bottom: 8%; transform: translateX(-50%);
+    position: absolute; left: 33%; top: calc(83% + 8px);
     background: var(--hud); border: 1px solid var(--hud-edge);
     -webkit-backdrop-filter: blur(20px) saturate(1.4); backdrop-filter: blur(20px) saturate(1.4);
     border-radius: 6px; padding: 4px 8px; white-space: nowrap;
     font-size: clamp(10px, 1.5vw, 12px); color: var(--ink);
   }
   .stage .label code { font-size: 0.95em; }
-  .stage .cursor {
-    position: absolute; left: 59%; bottom: 17.5%; width: 3.6%; min-width: 18px; height: auto;
-    filter: drop-shadow(0 1px 2px rgba(0,0,0,.5));
-  }
-  /* the ball, docked at the right edge as it rests */
+  /* the system pointing hand the overlay uses in Point mode; its hotspot (13, 8 of 32) lands on the button */
+  .stage .cursor { position: absolute; left: 57.5%; top: 77.5%; width: 3.6%; min-width: 18px; height: auto; }
+  /* the ball, docked at the right edge as it rests: 60 percent of the disc stays on screen */
   .stage .ball {
-    position: absolute; right: -2.2%; top: 44%; width: 4.4%; min-width: 26px; aspect-ratio: 1; border-radius: 50%;
+    position: absolute; right: -1.76%; top: 44%; width: 4.4%; min-width: 26px; aspect-ratio: 1; border-radius: 50%;
     background: var(--glass); border: 1px solid var(--glass-edge);
     -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
     box-shadow: 0 1px 6px rgba(0,0,0,.18);
@@ -227,7 +228,7 @@
   .step { display: grid; gap: 12px; align-content: start; }
   .step .vis {
     position: relative; height: 108px; border-radius: 14px; background: var(--surface); box-shadow: 0 0 0 1px var(--hair);
-    display: grid; place-items: center; padding: 16px; overflow: hidden;
+    display: grid; grid-template-columns: minmax(0, 1fr); place-items: center; padding: 12px; overflow: hidden;
   }
   .step .vis .n { position: absolute; top: 10px; left: 14px; font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
   .step .text { display: grid; gap: 4px; }
@@ -240,13 +241,16 @@
   .keys { display: flex; align-items: center; gap: 8px; }
   .keys kbd { font-size: 22px; padding: 6px 14px; border-radius: 9px; }
   .keys .plus { color: var(--muted); font-size: 13px; }
+  /* the note field: label.bg at 6 pt, 28 pt tall, label.sans 12 pt, the hint right-aligned in the secondary color */
   .hud {
-    background: var(--hud); border: 1px solid var(--hud-edge); border-radius: 8px; padding: 8px 12px;
-    font-size: 13px; color: var(--ink); white-space: nowrap; display: flex; align-items: center; gap: 10px;
-    box-shadow: 0 4px 14px rgba(0,0,0,.10);
+    background: var(--hud); border: 1px solid var(--hud-edge); border-radius: 6px; height: 28px; padding: 0 8px;
+    font-size: 12px; color: var(--ink); white-space: nowrap; display: flex; align-items: center; gap: 8px;
+    max-width: 100%; box-shadow: 0 4px 14px rgba(0,0,0,.10);
   }
-  .hud .caret { width: 1.5px; height: 15px; background: var(--accent); }
-  .hud kbd { font-size: 11px; padding: 0 5px; }
+  .hud > span:first-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+  .hud .hint { flex: none; }
+  .hud .caret { display: inline-block; width: 1px; height: 14px; background: var(--ink); vertical-align: -3px; margin-left: 1px; }
+  .hud .hint { color: var(--muted); }
   .term {
     width: 100%; background: #1c1c1e; color: #f5f5f7; border-radius: 8px; padding: 10px 12px;
     font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 11.5px; line-height: 1.5; text-align: left; white-space: nowrap; overflow: hidden;
@@ -275,7 +279,7 @@
   .note b { font-weight: 600; }
   .note span { color: var(--muted); }
 
-  /* the fallback ladder: what the label reads at each rung */
+  /* the fallback ladder: the target line the payload carries at each rung */
   .ladder { display: grid; gap: 10px; }
   .rung { display: grid; grid-template-columns: 26px auto 1fr; gap: 18px; align-items: center; padding: 14px 16px; border-radius: 12px; background: var(--surface); box-shadow: 0 0 0 1px var(--hair); }
   .rung .n { color: var(--muted); font-variant-numeric: tabular-nums; font-size: 13px; }
@@ -287,7 +291,12 @@
 
   .actions { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
   .action { display: grid; gap: 8px; padding: 18px 16px; background: var(--surface); border-radius: 16px; box-shadow: 0 0 0 1px var(--hair); align-content: start; }
-  .action .glyph { width: 30px; height: 30px; }
+  /* the ring's four symbols, drawn in the label color like the app draws them */
+  .action .glyph { width: 30px; height: 30px; background: var(--ink); -webkit-mask: var(--glyph) center / contain no-repeat; mask: var(--glyph) center / contain no-repeat; }
+  .action .glyph.snap { --glyph: url("assets/glyph-snap.png"); }
+  .action .glyph.text { --glyph: url("assets/glyph-text.png"); }
+  .action .glyph.color { --glyph: url("assets/glyph-color.png"); }
+  .action .glyph.cut { --glyph: url("assets/glyph-cut.png"); }
   .action h3 { font-size: 19px; }
   .action p { font-size: 14px; color: var(--muted); }
   .action .keeps { font-size: 12px; color: var(--muted); margin-top: 2px; }
@@ -302,20 +311,28 @@
   .ba .chrome .dots { display: flex; gap: 6px; }
   .ba .chrome .dots i { width: 10px; height: 10px; border-radius: 50%; background: var(--hair); display: block; }
   .ba .chrome .title { font-weight: 600; color: var(--muted); font-size: 12px; }
-  .ba .memo { padding: 12px 14px 10px; color: var(--ink); font-size: 14px; }
-  .ba .panes { position: relative; display: grid; grid-template-columns: 1fr 1fr; gap: 2px; background: var(--hair); margin-inline: 14px; border-radius: 8px; overflow: hidden; }
-  .ba .pane { position: relative; aspect-ratio: 45 / 26; background: var(--frame); display: grid; place-items: center; padding: 10%; }
-  .ba .pane .tag { position: absolute; top: 8px; left: 10px; font-size: 11px; color: var(--muted); }
-  .ba .pane .btn-old { width: 78%; height: 30%; background: var(--accent); border-radius: 6px; opacity: .85; }
-  .ba .pane .btn-new { width: 78%; height: 30%; background: var(--accent); border-radius: 980px; }
-  .ba .divider { position: absolute; top: 0; bottom: 0; left: 50%; width: 2px; background: var(--surface); transform: translateX(-1px); }
-  .ba .knob { position: absolute; top: 50%; left: 50%; width: 22px; height: 22px; transform: translate(-50%, -50%); border-radius: 50%; background: var(--surface); box-shadow: 0 1px 4px rgba(0,0,0,.25); display: grid; place-items: center; }
-  .ba .knob::before { content: ""; width: 8px; height: 8px; border-left: 1.5px solid var(--muted); border-right: 1.5px solid var(--muted); }
-  .ba .facts { display: grid; gap: 6px; padding: 12px 14px 14px; font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 11.5px; }
+  .ba .memo { padding: 12px 14px 10px; color: var(--ink); font-size: 14px; display: grid; gap: 2px; }
+  .ba .memo .el { color: var(--muted); font-size: 12px; }
+  .ba .bar { display: flex; align-items: center; gap: 12px; padding: 0 14px 10px; }
+  .ba .seg { display: flex; background: var(--frame); border-radius: 7px; padding: 2px; font-size: 11px; color: var(--muted); }
+  .ba .seg span { padding: 2px 9px; border-radius: 5px; }
+  .ba .seg .on { background: var(--surface); color: var(--ink); box-shadow: 0 1px 2px rgba(0,0,0,.12); }
+  .ba .bar .iter { margin-left: auto; font-size: 11px; color: var(--ink); background: var(--frame); border-radius: 6px; padding: 3px 9px; }
+  /* Slide: one canvas, the after revealed under a draggable accent divider */
+  .ba .canvas { position: relative; aspect-ratio: 45 / 14; margin-inline: 14px; border-radius: 8px; overflow: hidden; background: var(--frame); }
+  .ba .layer { position: absolute; inset: 0; display: grid; place-items: center; }
+  .ba .layer.after { clip-path: inset(0 0 0 50%); }
+  .ba .layer i { display: block; width: 40%; height: 34%; background: var(--accent); }
+  .ba .layer.before i { border-radius: 6px; }
+  .ba .layer.after i { border-radius: 980px; }
+  .ba .divider { position: absolute; top: 0; bottom: 0; left: 50%; width: 2px; background: var(--accent); transform: translateX(-1px); }
+  .ba .knob { position: absolute; top: 50%; left: 50%; width: 14px; height: 14px; transform: translate(-50%, -50%); border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 2px var(--surface); }
+  .ba .tag { position: absolute; font-size: 11px; color: var(--ink); background: var(--hud); border: 1px solid var(--hud-edge); border-radius: 5px; padding: 2px 6px; }
+  .ba .tag.before { top: 6px; left: 6px; }
+  .ba .tag.after { bottom: 6px; right: 6px; }
+  .ba .facts { display: grid; gap: 4px; padding: 12px 14px 14px; font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 11.5px; }
   .ba .facts .stat { color: var(--ink); }
-  .ba .facts .stat b { font-weight: 600; }
-  .ba .facts .plus { color: #30a46c; } .ba .facts .minus { color: #e5484d; }
-  .ba .facts .file { display: flex; justify-content: space-between; gap: 12px; }
+  .ba .facts .file { color: var(--muted); }
 
   .shot { display: grid; justify-items: center; }
   .shot img { width: 100%; max-width: 720px; height: auto; display: block; }
@@ -345,7 +362,7 @@
     .steps { grid-template-columns: 1fr; gap: 16px; }
     .step { grid-template-columns: 224px 1fr; align-items: center; gap: 20px; }
     .step .vis { height: 96px; padding: 12px; }
-    .step .hud { font-size: 12px; padding: 6px 10px; gap: 8px; }
+    .step .hud .hint { display: none; }
     .step .term { font-size: 10.5px; padding: 8px 10px; }
     .actions, .states { grid-template-columns: 1fr 1fr; }
     .split { grid-template-columns: 1fr; }
@@ -360,7 +377,7 @@
     .stage .highlight { animation: settle 220ms ease-out both; }
     .stage .label { animation: reveal 200ms ease-out 120ms both; }
     @keyframes settle { from { transform: scale(1.04); opacity: 0; } to { transform: none; opacity: 1; } }
-    @keyframes reveal { from { opacity: 0; transform: translate(-50%, 4px); } to { opacity: 1; transform: translate(-50%, 0); } }
+    @keyframes reveal { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
   }
 </style>
 
@@ -407,24 +424,24 @@
       <div class="dim"></div>
       <div class="pill">Capture</div>
       <div class="highlight"></div>
-      <img class="cursor" src="assets/glyph-hand.png" width="60" height="60" alt="">
-      <div class="label">button · <code>id=captureButton</code></div>
+      <img class="cursor" src="assets/cursor-pointing-hand.png" width="128" height="128" alt="">
+      <div class="label">button · <code>captureButton</code></div>
       <div class="ball" aria-hidden="true"></div>
     </div>
     <figcaption>Hover shows the element and its identifier. Nothing is written until Enter.</figcaption>
   </figure>
 
-  <section class="col" id="how">
-    <div class="sect-head">
+  <section class="wide" id="how">
+    <div class="col"><div class="sect-head">
       <h2>Three seconds, start to paste</h2>
-    </div>
+    </div></div>
     <div class="steps">
       <div class="step">
         <div class="vis"><span class="n">1</span><div class="keys"><kbd>⌃</kbd><span class="plus">twice</span></div></div>
         <div class="text"><h3>Point</h3><p>Double-tap Control, or click the ball. Hover, then click the element.</p></div>
       </div>
       <div class="step">
-        <div class="vis"><span class="n">2</span><div class="hud">make this rounded<span class="caret"></span><kbd>↩</kbd></div></div>
+        <div class="vis"><span class="n">2</span><div class="hud"><span>make this rounded<span class="caret"></span></span><span class="hint">↩ copy · esc cancel</span></div></div>
         <div class="text"><h3>Note</h3><p>Type what should change. Enter captures. Esc cancels, nothing written.</p></div>
       </div>
       <div class="step">
@@ -468,7 +485,7 @@
 <pre class="payload"><span class="h">## Deixis capture (fix)</span>
 <span class="k">Image:</span> ~/Pictures/Deixis/deixis-simulator-20260913-153012-k7q2.png
 <span class="k">App:</span> Simulator (com.example.myapp) · Window: iPhone 17 Pro
-<span class="k">Captured:</span> 2026-09-13 15:30 · Image region: 450×130 pt @2x
+<span class="k">Captured:</span> 2026-09-13 15:30 · Image region: 450×130 pt @2x (element + 40 pt)
 
 <span class="h">### Target element</span>
 button · id=captureButton
@@ -493,10 +510,10 @@ make this rounded, match the other pills</pre>
     </div>
     <div class="ladder">
       <div class="rung"><span class="n">1</span><span class="chip">button · <code>id=captureButton</code></span><p><b>Element</b> with a declared identifier. The best case.</p></div>
-      <div class="rung"><span class="n">2</span><span class="chip">button · "Save changes"</span><p><b>Label only.</b> The nearest labeled neighbors are named too.</p></div>
-      <div class="rung"><span class="n">3</span><span class="chip">frame · 450×130 · 6 elements</span><p><b>Drawn frame.</b> Drag on the overlay; everything inside is listed.</p></div>
-      <div class="rung"><span class="n">4</span><span class="chip">text · "Save changes" "Cancel"</span><p><b>Text and neighbors.</b> Words in the image are recognized.</p></div>
-      <div class="rung"><span class="n">5</span><span class="chip dash">element: null</span><p><b>Image.</b> The payload says so, and still carries your note.</p></div>
+      <div class="rung"><span class="n">2</span><span class="chip">button "Save changes" · no identifier</span><p><b>Label only.</b> The nearest labeled neighbors are named too.</p></div>
+      <div class="rung"><span class="n">3</span><span class="chip">Elements in frame (6)</span><p><b>Drawn frame.</b> Drag on the overlay; everything inside is listed.</p></div>
+      <div class="rung"><span class="n">4</span><span class="chip">Text in image · Nearby</span><p><b>Text and neighbors.</b> Words in the image are recognized.</p></div>
+      <div class="rung"><span class="n">5</span><span class="chip dash">No element information available</span><p><b>Image.</b> The payload says so, and still carries your note.</p></div>
     </div>
   </section>
 
@@ -507,19 +524,19 @@ make this rounded, match the other pills</pre>
     </div>
     <div class="actions">
       <div class="action">
-        <img class="glyph" src="assets/glyph-snap.png" width="60" height="60" alt="">
+        <span class="glyph snap" aria-hidden="true"></span>
         <h3>Snap</h3><p>A region or a window, as a PNG.</p><p class="keeps">Keeps a file</p>
       </div>
       <div class="action">
-        <img class="glyph" src="assets/glyph-text.png" width="60" height="60" alt="">
+        <span class="glyph text" aria-hidden="true"></span>
         <h3>Text</h3><p>Recognized lines, to the clipboard.</p><p class="keeps">Keeps nothing</p>
       </div>
       <div class="action">
-        <img class="glyph" src="assets/glyph-color.png" width="60" height="60" alt="">
-        <h3>Color</h3><p>Hex, rgb, hsl, or SwiftUI. sRGB or P3.</p><p class="keeps">Keeps nothing</p>
+        <span class="glyph color" aria-hidden="true"></span>
+        <h3>Color</h3><p>Hex, rgb(), hsl(), or SwiftUI Color. sRGB or Display P3.</p><p class="keeps">Keeps nothing</p>
       </div>
       <div class="action">
-        <img class="glyph" src="assets/glyph-cut.png" width="60" height="60" alt="">
+        <span class="glyph cut" aria-hidden="true"></span>
         <h3>Cut</h3><p>The subject on a transparent background.</p><p class="keeps">Keeps a file</p>
       </div>
     </div>
@@ -527,18 +544,20 @@ make this rounded, match the other pills</pre>
 
   <section class="col">
     <div class="split">
-      <div class="ba" role="img" aria-label="The Before and After window: the note on top, two captures of the same button side by side with a slide divider, square-cornered before and pill-shaped after, and the git diff stat beneath">
+      <div class="ba" role="img" aria-label="The Before and After window: the note and the element on top, a Slide, Side by side, Flip picker, one canvas of the same button with a draggable divider, square-cornered before on the left and pill-shaped after on the right, and the git diff summary beneath">
         <div class="chrome"><div class="dots"><i></i><i></i><i></i></div><span class="title">Before &amp; After</span><span></span></div>
-        <div class="memo">make this rounded, match the other pills</div>
-        <div class="panes">
-          <div class="pane"><span class="tag">Before</span><div class="btn-old"></div></div>
-          <div class="pane"><span class="tag">After</span><div class="btn-new"></div></div>
+        <div class="memo">make this rounded, match the other pills<span class="el">com.example.myapp · button id=captureButton</span></div>
+        <div class="bar"><div class="seg"><span class="on">Slide</span><span>Side by side</span><span>Flip</span></div><span class="iter">All iterations (1)</span></div>
+        <div class="canvas">
+          <div class="layer before"><i></i></div>
+          <div class="layer after"><i></i></div>
           <div class="divider"></div><div class="knob"></div>
+          <span class="tag before">Before</span><span class="tag after">After #1 · 15:32</span>
         </div>
         <div class="facts">
-          <div class="stat"><b>2 files changed</b> · <span class="plus">+12</span> <span class="minus">−4</span> · a3f9c1e → working tree</div>
-          <div class="file"><span>Sources/Capture/CaptureButton.swift</span><span><span class="plus">+9</span> <span class="minus">−3</span></span></div>
-          <div class="file"><span>Sources/DesignSystem/Pill.swift</span><span><span class="plus">+3</span> <span class="minus">−1</span></span></div>
+          <div class="stat">2 files changed, 12 insertions(+), 4 deletions(-)</div>
+          <div class="file">Sources/Capture/CaptureButton.swift</div>
+          <div class="file">Sources/DesignSystem/Pill.swift</div>
         </div>
       </div>
       <div class="sect-head" style="margin: 0;">
