@@ -254,6 +254,15 @@
   .term .p { color: #a1a1a6; }
   .term .k { color: #6ab0ff; }
 
+  /* the overlay, up close: four real frames */
+  .frames { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+  .frame { display: grid; gap: 10px; align-content: start; }
+  .frame .pic { aspect-ratio: 3 / 2; border-radius: 14px; overflow: hidden; box-shadow: var(--shadow); }
+  .frame .pic img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .frame h3 { font-size: 17px; }
+  .frame p { font-size: 14px; color: var(--muted); }
+  .frame code { font-size: 0.9em; }
+
   /* the ball: four real states */
   .states { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
   .state { display: grid; gap: 10px; align-content: start; }
@@ -348,6 +357,7 @@
     .step .hud { font-size: 12px; padding: 6px 10px; gap: 8px; }
     .step .term { font-size: 10.5px; padding: 8px 10px; }
     .actions, .states { grid-template-columns: 1fr 1fr; }
+    .frames { grid-template-columns: 1fr; }
     .split { grid-template-columns: 1fr; }
     .rung { grid-template-columns: 26px 1fr; }
     .rung p { grid-column: 2; }
@@ -369,6 +379,7 @@
     <a class="brand" href="#top"><span class="mark" aria-hidden="true"></span>Deixis</a>
     <div class="links">
       <a href="#how">How it works</a>
+      <a href="#point">Point</a>
       <a href="#ball">The ball</a>
       <a href="#payload">Payload</a>
       <a href="#actions">Actions</a>
@@ -430,6 +441,31 @@
       <div class="step">
         <div class="vis"><span class="n">3</span><div class="term"><span class="k">## Deixis capture (fix)</span><br>Image: ~/Pictures/Deixis/…<br>button · id=captureButton</div></div>
         <div class="text"><h3>Paste</h3><p>Into Claude Code, Cursor, or Codex. The image path comes first.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="wide" id="point">
+    <div class="sect-head col" style="margin-inline: auto;">
+      <h2>Point, up close</h2>
+      <p class="lede">The overlay over Calculator. Every frame is a real capture.</p>
+    </div>
+    <div class="frames">
+      <div class="frame">
+        <div class="pic"><img src="assets/overlay-hover.jpg" width="1400" height="933" alt="The overlay over Calculator: the 8 key outlined in blue, with the label button · Eight beneath it"></div>
+        <h3>Hover</h3><p>The element under the cursor and its identifier: <code>button · Eight</code>.</p>
+      </div>
+      <div class="frame">
+        <div class="pic"><img src="assets/overlay-option.jpg" width="1400" height="933" alt="With Option held, the whole keypad is outlined and the label reads group · CalculatorKeypadView"></div>
+        <h3>Option</h3><p>Steps to the parent: <code>group · CalculatorKeypadView</code>. Again for the next level.</p>
+      </div>
+      <div class="frame">
+        <div class="pic"><img src="assets/overlay-drag.jpg" width="1400" height="933" alt="A dragged frame around the number keys with a 161 by 167 point readout"></div>
+        <h3>Drag</h3><p>A frame, with every element inside it listed for the agent.</p>
+      </div>
+      <div class="frame">
+        <div class="pic"><img src="assets/overlay-note.jpg" width="1400" height="933" alt="After the click, a note field under the highlighted key reads make this key bigger, with Return to copy and Escape to cancel"></div>
+        <h3>Note</h3><p>Click, say what should change, Return. Esc cancels, nothing written.</p>
       </div>
     </div>
   </section>
