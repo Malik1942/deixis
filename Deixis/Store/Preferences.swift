@@ -111,7 +111,10 @@ final class Preferences {
         static let organization = "organization"
         static let colorFormat = "colorFormat"
         static let colorSpace = "colorSpace"
+        static let retentionDays = "retentionDays"
     }
+
+    static let retentionChoices = [7, 30, 90, 0]
 
     static var defaultCaptureFolder: String { ModeInference.directoryPath(FileStore.defaultDirectory) }
 
@@ -166,6 +169,11 @@ final class Preferences {
         didSet { defaults.set(colorSpace.rawValue, forKey: Key.colorSpace) }
     }
 
+    /// Days before images go to the Trash; 0 keeps everything.
+    var retentionDays: Int {
+        didSet { defaults.set(retentionDays, forKey: Key.retentionDays) }
+    }
+
     var captureFolderURL: URL { URL(filePath: captureFolder, directoryHint: .isDirectory) }
 
     init(defaults: UserDefaults = .standard) {
@@ -188,5 +196,6 @@ final class Preferences {
         organization = defaults.string(forKey: Key.organization).flatMap(CaptureOrganization.init(rawValue:)) ?? .none
         colorFormat = defaults.string(forKey: Key.colorFormat).flatMap(ColorFormat.init(rawValue:)) ?? .hex
         colorSpace = defaults.string(forKey: Key.colorSpace).flatMap(ColorSpaceChoice.init(rawValue:)) ?? .sRGB
+        retentionDays = defaults.object(forKey: Key.retentionDays) as? Int ?? 30
     }
 }

@@ -1,0 +1,247 @@
+import AppKit
+
+/// R27, PRD P1.11: four segments unfold from the ball on press-and-hold. Snap ↑, Text →, Color ↓,
+/// Cut ←; release over a segment chooses, release at center cancels. Never opens on hover.
+@MainActor
+final class Ring {
+    enum Segment: CaseIterable, Equatable {
+        case snap, text, color, cut
+
+        var symbol: String {
+            switch self {
+            case .snap: "camera.viewfinder"
+            case .text: "text.viewfinder"
+            case .color: "eyedropper"
+            case .cut: "person.and.background.dotted"
+            }
+        }
+
+        var title: String {
+            switch self {
+            case .snap: "Snap"
+            case .text: "Text"
+            case .color: "Color"
+            case .cut: "Cut"
+            }
+        }
+
+        /// Unit direction in AppKit coordinates (y up).
+        var direction: CGPoint {
+            switch self {
+            case .snap: CGPoint(x: 0, y: 1)
+            case .text: CGPoint(x: 1, y: 0)
+            case .color: CGPoint(x: 0, y: -1)
+            case .cut: CGPoint(x: -1, y: 0)
+            }
+        }
+
+        var acceptsClipboardOnly: Bool { self == .snap || self == .cut }
+    }
+
+    enum Tokens {
+        static let outerRadius: CGFloat = 92
+        static let innerRadius: CGFloat = 22
+        static let holdDelay: TimeInterval = 0.3
+        static let labelDelay: TimeInterval = 0.2
+        static let iconRadius: CGFloat = 54
+    }
+
+    private let panel: NSPanel
+    private let view: RingView
+    private var labelTask: Task<Void, Never>?
+    private(set) var center = CGPoint.zero
+    private(set) var hovered: Segment?
+
+    init() {
+        let side = Tokens.outerRadius * 2
+        panel = NSPanel(contentRect: NSRect(x: 0, y: 0, width: side, height: side), styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
+        panel.level = .screenSaver
+        panel.isOpaque = false
+        panel.backgroundColor = .clear
+        panel.hasShadow = false
+        panel.ignoresMouseEvents = true
+        panel.hidesOnDeactivate = false
+        panel.isReleasedWhenClosed = false
+        panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary, .ignoresCycle]
+        view = RingView(frame: NSRect(x: 0, y: 0, width: side, height: side))
+        panel.contentView = view
+    }
+
+    /// `center` in AppKit screen points.
+    func open(at center: CGPoint) {
+        self.center = center
+        hovered = nil
+        let side = Tokens.outerRadius * 2
+        panel.setFrameOrigin(CGPoint(x: center.x - side / 2, y: center.y - side / 2))
+        panel.alphaValue = 0
+        view.showLabels(false)
+        view.highlight(nil)
+        panel.orderFrontRegardless()
+        NSAnimationContext.runAnimationGroup { context in
+            context.duration = DesignTokens.reveal
+            context.timingFunction = CAMediaTimingFunction(name: .easeOut)
+            panel.animator().alphaValue = 1
+        }
+        labelTask?.cancel()
+        labelTask = Task { @MainActor in
+            try? await Task.sleep(for: .seconds(Tokens.labelDelay))
+            guard !Task.isCancelled else { return }
+            self.view.showLabels(true)
+        }
+    }
+
+    /// The segment under `point` (AppKit screen), updating the highlight.
+    @discardableResult
+    func hover(at point: CGPoint, optionHeld: Bool) -> Segment? {
+        let segment = Self.segment(for: CGPoint(x: point.x - center.x, y: point.y - center.y))
+        hovered = segment
+        view.highlight(segment)
+        view.showOptionBadge(optionHeld)
+        return segment
+    }
+
+    func close() {
+        labelTask?.cancel()
+        NSAnimationContext.runAnimationGroup { context in
+            context.duration = DesignTokens.dismiss
+            context.timingFunction = CAMediaTimingFunction(name: .easeIn)
+            panel.animator().alphaValue = 0
+        }
+        Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(Int(DesignTokens.dismiss * 1000) + 20))
+            self.panel.orderOut(nil)
+        }
+    }
+
+    /// Pure: which quadrant a delta from the center falls in; nil inside the center (cancel).
+    nonisolated static func segment(for delta: CGPoint, innerRadius: CGFloat = 22) -> Segment? {
+        guard hypot(delta.x, delta.y) > innerRadius else { return nil }
+        if abs(delta.y) >= abs(delta.x) {
+            return delta.y > 0 ? .snap : .color
+        }
+        return delta.x > 0 ? .text : .cut
+    }
+}
+
+/// `label.bg` disc with four wedges, outline symbols, labels that fade in, the filled hand at center.
+final class RingView: NSView {
+    private let material = NSVisualEffectView()
+    private let wedges = WedgeView()
+    private var icons: [Ring.Segment: NSImageView] = [:]
+    private var labels: [Ring.Segment: NSTextField] = [:]
+    private var badges: [Ring.Segment: NSTextField] = [:]
+    private let hand = NSImageView()
+
+    override init(frame frameRect: NSRect) {
+        super.init(frame: frameRect)
+        wantsLayer = true
+        layer?.cornerRadius = frameRect.width / 2
+        layer?.masksToBounds = true
+        material.material = .hudWindow
+        material.blendingMode = .behindWindow
+        material.state = .active
+        material.frame = bounds
+        addSubview(material)
+        wedges.frame = bounds
+        addSubview(wedges)
+
+        let center = CGPoint(x: bounds.midX, y: bounds.midY)
+        for segment in Ring.Segment.allCases {
+            let icon = NSImageView()
+            if let image = NSImage(systemSymbolName: segment.symbol, accessibilityDescription: segment.title) {
+                image.isTemplate = true
+                icon.image = image.withSymbolConfiguration(.init(pointSize: 18, weight: .regular))
+            }
+            icon.contentTintColor = .labelColor
+            let position = CGPoint(x: center.x + segment.direction.x * Ring.Tokens.iconRadius, y: center.y + segment.direction.y * Ring.Tokens.iconRadius)
+            icon.frame = NSRect(x: position.x - 12, y: position.y - 6, width: 24, height: 24)
+            addSubview(icon)
+            icons[segment] = icon
+
+            let label = NSTextField(labelWithString: segment.title)
+            label.font = DesignTokens.sans
+            label.textColor = .secondaryLabelColor
+            label.alignment = .center
+            label.sizeToFit()
+            label.frame.origin = CGPoint(x: position.x - label.frame.width / 2, y: position.y - 22)
+            label.alphaValue = 0
+            addSubview(label)
+            labels[segment] = label
+
+            if segment.acceptsClipboardOnly {
+                let badge = NSTextField(labelWithString: "⌥")
+                badge.font = DesignTokens.sans
+                badge.textColor = .secondaryLabelColor
+                badge.sizeToFit()
+                badge.frame.origin = CGPoint(x: icon.frame.maxX + 2, y: icon.frame.midY - badge.frame.height / 2)
+                badge.alphaValue = 0
+                addSubview(badge)
+                badges[segment] = badge
+            }
+        }
+
+        if let image = NSImage(systemSymbolName: "hand.point.up.left.fill", accessibilityDescription: "Point") {
+            image.isTemplate = true
+            hand.image = image.withSymbolConfiguration(.init(pointSize: 14, weight: .regular))
+        }
+        hand.contentTintColor = .labelColor
+        hand.frame = NSRect(x: center.x - 10, y: center.y - 10, width: 20, height: 20)
+        addSubview(hand)
+    }
+
+    @available(*, unavailable)
+    required init?(coder: NSCoder) { fatalError("init(coder:) is not supported") }
+
+    func highlight(_ segment: Ring.Segment?) {
+        wedges.highlighted = segment
+        wedges.needsDisplay = true
+    }
+
+    func showLabels(_ visible: Bool) {
+        NSAnimationContext.runAnimationGroup { context in
+            context.duration = DesignTokens.reveal
+            for label in labels.values { label.animator().alphaValue = visible ? 1 : 0 }
+        }
+    }
+
+    func showOptionBadge(_ visible: Bool) {
+        for badge in badges.values { badge.alphaValue = visible ? 1 : 0 }
+    }
+}
+
+/// The separators and the highlighted wedge.
+final class WedgeView: NSView {
+    var highlighted: Ring.Segment?
+
+    override func draw(_ dirtyRect: NSRect) {
+        let center = CGPoint(x: bounds.midX, y: bounds.midY)
+        let outer = bounds.width / 2
+        let inner = Ring.Tokens.innerRadius
+        if let highlighted {
+            let base: CGFloat = switch highlighted {
+            case .text: -45
+            case .snap: 45
+            case .cut: 135
+            case .color: 225
+            }
+            let path = NSBezierPath()
+            path.appendArc(withCenter: center, radius: outer, startAngle: base, endAngle: base + 90)
+            path.appendArc(withCenter: center, radius: inner, startAngle: base + 90, endAngle: base, clockwise: true)
+            path.close()
+            NSColor.labelColor.withAlphaComponent(0.08).setFill()
+            path.fill()
+        }
+        NSColor.separatorColor.setStroke()
+        let lines = NSBezierPath()
+        lines.lineWidth = 1
+        for angle in [45.0, 135.0, 225.0, 315.0] {
+            let radians = angle * .pi / 180
+            lines.move(to: CGPoint(x: center.x + cos(radians) * inner, y: center.y + sin(radians) * inner))
+            lines.line(to: CGPoint(x: center.x + cos(radians) * outer, y: center.y + sin(radians) * outer))
+        }
+        lines.stroke()
+        let disc = NSBezierPath(ovalIn: NSRect(x: center.x - inner, y: center.y - inner, width: inner * 2, height: inner * 2))
+        disc.lineWidth = 1
+        disc.stroke()
+    }
+}

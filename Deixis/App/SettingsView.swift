@@ -51,7 +51,13 @@ struct GeneralSettings: View {
                     }
                 }
                 .pickerStyle(.menu)
-                Footnote(text: "Each capture writes a PNG and a JSON sidecar here. Finder tags are always added: Deixis, the app, fix or reference, and the project when known.")
+                Picker("Keep images", selection: $preferences.retentionDays) {
+                    ForEach(Preferences.retentionChoices, id: \.self) { days in
+                        Text(days == 0 ? "Forever" : "\(days) days").tag(days)
+                    }
+                }
+                .pickerStyle(.menu)
+                Footnote(text: "Each capture writes a PNG and a JSON sidecar here. Finder tags are always added: Deixis, the app, fix or reference, and the project when known. Older images go to the Trash; pinned and resolved captures stay.")
             }
             Section {
                 Picker("Color format", selection: $preferences.colorFormat) {

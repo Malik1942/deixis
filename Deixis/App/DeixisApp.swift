@@ -40,6 +40,7 @@ private struct StatusMenu: View {
         Button("Color") { state.beginColorPick() }
         Button("Cut") { state.beginAction(.cut) }
         Divider()
+        Button("Pin last capture") { state.pinLastCapture() }
         Button("Open capture folder") {
             state.openCaptureFolder()
         }

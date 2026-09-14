@@ -48,6 +48,8 @@ final class AppState {
     @ObservationIgnored private var lockedNearby: [RegionElement]?
     @ObservationIgnored private var action: Action = .point
     @ObservationIgnored private var colorSession: ColorPickerSession?
+    @ObservationIgnored private var clipboardOnlyPreset = false
+    @ObservationIgnored private var sweepTask: Task<Void, Never>?
     /// R25: the last ten picked colors, in memory only.
     @ObservationIgnored private(set) var recentColors: [ColorValue] = []
     @ObservationIgnored private var clickPoint: CGPoint = .zero
@@ -65,6 +67,7 @@ final class AppState {
         preferences.onHotkeyChange = { [weak self] in self?.restartHotkey() }
         preferences.onBallEnabledChange = { [weak self] in self?.updateBall() }
         updateBall()
+        scheduleSweeps()
         overlay.onHover = { [weak self] point in self?.hover(point) }
         overlay.onClick = { [weak self] point in self?.click(point) }
         overlay.onCancel = { [weak self] in self?.cancel() }
@@ -89,6 +92,7 @@ final class AppState {
             let newBall = FloatingBall(origin: preferences.ballPosition)
             newBall.onPoint = { [weak self] in self?.beginCapture() }
             newBall.onMoved = { [weak self] origin in self?.preferences.ballPosition = origin }
+            newBall.onAction = { [weak self] segment, clipboardOnly in self?.beginRingAction(segment, clipboardOnly: clipboardOnly) }
             newBall.show(firstLaunch: firstLaunch)
             ball = newBall
         } else {
@@ -106,6 +110,43 @@ final class AppState {
     /// R1/R5: collect context for the app the user was looking at, then show the overlay.
     func beginCapture() {
         beginAction(.point)
+    }
+
+    /// R27: a ring segment chosen on the ball.
+    func beginRingAction(_ segment: Ring.Segment, clipboardOnly: Bool) {
+        switch segment {
+        case .snap: clipboardOnlyPreset = clipboardOnly; beginAction(.snap)
+        case .text: beginAction(.text)
+        case .color: beginColorPick()
+        case .cut: clipboardOnlyPreset = clipboardOnly; beginAction(.cut)
+        }
+    }
+
+    // MARK: Lifecycle (R28)
+
+    /// Sweep on launch and every 24 hours; the folder is read recursively.
+    private func scheduleSweeps() {
+        sweepTask?.cancel()
+        sweepTask = Task { @MainActor [weak self] in
+            while !Task.isCancelled {
+                guard let self else { return }
+                let folder = self.preferences.captureFolderURL
+                let days = self.preferences.retentionDays
+                _ = await Task.detached { Lifecycle.sweep(folder: folder, retentionDays: days) }.value
+                try? await Task.sleep(for: Lifecycle.sweepInterval)
+            }
+        }
+    }
+
+    /// Menu bar: keep the newest capture out of the sweep.
+    func pinLastCapture() {
+        let folder = preferences.captureFolderURL
+        guard let newest = Lifecycle.newest(in: folder) else {
+            toast.show(HudText.plain("No capture to pin"), near: Self.mainScreenCenterCG())
+            return
+        }
+        Lifecycle.pin(newest.urls)
+        toast.show(HudText.copied(identifier: nil).string == "Copied" ? HudText.plain("Pinned · \(newest.urls[0].lastPathComponent)") : HudText.plain("Pinned"), near: Self.mainScreenCenterCG())
     }
 
     /// R25: the magnifier session. Click copies the pixel in the chosen format; Esc cancels.
@@ -344,7 +385,8 @@ final class AppState {
     private func runOneShot(on rect: CGRect, at point: CGPoint, fromRegion: Bool) {
         guard let context else { return }
         let which = action
-        let optionHeld = NSEvent.modifierFlags.contains(.option)
+        let optionHeld = NSEvent.modifierFlags.contains(.option) || clipboardOnlyPreset
+        clipboardOnlyPreset = false
         let appName = Geometry.windowOwner(at: point, windows: windows, excludingPID: ownPID)
             .flatMap { NSRunningApplication(processIdentifier: $0.ownerPID)?.localizedName } ?? context.source.app.name
         let display = SelectionOverlay.displayFrameCG(containing: point)
@@ -456,6 +498,7 @@ final class AppState {
     private func reset() {
         phase = .idle
         action = .point
+        clipboardOnlyPreset = false
         overlay.mode = .point
         hoverTask?.cancel()
         hoverTask = nil

@@ -26,6 +26,12 @@ final class FloatingBall {
     var onPoint: (() -> Void)?
     /// The user dragged the ball; persist the new origin (AppKit screen points).
     var onMoved: ((CGPoint) -> Void)?
+    /// A ring segment was chosen; `clipboardOnly` when ⌥ was held.
+    var onAction: ((Ring.Segment, Bool) -> Void)?
+
+    private let ring = Ring()
+    private var holdTask: Task<Void, Never>?
+    private(set) var ringOpen = false
 
     private let panel: NSPanel
     private let view: BallView
@@ -111,7 +117,7 @@ final class FloatingBall {
     }
 
     private func cursorMoved(to point: CGPoint) {
-        guard !view.isDragging else { return }
+        guard !view.isDragging, !ringOpen else { return }
         let center = CGPoint(x: panel.frame.midX, y: panel.frame.midY)
         let distance = hypot(point.x - center.x, point.y - center.y)
         if distance <= Tokens.diameter / 2 + 4 {
@@ -190,6 +196,37 @@ final class FloatingBall {
 
     func clicked() {
         onPoint?()
+    }
+
+    /// R27: mouse down starts the hold; 300 ms without a drag opens the ring.
+    func pressBegan() {
+        holdTask?.cancel()
+        holdTask = Task { @MainActor in
+            try? await Task.sleep(for: .seconds(Ring.Tokens.holdDelay))
+            guard !Task.isCancelled, !self.view.isDragging else { return }
+            self.ringOpen = true
+            self.dockTask?.cancel()
+            self.ring.open(at: CGPoint(x: self.panel.frame.midX, y: self.panel.frame.midY))
+        }
+    }
+
+    func pressMoved(to point: CGPoint) {
+        guard ringOpen else { return }
+        ring.hover(at: point, optionHeld: NSEvent.modifierFlags.contains(.option))
+    }
+
+    /// Returns true when the release was handled by the ring (chosen or cancelled).
+    func pressEnded(at point: CGPoint) -> Bool {
+        holdTask?.cancel()
+        holdTask = nil
+        guard ringOpen else { return false }
+        ringOpen = false
+        let chosen = ring.hover(at: point, optionHeld: false)
+        let optionHeld = NSEvent.modifierFlags.contains(.option)
+        ring.close()
+        if let chosen { onAction?(chosen, optionHeld && chosen.acceptsClipboardOnly) }
+        scheduleDock()
+        return true
     }
 
     func dragged(by delta: CGPoint) {
@@ -304,11 +341,16 @@ final class BallView: NSView {
     override func mouseDown(with event: NSEvent) {
         dragStart = NSEvent.mouseLocation
         dragMoved = false
+        ball?.pressBegan()
     }
 
     override func mouseDragged(with event: NSEvent) {
         guard let start = dragStart else { return }
         let now = NSEvent.mouseLocation
+        if ball?.ringOpen == true {
+            ball?.pressMoved(to: now)
+            return
+        }
         if !dragMoved, hypot(now.x - start.x, now.y - start.y) <= 6 { return }
         dragMoved = true
         isDragging = true
@@ -318,6 +360,7 @@ final class BallView: NSView {
 
     override func mouseUp(with event: NSEvent) {
         defer { dragStart = nil; isDragging = false }
+        if ball?.pressEnded(at: NSEvent.mouseLocation) == true { return }
         if dragMoved {
             ball?.dragEnded()
         } else {
