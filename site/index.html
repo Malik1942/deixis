@@ -257,11 +257,10 @@
   /* the ball: four real states */
   .states { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
   .state { display: grid; gap: 10px; align-content: start; }
-  .state .pic { aspect-ratio: 1; border-radius: 16px; overflow: hidden; background: #3a3a3e; box-shadow: 0 0 0 1px var(--hair); }
+  .state .pic { aspect-ratio: 1; border-radius: 16px; overflow: hidden; box-shadow: 0 0 0 1px var(--hair); }
   .state .pic img { width: 100%; height: 100%; object-fit: cover; display: block; }
   .state h3 { font-size: 17px; }
   .state p { font-size: 14px; color: var(--muted); }
-  .ballnote { margin-top: 20px; font-size: 15px; color: var(--muted); }
 
   /* payload with what each line is for */
   .payload-wrap { display: grid; gap: 24px; }
@@ -413,7 +412,7 @@
       <div class="label">button · <code>id=captureButton</code></div>
       <div class="ball" aria-hidden="true"></div>
     </div>
-    <figcaption>Hover shows the element and its identifier before you click. Nothing is written until Enter.</figcaption>
+    <figcaption>Hover shows the element and its identifier. Nothing is written until Enter.</figcaption>
   </figure>
 
   <section class="col" id="how">
@@ -459,7 +458,6 @@
         <h3>The ring</h3><p>Press and hold for Snap, Text, Color, and Cut. Release on one.</p>
       </div>
     </div>
-    <p class="ballnote">Real captures from macOS 26. The ball is on by default and can be turned off in Settings; the hotkey works either way.</p>
   </section>
 
   <section class="col" id="payload">
@@ -492,7 +490,7 @@ make this rounded, match the other pills</pre>
   <section class="col">
     <div class="sect-head">
       <h2>When there is no element</h2>
-      <p class="lede">Deixis steps down a ladder and says which rung it reached. The label tells you before you click.</p>
+      <p class="lede">Deixis steps down a ladder and says which rung it reached.</p>
     </div>
     <div class="ladder">
       <div class="rung"><span class="n">1</span><span class="chip">button · <code>id=captureButton</code></span><p><b>Element</b> with a declared identifier. The best case.</p></div>
@@ -526,7 +524,6 @@ make this rounded, match the other pills</pre>
         <h3>Cut</h3><p>The subject on a transparent background.</p><p class="keeps">Keeps a file</p>
       </div>
     </div>
-    <p class="rulebox">One rule decides what stays: actions that make an image keep a file for 30 days. Actions that make text or a value keep nothing.</p>
   </section>
 
   <section class="col">
@@ -548,7 +545,6 @@ make this rounded, match the other pills</pre>
       <div class="sect-head" style="margin: 0;">
         <h2>See what changed</h2>
         <p class="lede">After the agent's edit, choose Capture after. Deixis finds the same element in the running app, captures it again, and shows both with the diff beneath.</p>
-        <p class="muted small">It never commits, never installs hooks, never talks to the network.</p>
       </div>
     </div>
   </section>
