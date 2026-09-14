@@ -105,6 +105,28 @@
   .muted { color: var(--muted); }
   .small { font-size: 14px; line-height: 1.45; }
 
+  /* nav */
+  .nav {
+    position: sticky; top: 0; z-index: 10;
+    margin-inline: -20px; padding-inline: 20px;
+    background: color-mix(in srgb, var(--ground) 78%, transparent);
+    -webkit-backdrop-filter: blur(20px) saturate(1.6); backdrop-filter: blur(20px) saturate(1.6);
+    border-bottom: 1px solid var(--hair);
+  }
+  .nav .in { max-width: 980px; margin-inline: auto; height: 52px; display: flex; align-items: center; gap: 28px; }
+  .nav .brand { display: flex; align-items: center; gap: 10px; text-decoration: none; font-weight: 600; font-size: 15px; letter-spacing: -0.01em; }
+  .nav .brand .mark { width: 24px; height: 24px; border-radius: 6px; background-image: var(--icon); background-size: 100% 100%; box-shadow: 0 1px 2px rgba(0,0,0,.18); }
+  .nav .links { display: flex; gap: 22px; margin-inline: auto; }
+  .nav .links a { text-decoration: none; font-size: 14px; color: var(--muted); }
+  .nav .links a:hover { color: var(--ink); }
+  .nav .by { font-size: 14px; color: var(--muted); text-decoration: none; }
+  .nav .by:hover { color: var(--ink); }
+  .nav .dl { display: inline-block; text-decoration: none; background: var(--accent); color: #fff; font-weight: 600; font-size: 13px; padding: 7px 14px; border-radius: 980px; }
+  .nav a:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 4px; }
+  @media (max-width: 720px) { .nav .links, .nav .by { display: none; } .nav .dl { margin-left: auto; } }
+  html { scroll-behavior: smooth; scroll-padding-top: 64px; }
+  @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+
   /* hero */
   .hero { text-align: center; padding-block: 88px 48px; display: grid; gap: 20px; justify-items: center; }
   .app-icon {
@@ -329,7 +351,20 @@
   }
 </style>
 
-<main>
+<nav class="nav" aria-label="Site">
+  <div class="in">
+    <a class="brand" href="#top"><span class="mark" aria-hidden="true"></span>Deixis</a>
+    <div class="links">
+      <a href="#how">How it works</a>
+      <a href="#payload">Payload</a>
+      <a href="#actions">Actions</a>
+      <a href="#privacy">Privacy</a>
+    </div>
+    <a class="by" href="PORTFOLIO_URL">Made by Malik Zhang</a>
+    <a class="dl" href="https://github.com/Malik1942/deixis/releases/latest">Download</a>
+  </div>
+</nav>
+<main id="top">
   <header class="hero col">
     <div class="app-icon" role="img" aria-label="Deixis app icon"></div>
     <p class="name">Deixis <span>for Mac</span></p>
@@ -365,7 +400,7 @@
     <figcaption>Hover shows the element and its identifier before you click. Nothing is written until Enter.</figcaption>
   </figure>
 
-  <section class="col">
+  <section class="col" id="how">
     <div class="sect-head">
       <h2>Three seconds, start to paste</h2>
     </div>
@@ -385,7 +420,7 @@
     </div>
   </section>
 
-  <section class="col">
+  <section class="col" id="payload">
     <div class="sect-head">
       <h2>What your agent receives</h2>
       <p class="lede">Enough to find the right file on the first try.</p>
@@ -426,7 +461,7 @@ make this rounded, match the other pills</pre>
     </div>
   </section>
 
-  <section class="col">
+  <section class="col" id="actions">
     <div class="sect-head">
       <h2>Four more, on the same gesture</h2>
       <p class="lede">Press and hold the ball for the ring.</p>
@@ -482,11 +517,11 @@ make this rounded, match the other pills</pre>
       <p class="lede">The one place Deixis is a window. Every default works on first launch.</p>
     </div>
     <figure class="shot" style="margin: 0;">
-      <img src="assets/settings-dark.png" width="1176" height="1036" alt="Deixis Settings window, General tab: capture hotkey set to double-tap Control, a toggle to adjust the selection before capturing, and per-action hotkeys for Snap, Text, Color, and Cut">
+      <img src="assets/settings-dark.png" width="1264" height="1124" alt="Deixis Settings window, General tab: capture hotkey set to double-tap Control, a toggle to adjust the selection before capturing, and per-action hotkeys for Snap, Text, Color, and Cut">
     </figure>
   </section>
 
-  <section class="col">
+  <section class="col" id="privacy">
     <div class="sect-head">
       <h2>Private by design</h2>
     </div>
@@ -544,6 +579,7 @@ make this rounded, match the other pills</pre>
       <a class="btn" href="https://github.com/Malik1942/deixis/releases/latest">Download for Mac</a>
       <a class="link" href="https://github.com/Malik1942/deixis">GitHub</a>
       <span>Version 0.4.0</span>
+      <a class="link" href="PORTFOLIO_URL" style="margin-left: auto;">Made by Malik Zhang</a>
     </div>
     <p class="word">Deixis is the linguistics term for words like <em>this</em>, <em>here</em>, and <em>that one</em>, which only mean something when someone is pointing.</p>
   </footer>
