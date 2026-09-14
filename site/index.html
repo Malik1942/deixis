@@ -12,6 +12,7 @@
     --muted: #6e6e73;
     --hair: #d2d2d7;
     --accent: #0a84ff;
+    --stage: #0a84ff;
     --hud: rgba(255, 255, 255, 0.78);
     --hud-edge: rgba(0, 0, 0, 0.08);
     --frame: #e9e9ee;
@@ -30,6 +31,7 @@
       --muted: #a1a1a6;
       --hair: #3a3a3c;
       --accent: #0a84ff;
+      --stage: #0b6fe0;
       --hud: rgba(30, 30, 32, 0.78);
       --hud-edge: rgba(255, 255, 255, 0.12);
       --frame: #2c2c2e;
@@ -48,6 +50,7 @@
     --muted: #a1a1a6;
     --hair: #3a3a3c;
     --accent: #0a84ff;
+    --stage: #0b6fe0;
     --hud: rgba(30, 30, 32, 0.78);
     --hud-edge: rgba(255, 255, 255, 0.12);
     --frame: #2c2c2e;
@@ -120,7 +123,7 @@
     aspect-ratio: 16 / 10;
     max-width: 100%;
     border-radius: 18px;
-    background: var(--frame);
+    background: var(--stage);
     box-shadow: var(--shadow);
     overflow: hidden;
     margin-top: 40px;
@@ -129,7 +132,7 @@
     position: absolute; inset: 9% 12% 0 12%;
     background: var(--surface);
     border-radius: 14px 14px 0 0;
-    box-shadow: 0 0 0 1px var(--hair);
+    box-shadow: 0 8px 30px rgba(0,0,0,.18);
     padding: 0;
     overflow: hidden;
   }
