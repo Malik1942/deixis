@@ -12,13 +12,14 @@ Deixis is a macOS menu bar tool. Press a hotkey, click one element in any app, t
 2. Launch Deixis. It has no Dock icon; look for the pointing hand in the menu bar.
 3. Grant the permissions it asks for, in this order:
    - **Accessibility**: reads what is under your cursor and listens for the hotkey. Without it nothing works.
-   - **Screen Recording**: captures the pixels of the element. Asked on first launch; macOS applies a fresh grant after a relaunch.
-   - There is no third prompt in v0.1. Nothing leaves the machine: no network, no telemetry, no accounts.
+   - **Screen Recording**: captures the pixels of the element. Asked on first launch; macOS applies a fresh grant after a relaunch, and offers to do that itself.
+   - There is no third prompt. Nothing leaves the machine: no network, no telemetry, no accounts.
+4. A one-line hint under the ball says what to press. The first three times each action opens, a line at the bottom of the screen names its gestures. Both fade by themselves and never come back; there is nothing to dismiss.
 
 ## Use
 
 - **⌃⌃** (double-tap Control within 350 ms) opens the overlay. Hover to see the highlight and the label `role · identifier`. The label tells you before you click whether the element has a declared identifier, only a label, a symbol name, or no accessibility tree at all.
-- **Click** the element, type what should change, **Enter**. **Esc** at any point cancels; nothing is written and the clipboard is untouched.
+- **Click** the element, or press **Return** while it is highlighted, type what should change, **Enter**. **Esc** at any point cancels; nothing is written and the clipboard is untouched.
 - **Paste** into your agent. Each capture also lands in `~/Pictures/Deixis/` as a PNG and a JSON sidecar that validates against `schema/capture.schema.json`.
 
 Example payload:
@@ -48,13 +49,14 @@ make this rounded, match the other pills
 
 ## The other actions
 
-Point is the primary action. Four one-shot actions share its gesture and sit on the ball's ring (press and hold the ball) and in the menu bar. Actions that make an image keep a file for the retention period; actions that make text or a value keep nothing.
+Point is the primary action. Four one-shot actions share its gesture and sit on the ball's ring (hold the ball for half a second; a shorter press is a click, which is Point) and in the menu bar. Actions that make an image keep a file for the retention period; actions that make text or a value keep nothing.
 
 - **Snap**: drag a region or click a window. PNG to the clipboard and the folder; hold ⌥ at release for clipboard only.
 - **Text**: drag a region or click an element. Recognized lines to the clipboard, nothing on disk.
 - **Color**: a magnifier follows the cursor; arrows nudge by a pixel, click copies the value. Hex, rgb, hsl, or SwiftUI, in sRGB or Display P3, chosen in Settings.
 - **Cut**: drag or click; the subject is cut onto a transparent background, PNG to the clipboard and the folder.
 - **Retention**: images older than the setting (30 days by default) move to the Trash on launch and daily. Pinned captures ("Pin last capture" in the menu) and captures an agent marked resolved stay.
+- **Return is a click** in every action: it takes the highlighted window, element, or pixel where the cursor is. Esc cancels everywhere.
 - Each action has a hotkey: ⌃⌥ and its number in the menu, ⌃⌥1 Point through ⌃⌥5 Cut. The ring shows the numbers. Re-record or clear any of them in Settings, which warns when a chord is also a macOS shortcut.
 
 ## See what changed
