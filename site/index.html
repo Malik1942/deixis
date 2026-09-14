@@ -300,8 +300,9 @@
   .note span { color: var(--muted); }
 
   /* the fallback ladder: what the label reads at each rung */
-  .ladder { display: grid; gap: 10px; }
-  .rung { display: grid; grid-template-columns: 26px auto 1fr; gap: 18px; align-items: center; padding: 14px 16px; border-radius: 12px; background: var(--surface); box-shadow: 0 0 0 1px var(--hair); }
+  .ladder { display: grid; background: var(--surface); border-radius: 14px; box-shadow: 0 0 0 1px var(--hair); overflow: hidden; }
+  .rung { display: grid; grid-template-columns: 26px 220px 1fr; gap: 18px; align-items: center; padding: 15px 18px; }
+  .rung + .rung { border-top: 1px solid var(--hair); }
   .rung .n { color: var(--muted); font-variant-numeric: tabular-nums; font-size: 13px; }
   .rung .chip { justify-self: start; background: var(--hud); border: 1px solid var(--hud-edge); border-radius: 6px; padding: 3px 8px; font-size: 12px; white-space: nowrap; }
   .rung .chip code { font-size: 0.95em; }
@@ -350,8 +351,9 @@
   .grid2 .item p { color: var(--muted); font-size: 15px; }
 
   /* agents, one row each, the same rows as the ladder */
-  .agents { display: grid; gap: 10px; }
-  .agent { display: grid; grid-template-columns: 240px 1fr auto; gap: 18px; align-items: center; padding: 14px 16px; border-radius: 12px; background: var(--surface); box-shadow: 0 0 0 1px var(--hair); font-size: 15px; }
+  .agents { display: grid; background: var(--surface); border-radius: 14px; box-shadow: 0 0 0 1px var(--hair); overflow: hidden; }
+  .agent { display: grid; grid-template-columns: 240px 1fr auto; gap: 18px; align-items: center; padding: 15px 18px; font-size: 15px; }
+  .agent + .agent { border-top: 1px solid var(--hair); }
   .agent b { font-weight: 600; }
   .agent span { color: var(--muted); font-size: 14px; }
   .agent .chip { justify-self: end; color: var(--ink); background: var(--hud); border: 1px solid var(--hud-edge); border-radius: 6px; padding: 3px 8px; font-size: 12px; white-space: nowrap; }
