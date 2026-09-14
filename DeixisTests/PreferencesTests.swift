@@ -13,7 +13,8 @@ final class PreferencesTests: XCTestCase {
     // 1
     func testDefaultsWhenNothingStored() {
         let p = Preferences(defaults: isolatedDefaults())
-        XCTAssertEqual(p.hotkeyModifier, .control)
+        XCTAssertEqual(p.hotkey, .default)
+        XCTAssertEqual(p.hotkey.title, "Double-tap ⌃")
         XCTAssertEqual(p.captureFolder, Preferences.defaultCaptureFolder)
         XCTAssertTrue(p.captureFolder.hasSuffix("/Pictures/Deixis"))
         XCTAssertTrue(p.ballEnabled)
@@ -27,8 +28,8 @@ final class PreferencesTests: XCTestCase {
         let p = Preferences(defaults: defaults)
         var hotkeyChanges = 0
         p.onHotkeyChange = { hotkeyChanges += 1 }
-        p.hotkeyModifier = .option
-        p.hotkeyModifier = .option
+        p.hotkey = .chord(keyCode: 2, modifiers: [.command, .shift], key: "D")
+        p.hotkey = .chord(keyCode: 2, modifiers: [.command, .shift], key: "D")
         p.captureFolder = "/tmp/captures"
         p.ballEnabled = false
         p.ballPosition = CGPoint(x: 1200, y: 40)
@@ -36,12 +37,19 @@ final class PreferencesTests: XCTestCase {
         XCTAssertEqual(hotkeyChanges, 1, "only a real change restarts the monitor")
 
         let again = Preferences(defaults: defaults)
-        XCTAssertEqual(again.hotkeyModifier, .option)
+        XCTAssertEqual(again.hotkey, .chord(keyCode: 2, modifiers: [.command, .shift], key: "D"))
+        XCTAssertEqual(again.hotkey.title, "⇧⌘D")
         XCTAssertEqual(again.captureFolder, "/tmp/captures")
         XCTAssertFalse(again.ballEnabled)
         XCTAssertEqual(again.ballPosition, CGPoint(x: 1200, y: 40))
         XCTAssertEqual(again.myApps, ["com.inspireocean.app"])
         XCTAssertEqual(again.captureFolderURL.path(percentEncoded: false), "/tmp/captures/")
+    }
+
+    func testLegacyHotkeyModifierMigrates() {
+        let defaults = isolatedDefaults()
+        defaults.set("option", forKey: Preferences.Key.hotkeyModifier)
+        XCTAssertEqual(Preferences(defaults: defaults).hotkey, .doubleTap(.option))
     }
 
     // 3

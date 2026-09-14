@@ -31,13 +31,10 @@ struct GeneralSettings: View {
         @Bindable var preferences = state.preferences
         Form {
             Section {
-                Picker("Hotkey", selection: $preferences.hotkeyModifier) {
-                    ForEach(HotkeyModifier.allCases, id: \.self) { modifier in
-                        Text(modifier.title).tag(modifier)
-                    }
+                LabeledContent("Hotkey") {
+                    HotkeyRecorder(hotkey: $preferences.hotkey, onBegin: { state.pauseHotkey() }, onEnd: { state.resumeHotkey() })
                 }
-                .pickerStyle(.menu)
-                Footnote(text: "Double-tap Command is used by Codex; double-tap Option by Claude Desktop.")
+                Footnote(text: "Press a key with modifiers, or double-tap one modifier. Double-tap Command is used by Codex; double-tap Option by Claude Desktop.")
             }
             Section {
                 LabeledContent("Capture folder") {
@@ -69,6 +66,108 @@ struct GeneralSettings: View {
         panel.prompt = "Choose"
         if panel.runModal() == .OK, let url = panel.url {
             preferences.captureFolder = url.path(percentEncoded: false)
+        }
+    }
+}
+
+/// Records the next key press or modifier double-tap as the hotkey. Esc cancels.
+struct HotkeyRecorder: View {
+    @Binding var hotkey: Hotkey
+    let onBegin: () -> Void
+    let onEnd: () -> Void
+
+    @State private var recording = false
+    @State private var hint: String?
+    @State private var monitor: Any?
+    @State private var lastTap: (modifier: HotkeyModifier, time: TimeInterval)?
+    @State private var modifiersWereDown = false
+
+    private static let functionKeys: [UInt16: String] = [
+        122: "F1", 120: "F2", 99: "F3", 118: "F4", 96: "F5", 97: "F6", 98: "F7", 100: "F8",
+        101: "F9", 109: "F10", 103: "F11", 111: "F12", 105: "F13", 107: "F14", 113: "F15",
+    ]
+    private static let specialKeys: [UInt16: String] = [
+        49: "Space", 36: "↩", 48: "⇥", 51: "⌫", 117: "⌦", 123: "←", 124: "→", 125: "↓", 126: "↑",
+        115: "↖", 119: "↘", 116: "⇞", 121: "⇟",
+    ]
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Button(recording ? (hint ?? "Press keys…") : hotkey.title) {
+                recording ? stop() : begin()
+            }
+            .frame(minWidth: 180)
+            if hotkey != .default, !recording {
+                Button("Default") { hotkey = .default }
+            }
+        }
+    }
+
+    private func begin() {
+        onBegin()
+        recording = true
+        hint = nil
+        lastTap = nil
+        modifiersWereDown = false
+        monitor = NSEvent.addLocalMonitorForEvents(matching: [.keyDown, .flagsChanged]) { event in
+            let type = event.type, keyCode = event.keyCode, flags = event.modifierFlags
+            let chars = event.type == .keyDown ? event.charactersIgnoringModifiers : nil
+            let timestamp = event.timestamp
+            MainActor.assumeIsolated { handle(type: type, keyCode: keyCode, flags: flags, characters: chars, timestamp: timestamp) }
+            return nil
+        }
+    }
+
+    private func stop() {
+        if let monitor { NSEvent.removeMonitor(monitor) }
+        monitor = nil
+        recording = false
+        hint = nil
+        onEnd()
+    }
+
+    private func handle(type: NSEvent.EventType, keyCode: UInt16, flags: NSEvent.ModifierFlags, characters: String?, timestamp: TimeInterval) {
+        switch type {
+        case .keyDown:
+            if keyCode == 53 { stop(); return } // Esc
+            let modifiers = KeyModifiers(flags)
+            let name: String
+            if let fn = Self.functionKeys[keyCode] {
+                name = fn
+            } else if let special = Self.specialKeys[keyCode] {
+                name = special
+            } else {
+                name = (characters ?? "").uppercased()
+            }
+            guard !name.isEmpty else { return }
+            if modifiers.isEmpty, Self.functionKeys[keyCode] == nil {
+                hint = "Add ⌘, ⌥, ⌃ or ⇧"
+                return
+            }
+            hotkey = .chord(keyCode: keyCode, modifiers: modifiers, key: name)
+            stop()
+        case .flagsChanged:
+            let modifiers = KeyModifiers(flags)
+            let down = !modifiers.isEmpty
+            defer { modifiersWereDown = down }
+            guard down, !modifiersWereDown else { return }
+            let single: HotkeyModifier? = switch modifiers {
+            case [.control]: .control
+            case [.option]: .option
+            case [.shift]: .shift
+            case [.command]: keyCode == 54 ? .rightCommand : .command
+            default: nil
+            }
+            guard let single else { lastTap = nil; return }
+            if let last = lastTap, last.modifier == single, timestamp - last.time <= HotkeyMonitor.window {
+                hotkey = .doubleTap(single)
+                stop()
+            } else {
+                lastTap = (single, timestamp)
+                hint = "Again to double-tap \(single.glyph), or add a key"
+            }
+        default:
+            break
         }
     }
 }

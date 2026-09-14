@@ -27,13 +27,68 @@ enum HotkeyModifier: String, CaseIterable, Codable, Sendable {
         case .rightCommand: "right ⌘⌘"
         }
     }
+
+    var glyph: String {
+        switch self {
+        case .control: "⌃"
+        case .option: "⌥"
+        case .shift: "⇧"
+        case .command: "⌘"
+        case .rightCommand: "right ⌘"
+        }
+    }
+}
+
+/// Modifier keys of a chord, AppKit-free so the store stays pure.
+struct KeyModifiers: OptionSet, Codable, Sendable, Hashable {
+    let rawValue: UInt8
+    static let control = KeyModifiers(rawValue: 1)
+    static let option = KeyModifiers(rawValue: 2)
+    static let shift = KeyModifiers(rawValue: 4)
+    static let command = KeyModifiers(rawValue: 8)
+
+    /// In the order macOS prints them: ⌃ ⌥ ⇧ ⌘.
+    var symbols: String {
+        var s = ""
+        if contains(.control) { s += "⌃" }
+        if contains(.option) { s += "⌥" }
+        if contains(.shift) { s += "⇧" }
+        if contains(.command) { s += "⌘" }
+        return s
+    }
+}
+
+/// v0.3: the capture hotkey, recorded by the user. Either a double-tap of one modifier (the v0.1
+/// convention) or a key pressed with modifiers.
+enum Hotkey: Codable, Equatable, Sendable {
+    case doubleTap(HotkeyModifier)
+    case chord(keyCode: UInt16, modifiers: KeyModifiers, key: String)
+
+    static let `default` = Hotkey.doubleTap(.control)
+
+    /// "Double-tap ⌃", "⌘⇧D", "F5".
+    var title: String {
+        switch self {
+        case .doubleTap(let modifier): "Double-tap \(modifier.glyph)"
+        case .chord(_, let modifiers, let key): modifiers.symbols + key
+        }
+    }
+
+    /// Short form for the menu bar item: "⌃⌃", "⌘⇧D".
+    var symbol: String {
+        switch self {
+        case .doubleTap(let modifier): modifier.symbol
+        case .chord(_, let modifiers, let key): modifiers.symbols + key
+        }
+    }
 }
 
 @Observable
 @MainActor
 final class Preferences {
     enum Key {
-        static let hotkeyModifier = "hotkeyModifier"
+        static let hotkey = "hotkey"
+        static let hotkeyModifier = "hotkeyModifier" // v0.3 early builds; migrated on read
         static let captureFolder = "captureFolder"
         static let ballEnabled = "ballEnabled"
         static let ballPosition = "ballPosition"
@@ -46,10 +101,10 @@ final class Preferences {
     /// Called after the hotkey changes so the monitor can restart.
     @ObservationIgnored var onHotkeyChange: (() -> Void)?
 
-    var hotkeyModifier: HotkeyModifier {
+    var hotkey: Hotkey {
         didSet {
-            defaults.set(hotkeyModifier.rawValue, forKey: Key.hotkeyModifier)
-            if hotkeyModifier != oldValue { onHotkeyChange?() }
+            if let data = try? JSONEncoder().encode(hotkey) { defaults.set(data, forKey: Key.hotkey) }
+            if hotkey != oldValue { onHotkeyChange?() }
         }
     }
 
@@ -80,7 +135,13 @@ final class Preferences {
 
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
-        hotkeyModifier = defaults.string(forKey: Key.hotkeyModifier).flatMap(HotkeyModifier.init(rawValue:)) ?? .control
+        if let data = defaults.data(forKey: Key.hotkey), let stored = try? JSONDecoder().decode(Hotkey.self, from: data) {
+            hotkey = stored
+        } else if let legacy = defaults.string(forKey: Key.hotkeyModifier).flatMap(HotkeyModifier.init(rawValue:)) {
+            hotkey = .doubleTap(legacy)
+        } else {
+            hotkey = .default
+        }
         captureFolder = defaults.string(forKey: Key.captureFolder) ?? Self.defaultCaptureFolder
         ballEnabled = defaults.object(forKey: Key.ballEnabled) as? Bool ?? true
         if let pair = defaults.array(forKey: Key.ballPosition) as? [Double], pair.count == 2 {

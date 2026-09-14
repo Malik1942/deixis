@@ -32,7 +32,7 @@ private struct StatusMenu: View {
     @Environment(\.openSettings) private var openSettings
 
     var body: some View {
-        Button("Capture (\(state.preferences.hotkeyModifier.symbol))") {
+        Button("Capture (\(state.preferences.hotkey.symbol))") {
             state.beginCapture()
         }
         Button("Open capture folder") {

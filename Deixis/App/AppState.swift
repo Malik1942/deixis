@@ -55,10 +55,14 @@ final class AppState {
 
     private func restartHotkey() {
         hotkey?.stop()
-        let monitor = HotkeyMonitor(modifier: preferences.hotkeyModifier) { [weak self] in self?.beginCapture() }
+        let monitor = HotkeyMonitor(hotkey: preferences.hotkey) { [weak self] in self?.beginCapture() }
         monitor.start()
         hotkey = monitor
     }
+
+    /// While the Settings recorder listens, the real hotkey must not fire.
+    func pauseHotkey() { hotkey?.stop() }
+    func resumeHotkey() { restartHotkey() }
 
     // MARK: Session
 
