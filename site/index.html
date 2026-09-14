@@ -1,0 +1,444 @@
+<title>Deixis</title>
+<meta name="description" content="Point at one element in any Mac app. Your coding agent gets the element, not a screenshot.">
+<link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png">
+<link rel="icon" type="image/png" sizes="64x64" href="assets/favicon-64.png">
+<link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+<style>
+  /* Borrow, don't brand. The page is set in the system face, the same one the overlay label uses. */
+  :root {
+    --ground: #f5f5f7;
+    --surface: #ffffff;
+    --ink: #1d1d1f;
+    --muted: #6e6e73;
+    --hair: #d2d2d7;
+    --accent: #0a84ff;
+    --hud: rgba(255, 255, 255, 0.78);
+    --hud-edge: rgba(0, 0, 0, 0.08);
+    --frame: #e9e9ee;
+    --frame-chrome: #f7f7fa;
+    --dim: rgba(0, 0, 0, 0.2);
+    --code-bg: #ffffff;
+    --shadow: 0 1px 2px rgba(0,0,0,.06), 0 12px 32px rgba(0,0,0,.08);
+    --icon: url("assets/icon-light.png");
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground: #000000;
+      --surface: #1c1c1e;
+      --ink: #f5f5f7;
+      --muted: #a1a1a6;
+      --hair: #3a3a3c;
+      --accent: #0a84ff;
+      --hud: rgba(30, 30, 32, 0.78);
+      --hud-edge: rgba(255, 255, 255, 0.12);
+      --frame: #2c2c2e;
+      --frame-chrome: #3a3a3c;
+      --dim: rgba(0, 0, 0, 0.32);
+      --code-bg: #1c1c1e;
+      --shadow: 0 1px 2px rgba(0,0,0,.4), 0 12px 32px rgba(0,0,0,.5);
+      --icon: url("assets/icon-dark.png");
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground: #000000;
+    --surface: #1c1c1e;
+    --ink: #f5f5f7;
+    --muted: #a1a1a6;
+    --hair: #3a3a3c;
+    --accent: #0a84ff;
+    --hud: rgba(30, 30, 32, 0.78);
+    --hud-edge: rgba(255, 255, 255, 0.12);
+    --frame: #2c2c2e;
+    --frame-chrome: #3a3a3c;
+    --dim: rgba(0, 0, 0, 0.32);
+    --code-bg: #1c1c1e;
+    --shadow: 0 1px 2px rgba(0,0,0,.4), 0 12px 32px rgba(0,0,0,.5);
+    --icon: url("assets/icon-dark.png");
+    color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--ground);
+    color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-size: 17px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    padding-inline: 20px;
+    padding-block: 0 96px;
+  }
+  a { color: inherit; }
+  code, pre, .mono {
+    font-family: ui-monospace, "SF Mono", Menlo, Monaco, Consolas, monospace;
+    font-size: 0.86em;
+  }
+
+  .col { max-width: 760px; margin-inline: auto; }
+  .wide { max-width: 980px; margin-inline: auto; }
+
+  h1, h2, h3 { margin: 0; text-wrap: balance; letter-spacing: -0.022em; }
+  h1 { font-size: clamp(38px, 6.4vw, 60px); line-height: 1.06; font-weight: 600; }
+  h2 { font-size: clamp(28px, 4vw, 40px); line-height: 1.12; font-weight: 600; }
+  h3 { font-size: 21px; line-height: 1.25; font-weight: 600; letter-spacing: -0.012em; }
+  p { margin: 0; }
+  .lede { font-size: 21px; line-height: 1.4; color: var(--muted); font-weight: 400; letter-spacing: -0.01em; }
+  .muted { color: var(--muted); }
+  .eyebrow { font-size: 13px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); font-weight: 600; }
+  .small { font-size: 14px; line-height: 1.45; }
+
+  /* hero */
+  .hero { text-align: center; padding-block: 96px 56px; display: grid; gap: 22px; justify-items: center; }
+  .app-icon {
+    width: 112px; height: 112px;
+    background-image: var(--icon);
+    background-size: 128% 128%; /* the render carries the system margin */
+    background-position: center;
+    background-repeat: no-repeat;
+  }
+  .hero h1 { max-width: 14ch; }
+  .hero h1 em { font-style: italic; font-weight: 600; }
+  .hero .lede { max-width: 34ch; }
+  .cta { display: flex; gap: 10px 22px; align-items: center; flex-wrap: wrap; justify-content: center; margin-top: 6px; }
+  .btn {
+    display: inline-block; text-decoration: none;
+    background: var(--accent); color: #fff;
+    padding: 12px 22px; border-radius: 980px; font-weight: 600; font-size: 17px;
+  }
+  .btn:focus-visible, .link:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+  .link { text-decoration: none; color: var(--accent); font-weight: 500; }
+  .link:hover { text-decoration: underline; }
+  .fine { font-size: 13px; color: var(--muted); }
+  .fine span + span::before { content: "·"; margin-inline: 8px; }
+
+  /* the overlay, drawn from the app's own tokens */
+  .stage {
+    position: relative;
+    aspect-ratio: 16 / 10;
+    max-width: 100%;
+    border-radius: 18px;
+    background: var(--frame);
+    box-shadow: var(--shadow);
+    overflow: hidden;
+    margin-top: 40px;
+  }
+  .stage .app {
+    position: absolute; inset: 9% 12% 0 12%;
+    background: var(--surface);
+    border-radius: 14px 14px 0 0;
+    box-shadow: 0 0 0 1px var(--hair);
+    padding: 0;
+    overflow: hidden;
+  }
+  .stage .chrome { height: 34px; background: var(--frame-chrome); border-bottom: 1px solid var(--hair); display: flex; align-items: center; gap: 7px; padding-inline: 12px; }
+  .stage .chrome i { width: 11px; height: 11px; border-radius: 50%; background: var(--hair); display: block; }
+  .stage .body { padding: 5.5% 6%; display: grid; gap: 14px; }
+  .stage .line { height: 12px; border-radius: 6px; background: var(--hair); opacity: .8; }
+  .stage .line.w1 { width: 62%; } .stage .line.w2 { width: 40%; } .stage .line.w3 { width: 74%; }
+  .stage .cardrow { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 8px; }
+  .stage .card { height: 64px; border-radius: 10px; background: var(--frame); }
+  .stage .dim { position: absolute; inset: 0; background: var(--dim); }
+  .stage .pill {
+    position: absolute; left: 33%; bottom: 17%; width: 34%; height: 8.5%;
+    border-radius: 980px; background: var(--accent); opacity: .92;
+    display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 600; font-size: clamp(11px, 1.6vw, 15px);
+  }
+  .stage .highlight {
+    position: absolute; left: calc(33% - 4px); bottom: calc(17% - 4px); width: calc(34% + 8px); height: calc(8.5% + 8px);
+    border-radius: 980px; border: 2px solid var(--accent);
+    box-shadow: 0 0 0 1px rgba(255,255,255,.25) inset;
+  }
+  .stage .label {
+    position: absolute; left: 50%; bottom: 8%; transform: translateX(-50%);
+    background: var(--hud); border: 1px solid var(--hud-edge);
+    -webkit-backdrop-filter: blur(20px) saturate(1.4); backdrop-filter: blur(20px) saturate(1.4);
+    border-radius: 6px; padding: 4px 8px; white-space: nowrap;
+    font-size: clamp(10px, 1.5vw, 12px); color: var(--ink);
+  }
+  .stage .label code { font-size: 0.95em; }
+  .stage .cursor {
+    position: absolute; left: 60%; bottom: 18.5%; width: 3%; min-width: 16px; aspect-ratio: 1; color: var(--ink);
+    filter: drop-shadow(0 1px 1px rgba(0,0,0,.35));
+  }
+  .stage.paused .highlight, .stage.paused .label, .stage.paused .cursor { animation: none; }
+  figcaption { margin-top: 14px; font-size: 14px; color: var(--muted); text-align: center; }
+
+  /* sections */
+  section { padding-block: 72px 0; }
+  .sect-head { display: grid; gap: 12px; margin-bottom: 32px; max-width: 640px; }
+  .sect-head .lede { font-size: 19px; }
+  hr.rule { border: 0; border-top: 1px solid var(--hair); margin: 88px auto 0; max-width: 760px; }
+
+  .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 28px; }
+  .step { display: grid; gap: 8px; align-content: start; }
+  .step .n { font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .step kbd {
+    font-family: inherit; font-size: 13px; font-weight: 600;
+    border: 1px solid var(--hair); border-bottom-width: 2px; border-radius: 6px; padding: 1px 7px; background: var(--surface);
+  }
+
+  pre.payload {
+    margin: 0; background: var(--code-bg); border: 1px solid var(--hair); border-radius: 12px;
+    padding: 20px 22px; overflow-x: auto; line-height: 1.55; font-size: 13.5px;
+    tab-size: 2;
+  }
+  pre.payload .h { color: var(--muted); }
+  pre.payload .k { color: var(--accent); }
+  .fields { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px 32px; margin-top: 28px; }
+  .field { display: grid; grid-template-columns: 132px 1fr; gap: 12px; font-size: 15px; padding-block: 8px; border-top: 1px solid var(--hair); }
+  .field b { font-weight: 600; }
+
+  .ladder { display: grid; border-top: 1px solid var(--hair); }
+  .rung { display: grid; grid-template-columns: 40px 200px 1fr; gap: 16px; align-items: baseline; padding-block: 16px; border-bottom: 1px solid var(--hair); }
+  .rung .n { color: var(--muted); font-variant-numeric: tabular-nums; font-size: 14px; }
+  .rung b { font-weight: 600; }
+  .rung p { color: var(--muted); font-size: 15px; }
+
+  .actions { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; }
+  .action { display: grid; gap: 6px; padding: 22px 20px; background: var(--surface); border-radius: 16px; box-shadow: 0 0 0 1px var(--hair); }
+  .action h3 { font-size: 19px; }
+  .action p { font-size: 15px; color: var(--muted); }
+  .action .keeps { font-size: 13px; margin-top: 8px; }
+  .rulebox { margin-top: 20px; font-size: 15px; color: var(--muted); }
+
+  .split { display: grid; grid-template-columns: 1.1fr 1fr; gap: 40px; align-items: center; }
+  .ba {
+    position: relative; aspect-ratio: 4 / 3; border-radius: 16px; overflow: hidden; background: var(--frame); box-shadow: var(--shadow);
+  }
+  .ba .pane { position: absolute; inset: 14% 0 0 0; display: grid; place-items: center; }
+  .ba .pane.before { right: 46%; }
+  .ba .pane.after { left: 54%; }
+  .ba .btn-old { width: 62%; height: 15%; background: var(--accent); border-radius: 6px; opacity: .85; }
+  .ba .btn-new { width: 62%; height: 15%; background: var(--accent); border-radius: 980px; }
+  .ba .divider { position: absolute; top: 14%; bottom: 0; left: 50%; width: 2px; background: var(--surface); box-shadow: 0 0 0 1px var(--hair); }
+  .ba .knob { position: absolute; top: 50%; left: 50%; width: 26px; height: 26px; transform: translate(-50%, -50%); border-radius: 50%; background: var(--surface); box-shadow: 0 1px 4px rgba(0,0,0,.25); }
+  .ba .note { position: absolute; top: 0; left: 0; right: 0; height: 14%; display: flex; align-items: center; padding-inline: 16px; font-size: 13px; color: var(--muted); background: var(--surface); border-bottom: 1px solid var(--hair); }
+  .ba .tags { position: absolute; bottom: 10px; left: 12px; right: 12px; display: flex; gap: 8px; font-size: 11.5px; color: var(--muted); }
+  .ba .tags span { background: var(--surface); border-radius: 6px; padding: 3px 7px; box-shadow: 0 0 0 1px var(--hair); }
+
+  .shot { display: grid; justify-items: center; }
+  .shot img { max-width: 100%; width: 588px; height: auto; display: block; }
+
+  .grid2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 28px 40px; }
+  .grid2 .item { display: grid; gap: 6px; }
+  .grid2 .item p { color: var(--muted); font-size: 15px; }
+
+  table { border-collapse: collapse; width: 100%; font-size: 15px; }
+  th, td { text-align: left; padding: 12px 12px 12px 0; border-bottom: 1px solid var(--hair); vertical-align: top; }
+  th { font-weight: 600; font-size: 13px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+  .tablewrap { overflow-x: auto; }
+
+  ul.plain { margin: 0; padding-left: 1.1em; display: grid; gap: 10px; color: var(--muted); font-size: 15px; }
+  ul.plain b { color: var(--ink); font-weight: 600; }
+
+  footer { margin-top: 96px; padding-top: 32px; border-top: 1px solid var(--hair); display: grid; gap: 18px; font-size: 14px; color: var(--muted); }
+  footer .row { display: flex; gap: 20px; flex-wrap: wrap; align-items: center; }
+  footer .word { max-width: 60ch; }
+
+  @media (max-width: 720px) {
+    .hero { padding-block: 64px 40px; }
+    .steps, .actions, .grid2, .fields { grid-template-columns: 1fr; }
+    .split { grid-template-columns: 1fr; }
+    .rung { grid-template-columns: 32px 1fr; }
+    .rung p { grid-column: 2; }
+    .field { grid-template-columns: 1fr; gap: 2px; }
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .stage .highlight { animation: settle 220ms ease-out both; }
+    .stage .label { animation: reveal 200ms ease-out 120ms both; }
+    @keyframes settle { from { transform: scale(1.04); opacity: 0; } to { transform: none; opacity: 1; } }
+    @keyframes reveal { from { opacity: 0; transform: translate(-50%, 4px); } to { opacity: 1; transform: translate(-50%, 0); } }
+  }
+</style>
+
+<main>
+  <header class="hero col">
+    <div class="app-icon" role="img" aria-label="Deixis app icon"></div>
+    <div class="eyebrow">Deixis for macOS</div>
+    <h1>Agents don't understand <em>this</em>. Deixis&nbsp;does.</h1>
+    <p class="lede">Point at one element in any app, type a note, press Enter. Your coding agent gets the element, not a screenshot.</p>
+    <div class="cta">
+      <a class="btn" href="https://github.com/Malik1942/deixis/releases/latest">Download for Mac</a>
+      <a class="link" href="https://github.com/Malik1942/deixis">View on GitHub</a>
+    </div>
+    <p class="fine"><span>macOS 15 or later</span><span>Apple silicon and Intel</span><span>Free</span><span>No account</span></p>
+  </header>
+
+  <figure class="wide" style="margin: 0;">
+    <!-- Hero demo. When the recording exists, replace this drawn stage with:
+         <video autoplay muted loop playsinline poster="assets/demo-poster.png"><source src="assets/demo.mp4" type="video/mp4"></video> -->
+    <div class="stage" aria-label="The Deixis overlay: a highlighted button with its role and identifier in a label beneath">
+      <div class="app">
+        <div class="chrome"><i></i><i></i><i></i></div>
+        <div class="body">
+          <div class="line w1"></div>
+          <div class="line w2"></div>
+          <div class="cardrow"><div class="card"></div><div class="card"></div></div>
+          <div class="line w3"></div>
+        </div>
+      </div>
+      <div class="dim"></div>
+      <div class="pill">Capture</div>
+      <div class="highlight"></div>
+      <svg class="cursor" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M9 2.5c-.9 0-1.6.7-1.6 1.6v8.2l-1.3-1.4c-.7-.7-1.8-.7-2.5 0-.6.6-.7 1.6-.1 2.3l4.6 5.6c.8 1 2 1.6 3.3 1.6h4.4c2.4 0 4.3-1.9 4.3-4.3v-4.2c0-.9-.7-1.6-1.6-1.6-.4 0-.8.2-1.1.4-.2-.7-.8-1.2-1.6-1.2-.5 0-.9.2-1.2.5-.3-.6-.9-1-1.6-1-.5 0-.9.2-1.2.4V4.1c0-.9-.7-1.6-1.6-1.6z"/></svg>
+      <div class="label">button · <code>id=captureButton</code></div>
+    </div>
+    <figcaption>Hover shows the element and its identifier before you click. Nothing is written until Enter.</figcaption>
+  </figure>
+
+  <section class="col">
+    <div class="sect-head">
+      <h2>One gesture. Three seconds.</h2>
+      <p class="lede">Deixis lives in the menu bar and in a small glass ball at the edge of the screen. It appears, is used, and is gone.</p>
+    </div>
+    <div class="steps">
+      <div class="step">
+        <span class="n">1</span>
+        <h3>Point</h3>
+        <p class="muted">Double-tap <kbd>⌃</kbd> or click the ball. Hover to see the highlight and the label. Click the element.</p>
+      </div>
+      <div class="step">
+        <span class="n">2</span>
+        <h3>Note</h3>
+        <p class="muted">Type what should change. <kbd>Enter</kbd> captures. <kbd>Esc</kbd> cancels with nothing written.</p>
+      </div>
+      <div class="step">
+        <span class="n">3</span>
+        <h3>Paste</h3>
+        <p class="muted">The clipboard holds a Markdown payload and the image path. Paste into Claude Code, Cursor, or Codex.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="col">
+    <div class="sect-head">
+      <h2>What your agent receives</h2>
+      <p class="lede">Role, label, accessibility identifier, frame, and ancestry, plus a cropped PNG. Enough to find the right file on the first try.</p>
+    </div>
+<pre class="payload"><span class="h">## Deixis capture (fix)</span>
+<span class="k">Image:</span> /Users/you/Pictures/Deixis/deixis-simulator-20260913-153012-k7q2.png
+<span class="k">App:</span> Simulator (com.example.myapp) · Window: iPhone 17 Pro
+<span class="k">Captured:</span> 2026-09-13 15:30 · Image region: 450×130 pt @2x (element + 40 pt)
+
+<span class="h">### Target element</span>
+button · id=captureButton
+<span class="k">Frame:</span> x=43 y=894 w=370 h=50
+<span class="k">Path:</span> application > window > group > group > button#captureButton
+
+<span class="h">### Note</span>
+make this rounded, match the other pills</pre>
+    <div class="fields">
+      <div class="field"><b>Image first</b><span class="muted">Terminal agents get only the text on paste, so the path leads.</span></div>
+      <div class="field"><b>Fix or reference</b><span class="muted">Your own apps are inferred: the Simulator, anything built on this Mac, anything signed with your Team ID.</span></div>
+      <div class="field"><b>Project line</b><span class="muted">When a project folder is found through DerivedData or an Xcode project, the payload carries it.</span></div>
+      <div class="field"><b>Sidecar</b><span class="muted">Every capture also lands in Pictures as a PNG and a JSON file that validates against a published schema.</span></div>
+    </div>
+  </section>
+
+  <section class="col">
+    <div class="sect-head">
+      <h2>When there is no element</h2>
+      <p class="lede">Figma, games, and custom-drawn views expose little. Deixis steps down a ladder and tells the agent which rung it reached.</p>
+    </div>
+    <div class="ladder">
+      <div class="rung"><span class="n">1</span><b>Element</b><p>The smallest real control under the cursor, with its declared identifier.</p></div>
+      <div class="rung"><span class="n">2</span><b>Cluster</b><p>The nearest labeled elements, when the target itself has only a label or a symbol name.</p></div>
+      <div class="rung"><span class="n">3</span><b>Drawn frame</b><p>Drag on the overlay to capture a region and every element inside it.</p></div>
+      <div class="rung"><span class="n">4</span><b>Text and neighbors</b><p>The text in the image is recognized and listed. The closest labeled elements are named.</p></div>
+      <div class="rung"><span class="n">5</span><b>Image</b><p>The payload says <code>element: null</code>, and still gives the agent the image and your note.</p></div>
+    </div>
+  </section>
+
+  <section class="wide">
+    <div class="sect-head col" style="margin-inline: auto;">
+      <h2>Four more, on the same gesture</h2>
+      <p class="lede">Press and hold the ball for the ring. One rule decides what stays: actions that make an image keep a file for 30 days; actions that make text or a value keep nothing.</p>
+    </div>
+    <div class="actions">
+      <div class="action"><h3>Snap</h3><p>Drag a region or click a window. PNG to the clipboard and the folder.</p><p class="keeps muted">Keeps a file</p></div>
+      <div class="action"><h3>Text</h3><p>Recognized lines from a region or an element, straight to the clipboard.</p><p class="keeps muted">Keeps nothing</p></div>
+      <div class="action"><h3>Color</h3><p>A magnifier under the cursor. Hex, rgb, hsl, or SwiftUI, in sRGB or Display P3.</p><p class="keeps muted">Keeps nothing</p></div>
+      <div class="action"><h3>Cut</h3><p>The subject, cut onto a transparent background.</p><p class="keeps muted">Keeps a file</p></div>
+    </div>
+  </section>
+
+  <section class="col">
+    <div class="split">
+      <div class="ba" aria-label="Before and after: the same button, square-cornered before and pill-shaped after, with a slide divider">
+        <div class="note">make this rounded, match the other pills</div>
+        <div class="pane before"><div class="btn-old"></div></div>
+        <div class="pane after"><div class="btn-new"></div></div>
+        <div class="divider"></div><div class="knob"></div>
+        <div class="tags"><span>2 files changed</span><span>+12 −4</span><span>a3f9c1e → working tree</span></div>
+      </div>
+      <div class="sect-head" style="margin: 0;">
+        <h2>See what changed</h2>
+        <p class="lede">After the agent's edit, choose Capture after. Deixis finds the same element again in the running app, captures it, records the git facts, and opens the two images side by side with one zoom.</p>
+        <p class="muted small">Deixis never commits, never installs hooks, never talks to the network.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="col">
+    <div class="sect-head">
+      <h2>Settings that look like Settings</h2>
+      <p class="lede">The one place Deixis is a window. The hotkey is recorded by pressing it. Everything else has a default that works on first launch.</p>
+    </div>
+    <figure class="shot" style="margin: 0;">
+      <img src="assets/settings-dark.png" width="1176" height="1036" alt="Deixis Settings window, General tab: capture hotkey set to double-tap Control, a toggle to adjust the selection before capturing, and per-action hotkeys for Snap, Text, Color, and Cut">
+    </figure>
+  </section>
+
+  <section class="col">
+    <div class="sect-head">
+      <h2>Private by design</h2>
+    </div>
+    <div class="grid2">
+      <div class="item"><h3>Two permissions, both explained</h3><p>Accessibility reads what is under your cursor and listens for the hotkey. Screen Recording captures the pixels. There is no third prompt.</p></div>
+      <div class="item"><h3>Nothing leaves the machine</h3><p>No network, no telemetry, no accounts. Captures live in your Pictures folder, tagged in Finder, and move to the Trash after 30 days unless pinned.</p></div>
+      <div class="item"><h3>Signed and notarized</h3><p>Every build is signed with a Developer ID and notarized by Apple. Distributed as a dmg, not through the App Store.</p></div>
+      <div class="item"><h3>Lightweight</h3><p>No Dock icon. Idle memory under 30 MB. Nothing pulses, bounces, or waits for you.</p></div>
+    </div>
+  </section>
+
+  <section class="col">
+    <div class="sect-head">
+      <h2>Works where you paste</h2>
+      <p class="lede">The payload is plain Markdown. Status as of v0.4:</p>
+    </div>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>Agent</th><th>Paste</th><th>Image</th><th>Status</th></tr></thead>
+        <tbody>
+          <tr><td>Claude Code</td><td>Markdown text</td><td>Reads the PNG from the path</td><td>Expected to work; end-to-end check pending</td></tr>
+          <tr><td>Cursor</td><td>Markdown text</td><td>Reads the path</td><td>Untested</td></tr>
+          <tr><td>Codex CLI</td><td>Markdown text</td><td>Views the image at the path</td><td>Untested</td></tr>
+          <tr><td>Gemini CLI, Antigravity</td><td>Markdown text</td><td>Untested</td><td>Untested</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="col">
+    <div class="sect-head">
+      <h2>Known limitations</h2>
+    </div>
+    <ul class="plain">
+      <li><b>Element quality follows the app's accessibility.</b> SwiftUI, AppKit, and the iOS Simulator work well. Electron and Chromium apps build their tree on first contact, so the first hover can take about half a second to sharpen.</li>
+      <li><b>Custom-drawn UIs expose little.</b> Figma, games, and canvases usually reach the bottom of the ladder. The payload says so.</li>
+      <li><b>Hover picks the smallest real control</b> and sticks to it across padding. Press Option to step to the parent.</li>
+    </ul>
+  </section>
+
+  <footer class="col">
+    <div class="row">
+      <a class="btn" href="https://github.com/Malik1942/deixis/releases/latest">Download for Mac</a>
+      <a class="link" href="https://github.com/Malik1942/deixis">GitHub</a>
+      <span>Version 0.4.0</span>
+    </div>
+    <p class="word">Deixis is the linguistics term for words like <em>this</em>, <em>here</em>, and <em>that one</em>, which only mean something when someone is pointing.</p>
+  </footer>
+</main>
