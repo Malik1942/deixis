@@ -1,27 +1,27 @@
 import Foundation
 
-/// Section 4: `fix` when the user's own code is on screen, else `reference`.
+/// Section 4 of v0.1, now backed by v0.3 mode inference. Kept as the one call site for
+/// "what mode is this source", so the rules live in `ModeInference`.
 enum ModeClassifier {
-    /// Hard-coded in v0.1; moves to Settings later.
-    static let myApps: [String] = [
-        "com.inspireocean.app", // Oryne
-        "com.malik.Moti",
-    ]
+    static let simulatorBundleId = ModeInference.simulatorBundleId
 
-    static let simulatorBundleId = "com.apple.iphonesimulator"
+    static func signals(for context: CaptureContext, myApps: [String], userTeamIDs: Set<String>) -> ModeSignals {
+        ModeSignals(
+            bundleId: context.source.app.bundleId,
+            isSimulator: context.source.app.bundleId == simulatorBundleId,
+            simulatedBundleId: context.source.simulator?.appBundleId,
+            bundlePath: context.bundlePath,
+            urlHost: context.source.url.flatMap { URL(string: $0)?.host },
+            teamID: context.teamID,
+            userTeamIDs: userTeamIDs,
+            myApps: myApps
+        )
+    }
 
-    static func classify(_ source: SourceInfo, myApps: [String] = myApps) -> CaptureMode {
-        if myApps.contains(source.app.bundleId) { return .fix }
-        if source.app.bundleId == simulatorBundleId {
-            // Someone else's app in the Simulator is a reference. An unreadable bundle id is
-            // still most likely the user's own build.
-            guard let simulated = source.simulator?.appBundleId else { return .fix }
-            return myApps.contains(simulated) ? .fix : .reference
-        }
-        if let url = source.url, let host = URL(string: url)?.host?.lowercased(),
-           host == "localhost" || host == "127.0.0.1" {
-            return .fix
-        }
-        return .reference
+    /// Mode from the source alone, without filesystem or keychain signals.
+    static func classify(_ source: SourceInfo, myApps: [String] = []) -> CaptureMode {
+        let context = CaptureContext(source: source, frontPID: 0)
+        let environment = ModeEnvironment(directoryEntries: { _ in [] }, derivedDataWorkspacePath: { _ in nil })
+        return ModeInference.infer(signals(for: context, myApps: myApps, userTeamIDs: []), environment: environment).mode
     }
 }

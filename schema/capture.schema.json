@@ -36,7 +36,7 @@
         "fix",
         "reference"
       ],
-      "description": "fix: the user's own code is on screen (front app is Simulator, bundle id is in MyApps, or URL host is localhost/127.0.0.1). reference: anything else."
+      "description": "fix: the user's own code is on screen, inferred from My Apps, the Simulator, a localhost URL, a bundle built in this machine's Xcode projects, or the user's own signing Team ID. reference: anything else. Affects payload wording and order only."
     },
     "image": {
       "$ref": "#/$defs/image"
@@ -213,6 +213,10 @@
             }
           ],
           "description": "Present only when the front app is the iOS Simulator."
+        },
+        "projectRoot": {
+          "type": "string",
+          "description": "Absolute path of the project directory that produced the app, when Deixis could infer it (DerivedData, an ancestor with .xcodeproj/.xcworkspace/Package.swift). Absent otherwise; never guessed."
         }
       }
     },

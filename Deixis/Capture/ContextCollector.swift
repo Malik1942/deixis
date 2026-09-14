@@ -30,10 +30,16 @@ enum ContextCollector {
         let source = SourceInfo(
             app: AppInfo(bundleId: bundleId, name: name),
             window: WindowInfo(title: title),
-            url: nil, // Safari/Chrome read deferred to v0.2
+            url: nil, // Safari/Chrome read still deferred
             simulator: simulator
         )
-        return CaptureContext(source: source, frontPID: pid)
+        let bundleURL = app.bundleURL
+        return CaptureContext(
+            source: source,
+            frontPID: pid,
+            bundlePath: bundleURL?.path(percentEncoded: false),
+            teamID: bundleURL.flatMap(CodeSigning.teamID(ofBundleAt:))
+        )
     }
 
     /// "iPhone 17 Pro – iOS 26.5" → "iPhone 17 Pro"

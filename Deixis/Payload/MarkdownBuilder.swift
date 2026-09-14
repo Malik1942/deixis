@@ -38,6 +38,7 @@ enum MarkdownBuilder {
             "Captured: \(capturedText(capture.createdAt)) · Image region: \(region) (\(regionNote))",
         ]
         if let url = source.url { lines.append("URL: \(url)") }
+        if let root = source.projectRoot { lines.append("Project: \(root)") }
         return lines.joined(separator: "\n")
     }
 

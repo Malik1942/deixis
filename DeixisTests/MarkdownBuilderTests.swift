@@ -165,6 +165,14 @@ final class MarkdownBuilderTests: XCTestCase {
         XCTAssertFalse(md.contains("### Elements in frame"))
     }
 
+    func testProjectLineWhenRootKnown() {
+        var c = capture(element: element())
+        XCTAssertFalse(MarkdownBuilder.build(c).contains("Project:"))
+        c.source.projectRoot = "/Users/malik/Documents/inspire-ocean"
+        let l = lines(MarkdownBuilder.build(c))
+        XCTAssertEqual(l[4], "Project: /Users/malik/Documents/inspire-ocean")
+    }
+
     func testNumberFormatting() {
         XCTAssertEqual(MarkdownBuilder.number(57.99999), "58")
         XCTAssertEqual(MarkdownBuilder.number(58.0), "58")

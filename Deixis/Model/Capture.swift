@@ -82,8 +82,10 @@ struct SourceInfo: Codable, Sendable, Equatable {
     var window: WindowInfo?
     var url: String?
     var simulator: SimulatorInfo?
+    /// The project directory that produced the app, when inference found one (v0.3).
+    var projectRoot: String? = nil
 
-    private enum CodingKeys: String, CodingKey { case app, window, url, simulator }
+    private enum CodingKeys: String, CodingKey { case app, window, url, simulator, projectRoot }
 
     func encode(to encoder: any Encoder) throws {
         var c = encoder.container(keyedBy: CodingKeys.self)
@@ -91,6 +93,7 @@ struct SourceInfo: Codable, Sendable, Equatable {
         try c.encode(window, forKey: .window)
         try c.encode(url, forKey: .url)
         try c.encode(simulator, forKey: .simulator)
+        try c.encodeIfPresent(projectRoot, forKey: .projectRoot)
     }
 }
 
@@ -258,4 +261,7 @@ struct Iteration: Codable, Sendable, Equatable {
 struct CaptureContext: Sendable, Equatable {
     var source: SourceInfo
     var frontPID: pid_t
+    /// Signals for mode inference (v0.3): where the bundle lives and who signed it.
+    var bundlePath: String? = nil
+    var teamID: String? = nil
 }
