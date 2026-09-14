@@ -15,13 +15,13 @@ final class FloatingBall {
         static let pad: CGFloat = 10
         static var panelSide: CGFloat { diameter + 2 * pad }
         static let approach: CGFloat = 80
-        static let dockDelay: TimeInterval = 5
+        static let dockDelay: TimeInterval = 2
         static let firstLaunchInset: CGFloat = 24
         static let restAlpha: CGFloat = 0.9
         static let dockedAlpha: CGFloat = 0.9
         /// How much of the disc stays on screen when tucked into an edge: enough to find it.
         static let dockedVisible: CGFloat = 0.6
-        /// The disc tucks into an edge (idle or dropped) only when its center is this close to one.
+        /// A drop with the center this close to an edge tucks in at once, without the idle wait.
         static let edgeSnap: CGFloat = diameter
         /// Awake near an edge, the disc moves in so the ring (outer radius 92) stays on screen.
         static let ringMargin: CGFloat = Ring.Tokens.outerRadius + 8
@@ -44,6 +44,18 @@ final class FloatingBall {
     var onMoved: ((CGPoint) -> Void)?
     /// A ring segment was chosen; `clipboardOnly` when ⌥ was held.
     var onAction: ((Ring.Segment, Bool) -> Void)?
+    /// Settings "Auto-hide": idle, the disc tucks into the nearest edge. Off, it stays where it is.
+    var autoHide = true {
+        didSet {
+            guard autoHide != oldValue else { return }
+            if autoHide {
+                scheduleDock()
+            } else {
+                dockTask?.cancel()
+                if state == .docked { set(.rest) }
+            }
+        }
+    }
 
     private let ring = Ring()
     private var holdTask: Task<Void, Never>?
@@ -175,7 +187,7 @@ final class FloatingBall {
             fade(to: 1)
             view.apply(newState, animated: true, waking: wasDocked)
         case .rest:
-            if shownOrigin != freeOrigin { move(to: freeOrigin, spring: .settle) }
+            if shownOrigin != freeOrigin { move(to: freeOrigin, spring: wasDocked ? .wake : .settle) }
             fade(to: Tokens.restAlpha)
             view.apply(.rest, animated: true)
             scheduleDock()
@@ -199,8 +211,8 @@ final class FloatingBall {
         dockTask?.cancel()
         dockTask = Task { @MainActor in
             try? await Task.sleep(for: .seconds(Tokens.dockDelay))
-            guard !Task.isCancelled, self.state == .rest, !self.view.isDragging else { return }
-            self.dock(ifWithin: Tokens.edgeSnap)
+            guard !Task.isCancelled, self.autoHide, self.state == .rest, !self.view.isDragging else { return }
+            self.dock(ifWithin: .infinity)
         }
     }
 
@@ -297,7 +309,7 @@ final class FloatingBall {
     /// left. Otherwise the cursor is still on it, so it stays ready; leaving rests it.
     func dragEnded() {
         onMoved?(freeOrigin)
-        if dock(ifWithin: Tokens.edgeSnap) {
+        if autoHide, dock(ifWithin: Tokens.edgeSnap) {
             holdDock = true
         } else {
             set(.ready)

@@ -107,6 +107,7 @@ final class Preferences {
         static let captureFolder = "captureFolder"
         static let ballEnabled = "ballEnabled"
         static let ballPosition = "ballPosition"
+        static let ballAutoHide = "ballAutoHide"
         static let myApps = "myApps"
         static let organization = "organization"
         static let colorFormat = "colorFormat"
@@ -124,6 +125,8 @@ final class Preferences {
     @ObservationIgnored var onHotkeyChange: (() -> Void)?
     /// Called after the ball toggle changes so it can show or hide at once.
     @ObservationIgnored var onBallEnabledChange: (() -> Void)?
+    /// Called after the auto-hide toggle changes so the ball tucks in or comes out at once.
+    @ObservationIgnored var onBallAutoHideChange: (() -> Void)?
 
     var hotkey: Hotkey {
         didSet {
@@ -140,6 +143,14 @@ final class Preferences {
         didSet {
             defaults.set(ballEnabled, forKey: Key.ballEnabled)
             if ballEnabled != oldValue { onBallEnabledChange?() }
+        }
+    }
+
+    /// Idle, the ball tucks into the nearest screen edge, part of it showing.
+    var ballAutoHide: Bool {
+        didSet {
+            defaults.set(ballAutoHide, forKey: Key.ballAutoHide)
+            if ballAutoHide != oldValue { onBallAutoHideChange?() }
         }
     }
 
@@ -193,6 +204,7 @@ final class Preferences {
         }
         captureFolder = defaults.string(forKey: Key.captureFolder) ?? Self.defaultCaptureFolder
         ballEnabled = defaults.object(forKey: Key.ballEnabled) as? Bool ?? true
+        ballAutoHide = defaults.object(forKey: Key.ballAutoHide) as? Bool ?? true
         if let pair = defaults.array(forKey: Key.ballPosition) as? [Double], pair.count == 2 {
             ballPosition = CGPoint(x: pair[0], y: pair[1])
         } else {

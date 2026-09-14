@@ -79,9 +79,17 @@ struct GeneralSettings: View {
                 Footnote(text: "The Color action copies the pixel under the cursor in this format.")
             }
             Section {
-                Toggle("Floating ball", isOn: $preferences.ballEnabled)
-                    .toggleStyle(.switch)
-                Footnote(text: "A quiet disc that wakes when you approach. Click it to point. The hotkey works either way.")
+                Toggle(isOn: $preferences.ballEnabled) {
+                    Text("Floating ball")
+                    Text("A quiet disc that wakes when you approach. Click it to point, hold for the ring. The hotkey works either way.")
+                }
+                .toggleStyle(.switch)
+                Toggle(isOn: $preferences.ballAutoHide) {
+                    Text("Auto-hide")
+                    Text("After 2 seconds without use, the ball tucks into the nearest screen edge with part of it showing. Move toward it to bring it back.")
+                }
+                .toggleStyle(.switch)
+                .disabled(!preferences.ballEnabled)
             }
         }
         .formStyle(.grouped)

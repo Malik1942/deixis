@@ -18,6 +18,7 @@ final class PreferencesTests: XCTestCase {
         XCTAssertEqual(p.captureFolder, Preferences.defaultCaptureFolder)
         XCTAssertTrue(p.captureFolder.hasSuffix("/Pictures/Deixis"))
         XCTAssertTrue(p.ballEnabled)
+        XCTAssertTrue(p.ballAutoHide)
         XCTAssertNil(p.ballPosition)
         XCTAssertEqual(p.myApps, [])
         XCTAssertEqual(p.organization, .none)
@@ -34,6 +35,7 @@ final class PreferencesTests: XCTestCase {
         p.hotkey = .chord(keyCode: 2, modifiers: [.command, .shift], key: "D")
         p.captureFolder = "/tmp/captures"
         p.ballEnabled = false
+        p.ballAutoHide = false
         p.ballPosition = CGPoint(x: 1200, y: 40)
         p.myApps = ["com.inspireocean.app"]
         p.organization = .byProject
@@ -45,6 +47,7 @@ final class PreferencesTests: XCTestCase {
         XCTAssertEqual(again.hotkey.title, "⇧⌘D")
         XCTAssertEqual(again.captureFolder, "/tmp/captures")
         XCTAssertFalse(again.ballEnabled)
+        XCTAssertFalse(again.ballAutoHide)
         XCTAssertEqual(again.ballPosition, CGPoint(x: 1200, y: 40))
         XCTAssertEqual(again.myApps, ["com.inspireocean.app"])
         XCTAssertEqual(again.organization, .byProject)
