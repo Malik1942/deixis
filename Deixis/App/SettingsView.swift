@@ -31,14 +31,22 @@ struct GeneralSettings: View {
         @Bindable var preferences = state.preferences
         Form {
             Section {
-                LabeledContent("Hotkey") {
+                // System Settings row: title and description in the label, the control trailing.
+                LabeledContent {
                     HotkeyRecorder(
                         hotkey: Binding(get: { preferences.hotkey }, set: { preferences.hotkey = $0 ?? .default }),
                         fallback: .default,
                         onBegin: { state.pauseHotkey() }, onEnd: { state.resumeHotkey() }
                     )
+                } label: {
+                    Text("Capture hotkey")
+                    Text("Press a key with modifiers, or double-tap one modifier. Double-tap Command is used by Codex; double-tap Option by Claude Desktop.")
                 }
-                Footnote(text: "Press a key with modifiers, or double-tap one modifier. Double-tap Command is used by Codex; double-tap Option by Claude Desktop.")
+                Toggle(isOn: $preferences.adjustSelection) {
+                    Text("Adjust selection before capturing")
+                    Text("After you drag a region for Snap, Text, or Cut, handles let you fine-tune it. Press Return to capture, Esc to cancel.")
+                }
+                .toggleStyle(.switch)
             }
             Section {
                 ForEach(Preferences.hotkeyActions, id: \.self) { action in
@@ -86,9 +94,17 @@ struct GeneralSettings: View {
                 Footnote(text: "The Color action copies the pixel under the cursor in this format.")
             }
             Section {
-                Toggle("Floating ball", isOn: $preferences.ballEnabled)
-                    .toggleStyle(.switch)
-                Footnote(text: "A quiet disc that wakes when you approach. Click it to point. The hotkey works either way.")
+                Toggle(isOn: $preferences.ballEnabled) {
+                    Text("Floating ball")
+                    Text("A quiet disc that wakes when you approach. Click it to point, hold for the ring. The hotkey works either way.")
+                }
+                .toggleStyle(.switch)
+                Toggle(isOn: $preferences.ballAutoHide) {
+                    Text("Auto-hide")
+                    Text("After 2 seconds without use, the ball tucks into the nearest screen edge with part of it showing. Move toward it to bring it back.")
+                }
+                .toggleStyle(.switch)
+                .disabled(!preferences.ballEnabled)
             }
         }
         .formStyle(.grouped)
@@ -132,19 +148,25 @@ struct HotkeyRecorder: View {
     ]
 
     var body: some View {
+        // The width sits on the label so the bordered button itself is the fixed-width control;
+        // a frame on the button would leave invisible space around a short title.
         HStack(spacing: 8) {
-            Button(recording ? (hint ?? "Press keys…") : (hotkey?.title ?? "None")) {
-                recording ? stop() : begin()
-            }
-            .frame(minWidth: 180)
             if !recording {
                 if let fallback, hotkey != fallback {
-                    Button("Default") { hotkey = fallback }
+                    Button("Reset") { hotkey = fallback }
                 } else if fallback == nil, hotkey != nil {
                     Button("Clear") { hotkey = nil }
                 }
             }
+            Button {
+                recording ? stop() : begin()
+            } label: {
+                Text(recording ? (hint ?? "Press keys…") : (hotkey?.title ?? "None"))
+                    .lineLimit(1)
+                    .frame(minWidth: 150)
+            }
         }
+        .fixedSize()
     }
 
     private func begin() {

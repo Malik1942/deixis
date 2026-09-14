@@ -21,6 +21,8 @@ enum DesignTokens {
     static var sans: NSFont { .systemFont(ofSize: 12) }
     /// Labels flip above the element when its bottom is within this distance of the screen bottom.
     static let flipMargin: CGFloat = 40
+    /// Frame handles: `highlight.stroke` on a white ring, as in Photos and Preview crop.
+    static var handleRing: NSColor { .white }
 }
 
 /// What the hover label says about the element under the cursor: `role · identifier`, with the
@@ -108,6 +110,9 @@ enum OverlayMode: Equatable {
 @MainActor
 final class SelectionOverlay {
     var mode: OverlayMode = .point
+    /// Settings "Adjust selection before capturing": a drawn frame waits with handles until Return.
+    /// Point ignores it; its frame already pauses at the note field.
+    var adjustsRegion = false
     var onHover: ((CGPoint) -> Void)?
     var onClick: ((CGPoint) -> Void)?
     var onCancel: (() -> Void)?
@@ -270,9 +275,17 @@ final class OverlayContentView: NSView, NSTextFieldDelegate {
     private static let dragThreshold: CGFloat = 6
     private var dragStart: CGPoint?
     private var isDragging = false
-    private let marquee = HighlightView()
+    private let marquee = RegionFrameView()
     private let sizeLabel = HudLabel()
     private var marks: [HighlightView] = []
+
+    // Adjustable frame: handles resize, the body moves, arrows nudge, Return captures, a drag
+    // outside draws a new one. Hover stays off while it is up.
+    private var editRegion: CGRect?
+    private var editHit: RegionEditor.Hit = .outside
+    private var editStart: CGPoint = .zero
+    private var editBase: CGRect = .zero
+    var isAdjusting: Bool { editRegion != nil }
 
     override init(frame frameRect: NSRect) {
         super.init(frame: frameRect)
@@ -281,7 +294,6 @@ final class OverlayContentView: NSView, NSTextFieldDelegate {
         label.isHidden = true
         addSubview(highlight)
         addSubview(label)
-        marquee.cornerRadius = 0
         marquee.isHidden = true
         sizeLabel.isHidden = true
         addSubview(marquee)
@@ -308,32 +320,55 @@ final class OverlayContentView: NSView, NSTextFieldDelegate {
     override func mouseMoved(with event: NSEvent) {
         if let picker { picker.cursorMoved(NSEvent.mouseLocation); return }
         guard !locked, let window else { return }
+        if let region = editRegion {
+            Self.cursor(for: RegionEditor.hit(event.locationInWindow, in: region), outside: owner?.mode.cursor ?? .crosshair).set()
+            return
+        }
         owner?.hover(atAppKit: window.convertPoint(toScreen: event.locationInWindow))
     }
 
     override func mouseDown(with event: NSEvent) {
         if let picker { picker.clicked(); return }
         guard !locked else { return }
-        dragStart = event.locationInWindow
+        let point = event.locationInWindow
+        if let region = editRegion {
+            editHit = RegionEditor.hit(point, in: region)
+            editStart = point
+            editBase = region
+            if event.clickCount == 2, editHit == .inside { confirmRegion(); return }
+            guard editHit == .outside else { return }
+        }
+        dragStart = point
         isDragging = false
     }
 
     override func mouseDragged(with event: NSEvent) {
-        guard !locked, let start = dragStart else { return }
+        guard !locked else { return }
         let point = event.locationInWindow
+        if editRegion != nil, editHit != .outside {
+            let delta = CGPoint(x: point.x - editStart.x, y: point.y - editStart.y)
+            let moved: CGRect
+            switch editHit {
+            case .handle(let handle): moved = RegionEditor.resize(editBase, handle: handle, by: delta)
+            case .inside: moved = RegionEditor.move(editBase, by: delta, within: bounds)
+            case .outside: moved = editBase
+            }
+            let clamped = moved.intersection(bounds)
+            editRegion = clamped
+            setRegion(clamped)
+            return
+        }
+        guard let start = dragStart else { return }
         if !isDragging {
             guard hypot(point.x - start.x, point.y - start.y) > Self.dragThreshold else { return }
             isDragging = true
             highlight.isHidden = true
             label.isHidden = true
+            marquee.showsHandles = false
             marquee.isHidden = false
             sizeLabel.isHidden = false
         }
-        let rect = Self.normalized(start, point)
-        marquee.frame = rect
-        marquee.needsDisplay = true
-        sizeLabel.set(HudText.plain("\(Int(rect.width.rounded())) × \(Int(rect.height.rounded())) pt"))
-        sizeLabel.frame = anchoredFrame(size: sizeLabel.hudSize, below: rect)
+        setRegion(Self.normalized(start, point))
     }
 
     override func mouseUp(with event: NSEvent) {
@@ -341,13 +376,72 @@ final class OverlayContentView: NSView, NSTextFieldDelegate {
         dragStart = nil
         if isDragging {
             isDragging = false
-            sizeLabel.isHidden = true
             let rect = Self.normalized(start, event.locationInWindow)
-            guard rect.width >= 2, rect.height >= 2 else { marquee.isHidden = true; return }
-            let screenRect = window.convertToScreen(convert(rect, to: nil))
-            owner?.region(atAppKit: screenRect, start: window.convertPoint(toScreen: start))
-        } else {
+            guard rect.width >= 2, rect.height >= 2 else {
+                if let region = editRegion { beginAdjusting(region) } else { marquee.isHidden = true; sizeLabel.isHidden = true }
+                return
+            }
+            if owner?.adjustsRegion == true, owner?.mode != .point {
+                beginAdjusting(rect)
+            } else {
+                sizeLabel.isHidden = true
+                owner?.region(atAppKit: window.convertToScreen(convert(rect, to: nil)), start: window.convertPoint(toScreen: start))
+            }
+        } else if editRegion == nil {
             owner?.click(atAppKit: window.convertPoint(toScreen: event.locationInWindow))
+        }
+    }
+
+    /// The marquee and its size label follow `rect` (local coordinates).
+    private func setRegion(_ rect: CGRect) {
+        marquee.region = rect
+        var text = "\(Int(rect.width.rounded())) × \(Int(rect.height.rounded())) pt"
+        if marquee.showsHandles { text += " · ↩ capture · esc cancel" }
+        sizeLabel.set(HudText.plain(text))
+        sizeLabel.frame = anchoredFrame(size: sizeLabel.hudSize, below: rect)
+    }
+
+    private func beginAdjusting(_ rect: CGRect) {
+        editRegion = rect
+        editHit = .outside
+        marquee.showsHandles = true
+        marquee.isHidden = false
+        sizeLabel.isHidden = false
+        setRegion(rect)
+    }
+
+    private func confirmRegion() {
+        guard let window, let region = editRegion else { return }
+        editRegion = nil
+        sizeLabel.isHidden = true
+        let center = CGPoint(x: region.midX, y: region.midY)
+        owner?.region(atAppKit: window.convertToScreen(convert(region, to: nil)), start: window.convertPoint(toScreen: center))
+    }
+
+    private func nudge(by delta: CGPoint) {
+        guard let region = editRegion else { return }
+        let moved = RegionEditor.move(region, by: delta, within: bounds)
+        editRegion = moved
+        setRegion(moved)
+    }
+
+    private static func cursor(for hit: RegionEditor.Hit, outside: NSCursor) -> NSCursor {
+        switch hit {
+        case .inside: return .openHand
+        case .outside: return outside
+        case .handle(let handle):
+            let position: NSCursor.FrameResizePosition
+            switch handle {
+            case .topLeft: position = .topLeft
+            case .top: position = .top
+            case .topRight: position = .topRight
+            case .right: position = .right
+            case .bottomRight: position = .bottomRight
+            case .bottom: position = .bottom
+            case .bottomLeft: position = .bottomLeft
+            case .left: position = .left
+            }
+            return .frameResize(position: position, directions: .all)
         }
     }
 
@@ -383,6 +477,22 @@ final class OverlayContentView: NSView, NSTextFieldDelegate {
         }
         if event.keyCode == 53 { // Esc
             owner?.onCancel?()
+            return
+        }
+        guard editRegion != nil else { return }
+        switch event.keyCode {
+        case 36, 76: // Return, keypad Enter
+            confirmRegion()
+        case 123, 124, 125, 126:
+            let step: CGFloat = event.modifierFlags.contains(.shift) ? 10 : 1
+            switch event.keyCode {
+            case 123: nudge(by: CGPoint(x: -step, y: 0))
+            case 124: nudge(by: CGPoint(x: step, y: 0))
+            case 125: nudge(by: CGPoint(x: 0, y: -step))
+            default: nudge(by: CGPoint(x: 0, y: step))
+            }
+        default:
+            break
         }
     }
 
@@ -399,7 +509,7 @@ final class OverlayContentView: NSView, NSTextFieldDelegate {
     func lock() { locked = true }
 
     func showHighlight(screenRect: CGRect, readout: Readout) {
-        guard let window else { return }
+        guard let window, !isDragging, !isAdjusting else { return }
         let local = convert(window.convertFromScreen(screenRect), from: nil)
         highlight.isFallback = readout.isFallback
         label.set(HudText.readout(readout))
@@ -489,6 +599,10 @@ final class HighlightView: NSView {
     @available(*, unavailable)
     required init?(coder: NSCoder) { fatalError("init(coder:) is not supported") }
 
+    /// Chrome never takes the mouse: the content view owns the gesture. (A view that receives the
+    /// mouse-down and is then hidden stops getting the drag, which is how region select broke.)
+    override func hitTest(_ point: NSPoint) -> NSView? { nil }
+
     override func draw(_ dirtyRect: NSRect) {
         let inset = bounds.insetBy(dx: strokeWidth / 2, dy: strokeWidth / 2)
         let path = NSBezierPath(roundedRect: inset, xRadius: cornerRadius, yRadius: cornerRadius)
@@ -500,6 +614,53 @@ final class HighlightView: NSView {
             DesignTokens.highlightStroke.setStroke()
         }
         path.stroke()
+    }
+}
+
+// MARK: - Region frame
+
+/// The drawn frame: `highlight.stroke`, square corners; eight handles while the frame is adjustable.
+/// `region` is in the superview's coordinates; the view is outset so the handles are not clipped.
+final class RegionFrameView: NSView {
+    static var pad: CGFloat { RegionEditor.handleSize / 2 + 1 }
+
+    var showsHandles = false { didSet { needsDisplay = true } }
+    var region: CGRect = .zero {
+        didSet {
+            frame = region.insetBy(dx: -Self.pad, dy: -Self.pad)
+            needsDisplay = true
+        }
+    }
+
+    override init(frame frameRect: NSRect) {
+        super.init(frame: frameRect)
+        wantsLayer = true
+        layerContentsRedrawPolicy = .duringViewResize
+    }
+
+    @available(*, unavailable)
+    required init?(coder: NSCoder) { fatalError("init(coder:) is not supported") }
+
+    override func hitTest(_ point: NSPoint) -> NSView? { nil }
+
+    override func draw(_ dirtyRect: NSRect) {
+        let rect = bounds.insetBy(dx: Self.pad, dy: Self.pad)
+        let stroke = DesignTokens.strokeWidth
+        let path = NSBezierPath(rect: rect.insetBy(dx: stroke / 2, dy: stroke / 2))
+        path.lineWidth = stroke
+        DesignTokens.highlightStroke.setStroke()
+        path.stroke()
+        guard showsHandles else { return }
+        let size = RegionEditor.handleSize
+        for handle in RegionEditor.Handle.allCases {
+            let center = RegionEditor.center(of: handle, in: rect)
+            let dot = NSBezierPath(ovalIn: NSRect(x: center.x - size / 2, y: center.y - size / 2, width: size, height: size))
+            DesignTokens.handleRing.setFill()
+            dot.fill()
+            dot.lineWidth = 1.5
+            DesignTokens.highlightStroke.setStroke()
+            dot.stroke()
+        }
     }
 }
 
@@ -525,6 +686,8 @@ final class HudLabel: NSVisualEffectView {
 
     @available(*, unavailable)
     required init?(coder: NSCoder) { fatalError("init(coder:) is not supported") }
+
+    override func hitTest(_ point: NSPoint) -> NSView? { nil }
 
     func set(_ string: NSAttributedString) {
         text.attributedStringValue = string

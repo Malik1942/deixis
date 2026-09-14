@@ -69,6 +69,10 @@ final class AppState {
         preferences.onHotkeyChange = { [weak self] in self?.restartHotkey() }
         preferences.onActionHotkeysChange = { [weak self] in self?.restartHotkey() }
         preferences.onBallEnabledChange = { [weak self] in self?.updateBall() }
+        preferences.onBallAutoHideChange = { [weak self] in
+            guard let self else { return }
+            self.ball?.autoHide = self.preferences.ballAutoHide
+        }
         updateBall()
         scheduleSweeps()
         overlay.onHover = { [weak self] point in self?.hover(point) }
@@ -107,6 +111,7 @@ final class AppState {
             guard ball == nil else { return }
             let firstLaunch = preferences.ballPosition == nil
             let newBall = FloatingBall(origin: preferences.ballPosition)
+            newBall.autoHide = preferences.ballAutoHide
             newBall.onPoint = { [weak self] in self?.beginCapture() }
             newBall.onMoved = { [weak self] origin in self?.preferences.ballPosition = origin }
             newBall.onAction = { [weak self] segment, clipboardOnly in self?.beginRingAction(segment, clipboardOnly: clipboardOnly) }
@@ -301,6 +306,7 @@ final class AppState {
         guard phase == .idle else { return }
         action = requested
         overlay.mode = requested.overlayMode
+        overlay.adjustsRegion = preferences.adjustSelection
         guard AccessibilityReader.isTrusted(prompt: false) else {
             fail(.noAccessibilityPermission, nearRect: nil)
             return
