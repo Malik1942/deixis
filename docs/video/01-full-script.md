@@ -57,68 +57,69 @@ the name-drops.
 
 ---
 
-## 2. How I approached it (0:52 to 2:05)
+## 2. How I approached it (0:52 to 2:15)
+
+The brief weighs this section most: decisions, challenges, what is worth highlighting, where AI came in. Each
+decision is told as a tension and a choice, so the viewer hears why, not just what.
 
 **SCREEN**
 `build-canvas.mp4`: the overlay states drawn on the Claude Design canvas before any code, timer at 2:59:57. Then
-`build-timelapse-3h.mp4` under the next two decisions: the whole three-hour window in twenty seconds, the timer
+`build-timelapse-3h.mp4` under the first two decisions: the whole three-hour window in twenty seconds, the timer
 counting down in the menu bar.
 
 **VOICE**
 > The smallest loop that could be useful: hotkey, hover, click, type what should change, Enter, paste.
 >
-> Four decisions shaped it.
+> Four decisions.
 
 **SCREEN**
-The overlay label `button · captureButton` over the Simulator, then the payload full screen in monospace.
-Highlight `id=captureButton`, then `Image:` on the first line. On "grep for": a terminal running
-`grep -rn captureButton` and returning one file.
+The payload in Cursor's input (reel 0:26 to 0:30) with `id=oceanCurrent.product ideas` readable, then the agent's
+"Using Locant to pull the capture" and the diff chip (reel 0:31 to 0:43).
 
 **VOICE**
-> One. It reads the accessibility tree, not the pixels. The identifier is the one thing an agent can grep for,
-> and it goes out as plain Markdown, image path first, so every agent can take it.
+> One. The accessibility tree, not the pixels. A pixel is a guess; an identifier is something an agent can grep.
+> It goes out as plain Markdown, image path first, so any agent can take it. No plugin, no lock-in.
 
 **SCREEN**
-The fallback ladder from the site, five rungs, one per second (`site-ladder-reveal.mp4`; still: `site-ladder.png`).
+The fallback ladder from the site, five rungs, one per second (`site-ladder-reveal.mp4`).
 
 **VOICE**
 > Two. No identifier? It steps down a ladder: label and neighbors, a drawn frame, text, then the image alone.
-> And it says which rung it reached.
+> And it says which rung it reached, so the agent knows how much to trust it.
 
 **SCREEN**
-The four action cards from the site, one per second (`site-actions-reveal.mp4`; still: `site-actions.png`), with
-their "keeps a file / keeps nothing" lines. Then the ring footage from the reel (1:05 to 1:19) carries into decision four.
+The four action cards, one per second (`site-actions-reveal.mp4`), then the Color pick from the reel (1:12 to 1:19).
 
 **VOICE**
-> Three. It had to replace my screenshot tool, or I'd still be switching apps while polishing. So Snap, Text,
-> Color, and Cut ride the same gesture. Images keep a file; text and colors keep nothing.
+> Three. It had to replace my screenshot tool, or I'd keep switching apps while polishing. So Snap, Text, Color,
+> and Cut ride the same gesture. Images keep a file; text and colors keep nothing.
 
 **SCREEN**
-The ball, real footage (`sceneC-comp.mp4`, reel 1:05 to 1:19): docked at the edge, waking as the cursor approaches,
-the hand appearing, then press and hold, the ring unfolding with the four segments and their numbers, release on
-Color, the magnifier. Let it play under the whole of decision four.
+The ball, real footage (reel 1:05 to 1:12): docked, waking, the hand, the hold, the ring unfolding.
 
 **VOICE**
-> Four. One gesture, five actions. The ball is a quiet disc that wakes when you reach for it. Click to point.
-> Hold it, a ring unfolds, release on the action you want. Round, so four directions can open from it.
+> Four. The ball. A hotkey is invisible and the menu bar is far. So: a quiet disc that wakes when you reach for
+> it. Click to point. Hold, and a ring unfolds; release on an action. Round, so four directions open from one spot.
 
 **SCREEN**
-`build-null-element.mp4`, at 1×: the first capture on the Oryne orb reads `No element information available (app
-exposes no accessibility tree)`, timer at 1:42. Then the reel at 0:12, the same orb with `oceanCurrent` in its label.
+`build-null-element.mp4` at 1×: the first capture on the Oryne orb reads `No element information available (app
+exposes no accessibility tree)`, timer at 1:42. Then `sceneF-comp.mp4`: the overlay over Locant's own Settings
+window, and the label names a button in the Cursor window behind it.
 
 **VOICE**
-> The challenge was in the seams: my own app's orbs were invisible to accessibility.
+> Two things fought back. My own app's orbs were invisible to accessibility; the ladder came out of that.
+> And Locant must never see itself, so it filters its own windows out of every capture. Point at its Settings,
+> and it names what's behind.
 
 **SCREEN**
-From the build recording (`~/Desktop/locant-film/v4/build/`): `build-scaffold.mp4`, Claude taking the PRD to a
-v0.1 plan; `build-v04-timer.mp4`, the diff chip `+381 −40` with the timer at 0:12:54; the line "45 tests pass" in
-`build-decision.mp4`. On "Locant to build Locant": `build-v04-timer.mp4` again, where the agent reads a capture of
-Locant's own frame overlay (`300 × 200 pt · ⏎ capture · esc cancel`). A live hover over Locant's Settings cannot be
-shot: Locant excludes its own windows from the hit test, so the overlay reads the window behind it.
+`build-scaffold.mp4` (the PRD becoming a v0.1 plan), `build-decision.mp4` (your "finish the product first, MCP
+later" message, 45 tests passing), `build-v04-timer.mp4` (the diff chip `+381 −40`, the agent reading a capture
+of Locant's own frame overlay, timer 0:12:54).
 
 **VOICE**
-> AI came in everywhere except the decisions: specs with Claude, Swift by Claude Code. And I used Locant to
-> build Locant.
+> AI came in everywhere except the decisions. The overlay was drawn on a canvas with Claude before any code.
+> One spec per version, written with Claude; the Swift by Claude Code. The calls about scope were mine.
+> And I used Locant to build Locant.
 
 **NOTE**
 `[CONFIRM]` Say the time honestly here, in one sentence. Suggested: *"Versions 0.1 to 0.4 were built inside the
@@ -128,7 +129,7 @@ the site must agree.
 
 ---
 
-## 3. Demo (2:05 to 2:27)
+## 3. Demo (2:15 to 2:37)
 
 **SCREEN**
 Take A from `02-demo-script.md`, cut to length. Three seconds with no narration; let the hotkey, hover, and
@@ -152,7 +153,7 @@ not narrated.
 
 ---
 
-## 4. Before and after (2:27 to 2:43)
+## 4. Before and after (2:37 to 2:57)
 
 **SCREEN**
 The results table from `03-before-script.md`, rendered at `~/Desktop/locant-film/v4/measure/results-table.png`,
@@ -174,7 +175,7 @@ The numbers are the medians of three headless runs per side (`03`, "Results"). T
 
 ---
 
-## 5. If I had more time (2:43 to 2:55)
+## 5. If I had more time (2:57 to 3:07)
 
 **SCREEN**
 The Locant highlight over one element on a web page in a browser (scene 8's fourth hover, `sceneD2-comp.mp4`),
@@ -197,12 +198,13 @@ exactly where a group is attached"), the site URL, the repo URL. Three seconds, 
 | Section | Target | Words | Read at 150 wpm | Read at 160 wpm |
 |---|---|---|---|---|
 | 1 Why | 0:52 | 136 | 0:54 | 0:51 |
-| 2 How | 1:14 | 206 | 1:22 | 1:17 |
+| 2 How | 1:23 | 262 | 1:45 | 1:38 |
 | 3 Demo | 0:20 | 42 | 0:16 | 0:15 |
 | 4 Before and after | 0:20 | 55 | 0:22 | 0:21 |
 | 5 Next | 0:12 | 21 | 0:08 | 0:08 |
-| **Total** | **2:59** | **460** | **3:04** | **2:53** |
+| **Total** | **3:08** | **516** | **3:27** | **3:14** |
 
 Add three seconds of silence at the top of the demo, the end card, and the pauses between sections: about ten
-seconds. At 160 words a minute the video lands near 3:03, so apply the first two cuts in the list at the end of
-`04-voiceover.md` (they save about six seconds) at any pace; at 150 apply the third as well. Read the voice-over aloud with a stopwatch before recording anything.
+seconds. Section 2 now carries the brief's weight and the read is over the cap: about 3:24 at 160 words a minute.
+Get under 3:00 by cutting from sections 1, 3 and 4 first, never from 2; the list at the end of `04-voiceover.md`
+is ordered for that and saves about 25 seconds. Read aloud with a stopwatch before recording anything. Read the voice-over aloud with a stopwatch before recording anything.

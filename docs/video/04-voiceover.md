@@ -39,35 +39,38 @@ Pointing is how people resolve "this."
 
 ---
 
-## 2. How · 206 words · 0:52 to 2:05
+## 2. How · 262 words · 0:52 to 2:15
 
 The smallest loop that could be useful: hotkey, hover, click, type what should change, Enter, paste.
 
-Four decisions shaped it.
+Four decisions.
 
-One. It reads the accessibility tree, not the pixels. The identifier is the one thing an agent can grep for, and
-it goes out as plain Markdown, image path first, so every agent can take it.
+One. The accessibility tree, not the pixels. A pixel is a guess; an identifier is something an agent can grep.
+It goes out as plain Markdown, image path first, so any agent can take it. No plugin, no lock-in.
 
 Two. No identifier? It steps down a ladder: label and neighbors, a drawn frame, text, then the image alone.
-And it says which rung it reached.
+And it says which rung it reached, so the agent knows how much to trust it.
 
-Three. It had to replace my screenshot tool, or I'd still be switching apps while polishing. So Snap, Text,
-Color, and Cut ride the same gesture. Images keep a file; text and colors keep nothing.
+Three. It had to replace my screenshot tool, or I'd keep switching apps while polishing. So Snap, Text, Color,
+and Cut ride the same gesture. Images keep a file; text and colors keep nothing.
 
-Four. One gesture, five actions. The ball is a quiet disc that wakes when you reach for it. Click to point.
-Hold it, a ring unfolds, release on the action you want. Round, so four directions can open from it.
+Four. The ball. A hotkey is invisible and the menu bar is far. So: a quiet disc that wakes when you reach for it.
+Click to point. Hold, and a ring unfolds; release on an action. Round, so four directions open from one spot.
 
-The challenge was in the seams: my own app's orbs were invisible to accessibility.
+Two things fought back. My own app's orbs were invisible to accessibility; the ladder came out of that.
+And Locant must never see itself, so it filters its own windows out of every capture. Point at its Settings,
+and it names what's behind.
 
-AI came in everywhere except the decisions: specs with Claude, Swift by Claude Code. And I used Locant to build
-Locant.
+AI came in everywhere except the decisions. The overlay was drawn on a canvas with Claude before any code.
+One spec per version, written with Claude; the Swift by Claude Code. The calls about scope were mine.
+And I used Locant to build Locant.
 
 [CONFIRM] Versions 0.1 to 0.4 were built inside the three-hour window, timer running. 0.5 came the next day.
 I'm the only author.
 
 ---
 
-## 3. Demo · 42 words · 2:05 to 2:27
+## 3. Demo · 42 words · 2:15 to 2:37
 
 *(Three seconds of silence first. Let the hotkey and hover play with sound.)*
 
@@ -80,7 +83,7 @@ the diff beneath.
 
 ---
 
-## 4. Before and after · 55 words · 2:27 to 2:47
+## 4. Before and after · 55 words · 2:37 to 2:57
 
 Same fix, same model, same repo.
 
@@ -92,7 +95,7 @@ Same tokens, half the time.
 
 ---
 
-## 5. Next · 21 words · 2:47 to 2:57
+## 5. Next · 21 words · 2:57 to 3:07
 
 Next is the web: a small extension that adds the CSS selector, so pointing works the same on any page.
 
@@ -102,12 +105,23 @@ Point, don't describe.
 
 ## Cut list, in order, if the read runs long
 
-1. Section 2: "Images keep a file; text and colors keep nothing." (saves ~3 s)
-2. Section 2: "Round, so four directions can open from it." (~3 s)
-3. Section 3: "first try." (~1 s)
-4. Section 1: "Or I'd paste a screenshot, and watch the agent guess." Only if the before video is dropped. (~3 s)
+The read is about 3:24 at 160 words a minute. Cut in this order until a stopwatch says under 2:58. Section 2 is
+last on purpose: it is what the brief scores.
+
+1. Section 1: "Others send a whole window to one agent." (~3 s)
+2. Section 1: "Half a second to see it." (~2 s)
+3. Section 4: "Three runs each." (~1 s)
+4. Section 3: "first try." (~1 s)
+5. Section 1: "Or I'd paste a screenshot, and watch the agent guess." (~3 s; the before/after table still makes the point)
+6. Section 1: "Browser tools fix this for the web." (~2 s; section 5 already names the web)
+7. Section 2: "No plugin, no lock-in." (~2 s)
+8. Section 2: "so the agent knows how much to trust it." (~2 s)
+9. Section 2: "Images keep a file; text and colors keep nothing." (~3 s)
+10. Section 2: "The calls about scope were mine." (~2 s; the "except the decisions" line already says it)
+11. Section 2: "Point at its Settings, and it names what's behind." (~3 s; keep the footage, drop the words)
 
 Never cut: "By the time I'd written it, I'd lost the thing I was actually going to say," the universal-capture
-sentence ("one element in any app... whichever agent"), "Pointing is how people resolve this," "the accessibility tree, not the pixels," the ladder,
-"replace my screenshot tool," "one gesture, five actions," the time-window sentence, the numbers, "I used Locant
-to build Locant," and the last line.
+sentence ("one element in any app... whichever agent"), "Pointing is how people resolve this," "the accessibility
+tree, not the pixels," "a pixel is a guess," the ladder, "replace my screenshot tool," "a hotkey is invisible and
+the menu bar is far," "Round, so four directions open from one spot," both challenges, the time-window sentence,
+the numbers, "I used Locant to build Locant," and the last line.
