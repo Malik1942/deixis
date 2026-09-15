@@ -365,9 +365,9 @@
   .ba .facts .file { color: var(--muted); }
 
   .shot { display: grid; justify-items: center; }
-  .shot img { width: 100%; max-width: 980px; height: auto; }   /* the full column, like the hero stage */
-  .shot img.light { display: var(--show-light); }
-  .shot img.dark { display: var(--show-dark); }
+  .shot img { width: 100%; max-width: 980px; height: auto; display: block; }   /* the full column, like the hero stage */
+  .shot .light { display: var(--show-light); }
+  .shot .dark { display: var(--show-dark); }
 
   .grid2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
   .grid2 .item { display: grid; gap: 6px; align-content: start; padding: 18px 20px; background: var(--surface); border-radius: 16px; box-shadow: 0 0 0 1px var(--hair); }
@@ -412,7 +412,10 @@
     .hero { padding-block: 56px 36px; }
     .fine .g { flex-basis: 100%; justify-content: center; }
     .fine .g + .g::before { content: none; }
-    .stage { aspect-ratio: 4 / 3; }               /* room for the mock window, its label, and the ball */
+    .stage { aspect-ratio: 4 / 3; }
+    /* phones get a closer crop of the Settings window (tabs through Auto-hide), bled toward the edges */
+    .shot { margin-inline: -12px !important; }
+    .shot img { border-radius: 12px; box-shadow: var(--shadow); }               /* room for the mock window, its label, and the ball */
     pre.payload { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 12px; padding: 14px 16px; }
     footer .links { margin-left: 0; flex-basis: 100%; }
     .app-icon { width: 96px; height: 96px; border-radius: 21.5px; }
@@ -666,7 +669,7 @@ make this rounded, match the other pills</pre>
       <p class="lede">The one place Locant is a window. Every default works on first launch.</p>
     </div>
     <figure class="shot" style="margin: 0;">
-      <img class="light" src="assets/settings-light.png" width="2024" height="1124" alt="Locant Settings window, General tab: Accessibility and Screen Recording granted, the floating ball and auto-hide on, a daily update check, version 0.7.0"><img class="dark" src="assets/settings-dark.png" width="2024" height="1124" alt="Locant Settings window, General tab: Accessibility and Screen Recording granted, the floating ball and auto-hide on, a daily update check, version 0.7.0">
+      <picture class="light"><source media="(max-width: 720px)" srcset="assets/settings-light-phone.png" width="1432" height="690"><img src="assets/settings-light.png" width="2024" height="1124" alt="Locant Settings window, General tab: Accessibility and Screen Recording granted, the floating ball and auto-hide on, a daily update check, version 0.7.0"></picture><picture class="dark"><source media="(max-width: 720px)" srcset="assets/settings-dark-phone.png" width="1432" height="690"><img src="assets/settings-dark.png" width="2024" height="1124" alt="Locant Settings window, General tab: Accessibility and Screen Recording granted, the floating ball and auto-hide on, a daily update check, version 0.7.0"></picture>
     </figure>
   </section>
 
