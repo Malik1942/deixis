@@ -445,6 +445,7 @@
       <a href="#ball">The ball</a>
       <a href="#payload">Payload</a>
       <a href="#actions">Actions</a>
+      <a href="#measured">Measured</a>
       <a href="#privacy">Privacy</a>
     </div>
     <a class="by" href="https://www.malikzhang.com">Built by Malik</a>
@@ -683,16 +684,33 @@ make this rounded, match the other pills</pre>
     </div>
   </section>
 
-  <section class="col">
+  <section class="col" id="agents">
     <div class="sect-head">
       <h2>Works where you paste</h2>
-      <p class="lede">The payload is plain Markdown, so any agent takes it on paste. Whether it also opens the image, as of version 0.6:</p>
+      <p class="lede">The payload is plain Markdown, so any agent takes it on paste. Settings › Agents connects the MCP server with one click, so the agent can also ask Locant for the capture itself. As of version 0.7.1:</p>
     </div>
     <div class="agents">
-      <div class="agent"><b>Claude Code</b><span>Reads the PNG from the path, check pending</span><span class="chip">Expected to work</span></div>
-      <div class="agent"><b>Cursor</b><span>Reads the path</span><span class="chip dash">Untested</span></div>
-      <div class="agent"><b>Codex CLI</b><span>Views the image at the path</span><span class="chip dash">Untested</span></div>
-      <div class="agent"><b>Gemini CLI, Antigravity</b><span>Untested</span><span class="chip dash">Untested</span></div>
+      <div class="agent"><b>Claude Code</b><span>Reads the PNG from the path; MCP connected from Settings; 30 measured runs (below)</span><span class="chip">Verified</span></div>
+      <div class="agent"><b>Cursor</b><span>Takes the paste, pulls the capture over MCP, edits the right file</span><span class="chip">Verified</span></div>
+      <div class="agent"><b>Codex CLI</b><span>Takes the paste, views the image at the path; MCP connected from Settings</span><span class="chip">Verified</span></div>
+      <div class="agent"><b>Gemini CLI, Antigravity</b><span>Settings › Agents shows the JSON to add; the paste is the same Markdown</span><span class="chip dash">Config shown, not yet run</span></div>
+    </div>
+  </section>
+
+  <section class="col" id="measured">
+    <div class="sect-head">
+      <h2>Measured against a screenshot</h2>
+      <p class="lede">Same fix, same model, same repo, same note. The only difference is what gets pasted: a ⌘⇧4 crop of the phone, or one Locant capture of the orb.</p>
+    </div>
+    <figure class="shot" style="margin: 0 0 18px;">
+      <img src="assets/measured-comparison.png" width="2560" height="1440" alt="Two panels, no build and build verified. Bars: with a screenshot the agent stopped to ask which orb in 6 of 6 and 11 of 12 runs; with Locant, 0 of 6 both times. Dot strips of time to the edit: screenshot medians 39 and 33 seconds, Locant 22 and 16 seconds.">
+    </figure>
+    <div class="ladder">
+      <div class="rung"><span class="n">1</span><span class="chip">17 of 18 · 0 of 12</span><p><b>Stopped to ask which orb.</b> Screenshot runs asked; Locant runs never did. Fisher exact p ≤ 0.002 in both conditions.</p></div>
+      <div class="rung"><span class="n">2</span><span class="chip">39 s → 22 s · 33 s → 16 s</span><p><b>Time from paste to the edit,</b> medians, no build then build verified. The screenshot side's time already leaves out the seconds a person spends answering. Mann–Whitney p ≤ 0.002.</p></div>
+      <div class="rung"><span class="n">3</span><span class="chip">312k → 253k · 287k → 162k</span><p><b>Session tokens,</b> medians. The saving is the turns spent looking and asking, not the image.</p></div>
+      <div class="rung"><span class="n">4</span><span class="chip">30 of 30</span><p><b>Correct edit, right file, every run.</b> Every build in the build condition succeeded. Locant removes the one thing the agent could not know from pixels; it does not make the agent smarter.</p></div>
+      <div class="rung"><span class="n">5</span><span class="chip dash">One task, one app, one model</span><p><b>Read the caveats.</b> Claude Code on Opus 5 at medium effort, fresh session per run, no MCP on either side, no memory, the repo reset between runs, six pairs per condition with the order alternated. Method, raw transcripts and statistics: <a href="https://github.com/Malik1942/locant/blob/main/docs/video/10-measurement-v3.md">the report</a>.</p></div>
     </div>
   </section>
 
