@@ -1,6 +1,6 @@
 # Locant: full script
 
-Runtime target **2:55**. Hard cap 3:00. The brief says less is more, so cut before you pad.
+Runtime target **2:55** (measured from the word counts below). Hard cap 3:00. The brief says less is more, so cut before you pad.
 
 Framing: this is a pitch told as a path. Frustration, approach, proof, next. The demo is evidence for the pitch,
 not the point of the video. Every section ends on one sentence the viewer can repeat.
@@ -9,7 +9,7 @@ Format: **VOICE** is what you say. **SCREEN** is what is shown. **NOTE** is prod
 
 ---
 
-## 1. Why this was worth solving for me (0:00 to 0:52)
+## 1. Why this was worth solving for me (0:00 to 0:38)
 
 **SCREEN**
 No title card. Open on your desktop as it really is when you work: the iOS Simulator with your app on the left,
@@ -19,12 +19,10 @@ talking. If you want to be on camera, this is the only section for it.
 **VOICE**
 > I build my own apps alone. A coding agent does most of the typing.
 >
-> What wore me down wasn't the code. It was the moment after I saw something wrong.
-> A button that should be rounder. Half a second to see it. Then I'd sit there composing the prompt.
+> It was the moment after I saw something wrong that wore me down.
+> A button that should be rounder. Then I'd sit there composing the prompt.
 > Which screen. Which component. Where it sits in the tree.
 > By the time I'd written it, I'd lost the thing I was actually going to say.
->
-> Or I'd paste a screenshot, and watch the agent guess.
 
 **SCREEN**
 Cutaways, two seconds each: you typing a long description into Cursor and deleting half of it; a
@@ -32,7 +30,6 @@ full-screen screenshot pasted into the prompt; the agent's reply asking which bu
 (both from the before-video takes).
 
 **VOICE**
-> Browser tools fix this for the web. Others send a whole window to one agent.
 > I wanted to point at one element in any app, and hand it to whichever agent I'm using.
 
 **SCREEN**
@@ -57,7 +54,7 @@ the name-drops.
 
 ---
 
-## 2. How I approached it (0:52 to 2:15)
+## 2. How I approached it (0:39 to 2:07)
 
 The brief weighs this section most: decisions, challenges, what is worth highlighting, where AI came in. Each
 decision is told as a tension and a choice, so the viewer hears why, not just what.
@@ -68,7 +65,7 @@ decision is told as a tension and a choice, so the viewer hears why, not just wh
 counting down in the menu bar.
 
 **VOICE**
-> The smallest loop that could be useful: hotkey, hover, click, type what should change, Enter, paste.
+> The smallest useful loop: hover, click, type what should change, paste.
 >
 > Four decisions.
 
@@ -78,21 +75,21 @@ The payload in Cursor's input (reel 0:26 to 0:30) with `id=oceanCurrent.product 
 
 **VOICE**
 > One. The accessibility tree, not the pixels. A pixel is a guess; an identifier is something an agent can grep.
-> It goes out as plain Markdown, image path first, so any agent can take it. No plugin, no lock-in.
+> It goes out as plain Markdown, image path first, so any agent can take it.
 
 **SCREEN**
 The fallback ladder from the site, five rungs, one per second (`site-ladder-reveal.mp4`).
 
 **VOICE**
 > Two. No identifier? It steps down a ladder: label and neighbors, a drawn frame, text, then the image alone.
-> And it says which rung it reached, so the agent knows how much to trust it.
+> And it says which rung it reached.
 
 **SCREEN**
 The four action cards, one per second (`site-actions-reveal.mp4`), then the Color pick from the reel (1:12 to 1:19).
 
 **VOICE**
 > Three. It had to replace my screenshot tool, or I'd keep switching apps while polishing. So Snap, Text, Color,
-> and Cut ride the same gesture. Images keep a file; text and colors keep nothing.
+> and Cut ride the same gesture.
 
 **SCREEN**
 The ball, real footage (reel 1:05 to 1:12): docked, waking, the hand, the hold, the ring unfolding.
@@ -108,8 +105,7 @@ window, and the label names a button in the Cursor window behind it.
 
 **VOICE**
 > Two things fought back. My own app's orbs were invisible to accessibility; the ladder came out of that.
-> And Locant must never see itself, so it filters its own windows out of every capture. Point at its Settings,
-> and it names what's behind.
+> And Locant must never see itself, so it filters its own windows out of every capture.
 
 **SCREEN**
 `build-scaffold.mp4` (the PRD becoming a v0.1 plan), `build-decision.mp4` (your "finish the product first, MCP
@@ -117,19 +113,24 @@ later" message, 45 tests passing), `build-v04-timer.mp4` (the diff chip `+381 âˆ
 of Locant's own frame overlay, timer 0:12:54).
 
 **VOICE**
-> AI came in everywhere except the decisions. The overlay was drawn on a canvas with Claude before any code.
-> One spec per version, written with Claude; the Swift by Claude Code. The calls about scope were mine.
+> AI came in everywhere except the decisions. The overlay was drawn with Claude before any code.
+> One spec per version, written with Claude; the Swift by Claude Code.
 > And I used Locant to build Locant.
 
+**SCREEN**
+`build-v04-timer.mp4` holds through this line: the timer reads 0:12:54.
+
+**VOICE**
+> Versions 0.1 to 0.4 were built inside the three-hour window, timer running. 0.5 came the next day.
+> I'm the only author.
+
 **NOTE**
-`[CONFIRM]` Say the time honestly here, in one sentence. Suggested: *"Versions 0.1 to 0.4 were built inside the
-three-hour window, timer running; 0.5 came the next day. I'm the only author."* Rewrite to match what you want to stand behind. The brief requires an existing
-project to be called out explicitly, and the site ribbon already says "v0.4 built in 3 hours," so the video and
-the site must agree.
+Confirmed Sep 15. The site ribbon says "v0.4 built in 3 hours"; the video says the same thing in more words, and
+the timer on screen is the proof. The brief's sole-author call-out is the last sentence.
 
 ---
 
-## 3. Demo (2:15 to 2:37)
+## 3. Demo (2:08 to 2:26)
 
 **SCREEN**
 Take A from `02-demo-script.md`, cut to length. Three seconds with no narration; let the hotkey, hover, and
@@ -138,7 +139,7 @@ click play with sound. The agent on screen is Cursor: the payload lands in its A
 **VOICE**
 > Double-tap Control. Hover; Locant says what it sees before I click.
 >
-> Paste into Cursor. It opens the right file, first try.
+> Paste into Cursor. It opens the right file.
 >
 > After the rebuild, Locant finds the same element again on its own. Show before & after: both images, with
 > the diff beneath.
@@ -153,7 +154,7 @@ not narrated.
 
 ---
 
-## 4. Before and after (2:37 to 2:57)
+## 4. Before and after (2:27 to 2:44)
 
 **SCREEN**
 The results table from `03-before-script.md`, rendered at `~/Desktop/locant-film/v4/measure/results-table.png`,
@@ -161,12 +162,10 @@ rows appearing one at a time, time first. The runs were headless (no split-scree
 split screen, re-run one pair on camera with `03`'s interactive steps and cut it under the same line.
 
 **VOICE**
-> Same fix, same model, same repo.
->
 > From a screenshot, the agent read the whole screen and opened several files before it found the button.
 > From Locant, it went straight there.
 >
-> > Three runs each. From paste to the edit: fifty-two seconds with Locant, a hundred and twelve from a screenshot.
+> > From paste to the edit: fifty-two seconds with Locant, a hundred and twelve from a screenshot.
 > Same tokens, half the time.
 
 **NOTE**
@@ -175,7 +174,7 @@ The numbers are the medians of three headless runs per side (`03`, "Results"). T
 
 ---
 
-## 5. If I had more time (2:57 to 3:07)
+## 5. If I had more time (2:45 to 2:57)
 
 **SCREEN**
 The Locant highlight over one element on a web page in a browser (scene 8's fourth hover, `sceneD2-comp.mp4`),
@@ -195,16 +194,19 @@ exactly where a group is attached"), the site URL, the repo URL. Three seconds, 
 
 ## Timing budget
 
-| Section | Target | Words | Read at 150 wpm | Read at 160 wpm |
-|---|---|---|---|---|
-| 1 Why | 0:52 | 136 | 0:54 | 0:51 |
-| 2 How | 1:23 | 262 | 1:45 | 1:38 |
-| 3 Demo | 0:20 | 42 | 0:16 | 0:15 |
-| 4 Before and after | 0:20 | 55 | 0:22 | 0:21 |
-| 5 Next | 0:12 | 21 | 0:08 | 0:08 |
-| **Total** | **3:08** | **516** | **3:27** | **3:14** |
+Word counts are from `04-voiceover.md` after the Sep 15 cuts. Silence is budgeted at 11 seconds: two at the open,
+three before the demo, three on the end card, three of pauses between sections.
 
-Add three seconds of silence at the top of the demo, the end card, and the pauses between sections: about ten
-seconds. Section 2 now carries the brief's weight and the read is over the cap: about 3:24 at 160 words a minute.
-Get under 3:00 by cutting from sections 1, 3 and 4 first, never from 2; the list at the end of `04-voiceover.md`
-is ordered for that and saves about 25 seconds. Read aloud with a stopwatch before recording anything. Read the voice-over aloud with a stopwatch before recording anything.
+| Section | Target | Words | Read at 160 wpm | Read at 150 wpm |
+|---|---|---|---|---|
+| 1 Why | 0:38 | 96 | 0:36 | 0:38 |
+| 2 How | 1:28 | 233 | 1:27 | 1:33 |
+| 3 Demo | 0:18 | 41 | 0:15 | 0:16 |
+| 4 Before and after | 0:17 | 45 | 0:17 | 0:18 |
+| 5 Next | 0:12 | 23 | 0:09 | 0:09 |
+| Silence | 0:11 | | 0:11 | 0:11 |
+| **Total** | **2:55** | **438** | **2:55** | **3:05** |
+
+Read at 160 words a minute and the video lands at 2:55. At 150 it lands at 3:05, so at that pace apply the
+remaining cuts in `04-voiceover.md` (they save about eight seconds) or trim the silence. Read aloud with a
+stopwatch before recording anything; do not speed up to fit.

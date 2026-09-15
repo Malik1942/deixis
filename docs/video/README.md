@@ -46,7 +46,8 @@ screenshot and the Locant payload used).
 - **Existing project.** The brief allows an existing project only if you are its sole author, and asks that this be
   called out explicitly in the submission. Locant is sole-authored, so say so.
 
-Both lines are already in the scripts, marked `[CONFIRM]`. Adjust them to the facts you want to stand behind.
+Both lines are in section 2 of the scripts and were confirmed on Sep 15: "Versions 0.1 to 0.4 were built inside
+the three-hour window, timer running. 0.5 came the next day. I'm the only author."
 
 ## Recording setup (applies to every take)
 
