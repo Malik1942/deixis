@@ -386,24 +386,25 @@
   .limit h3 { font-size: 17px; }
   .limit p { font-size: 14px; color: var(--muted); }
 
-  /* footer: an action row, then a colophon line, each under its own hairline */
-  footer { margin-top: 96px; padding-top: 32px; border-top: 1px solid var(--hair); display: grid; gap: 32px; font-size: 14px; color: var(--muted); }
-  footer .row { display: flex; gap: 12px 22px; flex-wrap: wrap; align-items: center; }
-  footer .row .btn { padding: 10px 18px; font-size: 15px; }
-  footer .row .ver { border-left: 1px solid var(--hair); padding-left: 22px; line-height: 1.2; }
-  footer .colophon { padding-top: 24px; border-top: 1px solid var(--hair); display: flex; justify-content: space-between; align-items: baseline; gap: 16px 32px; flex-wrap: wrap; font-size: 13px; line-height: 1.5; }
-  footer .word { max-width: 52ch; }
+  /* footer: one hairline, then the small print and a single line of links, the way apple.com closes a page */
+  footer { margin-top: 96px; padding-top: 28px; border-top: 1px solid var(--hair); display: grid; gap: 22px; font-size: 12px; line-height: 1.5; color: var(--muted); }
+  footer .word { max-width: 60ch; font-size: 13px; }
   footer .word p { margin: 0; }
   footer .word .head { margin-bottom: 2px; }
   footer .word b { color: var(--ink); font-weight: 600; font-size: 14px; }
   footer .word .say { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 12px; margin-inline: 6px 8px; }
   footer .word i { font-style: italic; }
   footer .word .nowrap { white-space: nowrap; }
-  footer .colophon .by { font-weight: 500; }
+  footer .row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 24px; }
+  footer .links { display: flex; flex-wrap: wrap; margin-left: auto; }
+  footer .links a { color: var(--ink); text-decoration: none; }
+  footer .links a:hover { text-decoration: underline; }
+  footer .links a:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 3px; }
+  footer .links a + a { margin-left: 10px; padding-left: 10px; border-left: 1px solid var(--hair); }
 
   @media (max-width: 720px) {
     .hero { padding-block: 56px 36px; }
-    footer .row .ver { border-left: 0; padding-left: 0; flex-basis: 100%; }
+    footer .links { margin-left: 0; flex-basis: 100%; }
     .app-icon { width: 96px; height: 96px; border-radius: 21.5px; }
     .grid2, .notes, .limits { grid-template-columns: 1fr; }
     .agent { grid-template-columns: 1fr auto; gap: 6px 12px; }
@@ -704,17 +705,17 @@ make this rounded, match the other pills</pre>
   </section>
 
   <footer class="col">
-    <div class="row">
-      <a class="btn" href="https://github.com/Malik1942/locant/releases/latest/download/Locant.dmg">Download for Mac</a>
-      <a class="link" href="https://github.com/Malik1942/locant">GitHub</a>
-      <span class="ver">Version 0.7.0</span>
+    <div class="word">
+      <p class="head"><b>lo·cant</b><span class="say">/ˈloʊ·kənt/</span><i>noun</i></p>
+      <p>The number in a chemical name that says exactly where a group is attached, as the&nbsp;2 in 2‑methylbutane. <span class="nowrap">One number, one molecule.</span></p>
     </div>
-    <div class="colophon">
-      <div class="word">
-        <p class="head"><b>lo·cant</b><span class="say">/ˈloʊ·kənt/</span><i>noun</i></p>
-        <p>The number in a chemical name that says exactly where a group is attached, as the&nbsp;2 in 2‑methylbutane. <span class="nowrap">One number, one molecule.</span></p>
-      </div>
-      <a class="link by" href="https://www.malikzhang.com">Built by Malik</a>
+    <div class="row">
+      <span class="ver">Locant 0.7.0 for Mac</span>
+      <nav class="links" aria-label="Footer">
+        <a href="https://github.com/Malik1942/locant/releases/latest/download/Locant.dmg">Download for Mac</a>
+        <a href="https://github.com/Malik1942/locant">GitHub</a>
+        <a href="https://www.malikzhang.com">Built by Malik</a>
+      </nav>
     </div>
   </footer>
 </main>
