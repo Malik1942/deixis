@@ -8,12 +8,12 @@ Deixis is a macOS menu bar tool. Press a hotkey, click one element in any app, t
 
 ## Install
 
-1. Download the dmg from Releases and drag Deixis to Applications. (Until then, build from source below.)
+1. [Download Deixis.dmg](https://github.com/Malik1942/deixis/releases/latest/download/Deixis.dmg) and drag Deixis to Applications. To update, do the same over the old copy; the permissions carry over.
 2. Launch Deixis. It has no Dock icon; look for the pointing hand in the menu bar.
 3. Grant the permissions it asks for, in this order:
    - **Accessibility**: reads what is under your cursor and listens for the hotkey. Without it nothing works.
    - **Screen Recording**: captures the pixels of the element. Asked on first launch; macOS applies a fresh grant after a relaunch, and offers to do that itself.
-   - There is no third prompt. Nothing leaves the machine: no network, no telemetry, no accounts.
+   - There is no third prompt. Nothing leaves the machine: no telemetry, no accounts. The one request Deixis makes is a daily check for a newer release on GitHub, which tells you when there is one; turn it off in Settings › General.
 4. A one-page guide opens: every action, its hotkey, and the gestures on the overlay. Close it; reopen it any time from Settings › General (Deixis Help). It also says how long images are kept. The first three times each action opens, a line at the bottom of the screen names its gestures, then fades by itself.
 
 ## Use
@@ -63,7 +63,7 @@ Point is the primary action. Four one-shot actions share its gesture and sit on 
 
 After a capture of your own app and an agent's edit, choose **See what changed** in the menu. Deixis finds the same element again in the running app by its identifier (then by role and label, then by the nearest frame), captures it, records the git facts, and opens **Before & After**: the two images side by side with one zoom, the diff stat and the files touched beneath, your note above. Each pass adds an iteration under the original capture; **Show before & after** reopens the newest one.
 
-Git facts need a project folder. Deixis finds it for Xcode builds, including apps running in the Simulator, through DerivedData; the sidecar records the commit at capture time, and the diff runs against it, or against the working tree when nothing was committed. Deixis never commits, never installs hooks, never talks to the network.
+Git facts need a project folder. Deixis finds it for Xcode builds, including apps running in the Simulator, through DerivedData; the sidecar records the commit at capture time, and the diff runs against it, or against the working tree when nothing was committed. Deixis never commits, never installs hooks, never talks to the network for this.
 
 ## Agent compatibility
 
