@@ -73,7 +73,12 @@ Oryne reset with `git checkout -- Oryne` between runs. Runner and transcripts: `
 - Tokens are the session totals from Claude Code's result event (input + output + cache writes + cache reads);
   "files opened" counts Read plus Grep/Glob calls, and greps run through Bash are listed separately.
 
-## Results (Sep 15, 2026, refined)
+## Results (Sep 15, 2026, refined; superseded by `10-measurement-v3.md`)
+
+**Read `10-measurement-v3.md` first.** It is the controlled version of this measurement (precise note, two conditions,
+statistics). The numbers below are the earlier pass and are kept for the record.
+
+### Earlier pass
 
 The measurement that counts is the third one. The first used a full-display screenshot (unfair; nobody pastes
 that). The second used a ⌘⇧4 crop but ran on Fable at high effort with the earlier runner. The third, below, is
