@@ -15,8 +15,8 @@ Clean narration, in order, with timing. Print this page. Nothing here is on scre
   the cognitive load; each item is a separate thought.
 - **Takes.** Record each section as its own file, three takes each, then pick. Leave two seconds of room tone at
   the head and tail of every file.
-- **Two lines to confirm before the mic.** The time-window line in section 2 and the numbers in section 4 are
-  placeholders. Fill them in first.
+- **One line to confirm before the mic.** The time-window line in section 2 is still marked `[CONFIRM]`. The
+  section 4 numbers are measured (medians of three runs, `03-before-script.md`).
 
 ---
 
@@ -80,20 +80,21 @@ the diff beneath.
 
 ---
 
-## 4. Before and after · 41 words · 2:27 to 2:43
+## 4. Before and after · 55 words · 2:27 to 2:47
 
 Same fix, same model, same repo.
 
 From a screenshot, the agent read the whole screen and opened several files before it found the button.
 From Locant, it went straight there.
 
-[NUMBERS] ___ times fewer tokens. ___ seconds instead of ___.
+Three runs each. From paste to the edit: fifty-two seconds with Locant, a hundred and twelve from a screenshot.
+Same tokens, half the time.
 
 ---
 
-## 5. Next · 24 words · 2:43 to 2:55
+## 5. Next · 21 words · 2:47 to 2:57
 
-Next is an MCP server, so the agent can ask Locant "what's under the cursor" itself.
+Next is the web: a small extension that adds the CSS selector, so pointing works the same on any page.
 
 Point, don't describe.
 

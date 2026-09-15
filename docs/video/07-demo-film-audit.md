@@ -1,9 +1,10 @@
 # Locant demo footage — Gap Audit (v4)
 
-Delivered file: `~/Desktop/locant-film/v4/locant-demo-reel-v4.mp4` (2560×1440, 60 fps, 102.3 s, silent), stitched
-from six scene files in `~/Desktop/locant-film/v4/`: `sceneA-comp.mp4` (42.8 s, the ball trigger, the loop and the
+Delivered file: `~/Desktop/locant-film/v4/locant-demo-reel-v5.mp4` (2560×1440, 60 fps, 104.7 s, silent), stitched
+from seven scene files in `~/Desktop/locant-film/v4/`: `sceneA-comp.mp4` (42.8 s, the ball trigger, the loop and the
 Cursor agent), `sceneB-comp.mp4` (21.3 s, Before & After), `sceneC-comp.mp4` (14.4 s, the ball and ring),
-`sceneD-comp.mp4` (4.2 s, three hovers), `sceneE1-comp.mp4` (10 s, Codex), `sceneE2-comp.mp4` (10 s, Claude Code).
+`sceneD-comp.mp4` (4.2 s, three hovers), `sceneD2-comp.mp4` (3.0 s, a web page in Safari), `sceneE1-comp.mp4`
+(10 s, Codex), `sceneE2-comp.mp4` (10 s, Claude Code). v5 adds scene D2 after D; everything else is the v4 reel.
 The v3 audit follows below as history; v2 is in `07-demo-film-audit-v2.md`.
 
 ## What v4 changed, against the five critiques of v3
@@ -31,6 +32,8 @@ Verdicts from frames of the delivered reel.
 | 7 | Ball and ring, Color, the pick | 1:05–1:19: 1.5 top-right: wake, hand, the ring with Snap / Cut / Text / Color, Color chosen, the magnifier; one ease to the Simulator; the pick on the Resurfacing card; `Copied · #2A2B2C` | MET |
 | 8 | Any app | 1:19–1:23 at 1.35, three cuts: `button · Eight`, `slider · no identifier`, `button · oceanCurrent.product ideas` | MET |
 | 9 | Any agent | 1:24–1:34 Codex 0.154, whole window: payload, send, "I'll inspect the captured orb"; 1:34–1:44 Claude Code, whole window: paste expanded, send, thinking | MET |
+| 10 | (Added Sep 15) Scene 8, a web page | 1:23–1:26 at 1.35: the site in Safari, `link "Download for Mac" · no identifier` with a tight frame on the button, then `staticText · no identifier` on the How it works link. Web elements carry no identifier, so the label is the text: rung 2 | MET |
+| 11 | (Attempted) Locant over its own Settings | Not in the reel. Locant's hit test skips its own windows; the overlay over Settings read the Cursor window behind it (`button "Oryne/App/SeedScreenshot.swift"`). The pitch uses the build recording for "Locant to build Locant" | DROPPED |
 
 ## Gulfs
 

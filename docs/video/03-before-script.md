@@ -56,16 +56,53 @@ tokens, and it is the more honest headline than the tokens themselves.
 | 3 | Wait. | The agent opens the PNG at the path, greps `captureButton`, opens the file. |
 | 4 | Stop the clock at the edit. Run `/cost`. | Same columns. |
 
-## Results table (fill from your runs)
+## As run (Sep 15, 2026)
+
+The measurement was run headless so both sides are identical except for the pasted content: Claude Code 2.1.272 in
+print mode (`claude -p … --output-format stream-json --verbose`, permission mode acceptEdits, no MCP servers on
+either side so the Locant side cannot ask Locant for anything the screenshot side cannot), fresh session per run,
+Oryne reset with `git checkout -- Oryne` between runs. Runner and transcripts: `~/Desktop/locant-film/v4/measure/`.
+
+- Note, both sides: `make this orb bigger, with satellite nodes like Light And Color` (the demo's note; the first
+  candidate, "give this orb a thin white outline", hit Oryne's do-not-touch rule for the Ocean field and the agent
+  stopped, so it measured the rule, not the payload).
+- Left: `Screenshot: <path to a ⌘⇧3-style capture of the whole LG display, 6016×3384>` and the note.
+- Right: the Markdown Locant put on the clipboard for a real capture of the Product Ideas orb with that note.
+- Stopping rule as above: if a run ends with no edit and a question, the session is resumed once with the shortest
+  true answer (`the Product Ideas orb, the big one at the top left`) and the two invocations are summed.
+- Tokens are the session totals from Claude Code's result event (input + output + cache writes + cache reads);
+  "files opened" counts Read plus Grep/Glob calls, and greps run through Bash are listed separately.
+
+## Results (Sep 15, 2026, Claude Code 2.1.272, model claude-fable-5-1, three runs per side)
 
 | | Screenshot (median of 3) | Locant (median of 3) |
 |---|---|---|
-| Human time before the paste | ___ s | ___ s |
-| Agent time, paste to edit | ___ s | ___ s |
-| Files the agent opened | ___ | ___ |
-| Clarifying questions | ___ | ___ |
-| Session tokens (`/cost`) | ___ | ___ |
-| First edit in the right file | ___ of 3 | ___ of 3 |
+| Human time before the paste | not timed (headless) | not timed (headless) |
+| Agent time, paste to first edit | 112 s | 52 s |
+| Files the agent read | 7 | 4 |
+| Shell greps and finds | 20 | 17 |
+| Clarifying questions | 0 | 0 |
+| Session tokens (input + output + cache) | 485k | 483k |
+| Tokens not served from cache | 28.4k | 24.0k |
+| Cost reported by Claude Code | $1.22 | $0.95 |
+| First edit in the right file (`SeedScreenshot.swift`) | 3 of 3 | 3 of 3 |
+
+Raw runs, paste to first edit: screenshot 83.5 s, 112.1 s, 128.3 s; Locant 26.0 s, 51.7 s, 114.3 s. Every run
+ended with the seed edit made and then a blocked `xcodebuild` (the sandbox refuses builds on both sides alike), so
+wall time past the edit is not comparable and is not reported.
+
+What the numbers support, and what they do not:
+
+- **Time.** Locant halved the median time to the edit. Say "half the time", not a ratio to two decimals; the spread
+  is wide (one Locant run took 114 s, one screenshot run 84 s).
+- **Tokens.** No difference to claim. The session totals are dominated by cache reads, which scale with turns, not
+  with the image; the screenshot's image is larger (575 KB of base64 in the transcript versus 117 KB for the crop)
+  but current models cap image tokens, so the pasted image is not where the cost lives. Do not say "fewer tokens".
+- **Files.** Both sides found the right file first; the screenshot side searched longer (more reads, more greps)
+  before editing. "It went straight there" is fair as a relative statement, not an absolute one.
+- **Caveat.** One screenshot run and one Locant run spawned a subagent whose tokens are not in the parent's total.
+  The agents on both sides grepped for the words in the note ("Light And Color", "Product Ideas") before the
+  identifier, because in this app the identifier is derived from the same label.
 
 ## The one number you can compute
 

@@ -98,6 +98,8 @@ verified by the gate's motion test, real pointer, 120 Hz minimum-jerk moves.
 | D | `takeD.mov` | 14.0 s | `button · Eight`, `slider · no identifier`, the orb |
 | E1 | `takeE1.mov` | 16.9 s | The payload into a fresh Codex session, sent, the agent starts |
 | E2 | `takeE2.mov` | 16.9 s | The payload into Claude Code, sent, the agent starts |
+| D2 | `takeD2.mov` | 11.7 s | Scene 8, fourth hover: the site in Safari on the stage, `link "Download for Mac" · no identifier`, then `staticText · no identifier` on the How it works nav link. `takeD2-0-shifted.mov` hovered 80 pt low after Safari's default-browser banner was dismissed |
+| F | `takeF-0-selfexcluded.mov` | 11.5 s | Locant over its own Settings window: unusable, see below |
 
 Facts learned:
 - A ball click opens the overlay only once the ball has woken; approach to within 70 pt and wait two seconds.
@@ -105,6 +107,14 @@ Facts learned:
   attempt typed the note into the frontmost app.
 - The cursor helper's earlier moves posted about 28 events a second; the 120 Hz version reads smooth at 60 fps.
 - The compact 2× stage is what makes the punches sharp: 1.5 on a 1920 pt region is exactly 2560 px.
+- Safari on the stage: position the window with `tell application "Safari" to set bounds`, not System Events
+  (access denied). Dismiss the default-browser banner before measuring targets; it shifts the page by 80 pt.
+  Safari's accessibility tree exposes the nav links; Locant reads `link`/`staticText` with the text as label.
+- Locant excludes its own windows from the hit test, so a hover over its Settings window reads the window
+  behind it. "Locant to build Locant" comes from the build recording instead (`build/build-v04-timer.mp4`).
+- Section 2 cutaways are cut from `~/Movies/2026-09-13 15-24-58.mov` into `v4/build/` (see `05`); the site's
+  ladder and action cards are rendered from `site/index.html` with headless Chrome at 2× (`site-*.png`,
+  `site-*-reveal.mp4`).
 
 ## Capture log, v3 (Sep 15, 2026, on the LG UltraFine)
 

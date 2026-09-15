@@ -17,11 +17,19 @@ and optionally what you would do with more time. Less is more.
 
 ## Delivered footage
 
-`~/Desktop/locant-film/v4/locant-demo-reel-v4.mp4` is a silent 102 s review reel of six scene files in the same folder
+`~/Desktop/locant-film/v4/locant-demo-reel-v5.mp4` is a silent 105 s review reel of seven scene files in the same folder
 (`sceneA-comp.mp4` the ball trigger, the loop and the Cursor agent, `sceneB-comp.mp4` Before & After, `sceneC-comp.mp4`
-the ball and ring, `sceneD-comp.mp4` three hovers, `sceneE1-comp.mp4` Codex, `sceneE2-comp.mp4` Claude Code), all
+the ball and ring, `sceneD-comp.mp4` three hovers, `sceneD2-comp.mp4` a web page, `sceneE1-comp.mp4` Codex,
+`sceneE2-comp.mp4` Claude Code), all
 2560x1440 at 60 fps from a 2x capture of a compact stage on the LG with Locant 0.7.1. Cut the scene files under the
 narration; the reel is for review only. The v3 footage stays in `~/Desktop/locant-film/v3/`.
+
+Section 2 cutaways are in `~/Desktop/locant-film/v4/build/`: seven clips from the Sep 13 build recording at the
+beats in `05` (`build-canvas`, `build-scaffold`, `build-v01-timer`, `build-null-element`, `build-decision`,
+`build-v03-plan`, `build-v04-timer`), a 20 s time-lapse of the three-hour window (`build-timelapse-3h.mp4`), and the
+site's ladder and action cards as 2× stills and one-row-per-second reveals (`site-ladder*`, `site-actions*`).
+The section 4 measurement lives in `~/Desktop/locant-film/v4/measure/` (`results.tsv`, the six run transcripts, the
+screenshot and the Locant payload used).
 
 ## Order of work
 
