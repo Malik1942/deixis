@@ -22,7 +22,8 @@ agent must verify with a build.
   app." (permission mode acceptEdits). Build: "Make this change, then verify it compiles by running exactly:
   `xcodebuild … build -quiet`. Do not install or launch the app." (permissions skipped so the build can run on
   both sides).
-- **Design.** Six pairs per condition, order alternated: screenshot first in pairs 1, 3, 5; Locant first in 2, 4, 6.
+- **Design.** Six pairs per condition, order alternated: screenshot first in pairs 1, 3, 5; Locant first in 2, 4, 6. Six more
+  screenshot-side runs were added to the build condition afterwards (runs 7 to 12), so that cell has 12.
 - **Clarifying questions.** When a run ended with no edit and a question, the session was resumed once with the
   shortest true answer, "the Product Ideas orb, the big one at the top left". Time to the edit then sums both
   invocations; the seconds a person would spend reading the question and answering are *not* counted, which
@@ -36,9 +37,9 @@ agent must verify with a build.
 
 ## Results
 
-## claude-opus-5 · build · 6 pairs
+## claude-opus-5 · build · 12 screenshot runs, 6 Locant runs
 
-| pair | screenshot: to edit | asked | correct | tokens | $ | Locant: to edit | asked | correct | tokens | $ |
+| run | screenshot: to edit | asked | correct | tokens | $ | Locant: to edit | asked | correct | tokens | $ |
 |---|---|---|---|---|---|---|---|---|---|---|
 | 1 | 26 s | no | yes | 211k | 0.36 | 16 s | no | yes | 162k | 0.29 |
 | 2 | 31 s | yes | yes | 286k | 0.41 | 16 s | no | yes | 161k | 0.28 |
@@ -46,23 +47,29 @@ agent must verify with a build.
 | 4 | 33 s | yes | yes | 253k | 0.39 | 16 s | no | yes | 163k | 0.29 |
 | 5 | 34 s | yes | yes | 245k | 0.39 | 17 s | no | yes | 161k | 0.29 |
 | 6 | 26 s | yes | yes | 214k | 0.36 | 17 s | no | yes | 162k | 0.28 |
+| 7 | 36 s | yes | yes | 325k | 0.43 | — | — | — | — | — |
+| 8 | 32 s | yes | yes | 288k | 0.42 | — | — | — | — | — |
+| 9 | 32 s | yes | yes | 263k | 0.43 | — | — | — | — | — |
+| 10 | 36 s | yes | yes | 316k | 0.43 | — | — | — | — | — |
+| 11 | 30 s | yes | yes | 307k | 0.45 | — | — | — | — | — |
+| 12 | 36 s | yes | yes | 338k | 0.47 | — | — | — | — | — |
 
 | | Screenshot | Locant |
 |---|---|---|
-| Asked which orb | 5 of 6 | 0 of 6 |
-| Correct edit | 6 of 6 | 6 of 6 |
-| Build succeeded | 6 of 6 | 6 of 6 |
-| Time to the edit, median (mean) | 32 s (31) | 16 s (16) |
-| Turns, median | 13 | 8 |
+| Asked which orb | 11 of 12 | 0 of 6 |
+| Correct edit | 12 of 12 | 6 of 6 |
+| Build succeeded | 12 of 12 | 6 of 6 |
+| Time to the edit, median (mean) | 33 s (32) | 16 s (16) |
+| Turns, median | 14 | 8 |
 | Files read, median | 2 | 1 |
-| Session tokens, median | 250k | 162k |
-| Cost, median | $0.39 | $0.29 |
+| Session tokens, median | 287k | 162k |
+| Cost, median | $0.42 | $0.29 |
 
-Mann–Whitney on time to the edit (exact, two-sided): U = 36, p = 0.002. Fisher exact on asked: p = 0.015.
+Mann–Whitney on time to the edit (exact, two-sided): U = 72, p = 0.0001. Fisher exact on asked: p = 0.0004.
 
-## claude-opus-5 · nobuild · 6 pairs
+## claude-opus-5 · nobuild · 6 screenshot runs, 6 Locant runs
 
-| pair | screenshot: to edit | asked | correct | tokens | $ | Locant: to edit | asked | correct | tokens | $ |
+| run | screenshot: to edit | asked | correct | tokens | $ | Locant: to edit | asked | correct | tokens | $ |
 |---|---|---|---|---|---|---|---|---|---|---|
 | 1 | 90 s | yes | yes | 332k | 0.77 | 22 s | no | yes | 253k | 0.34 |
 | 2 | 92 s | yes | yes | 325k | 0.80 | 22 s | no | yes | 252k | 0.33 |
@@ -81,22 +88,22 @@ Mann–Whitney on time to the edit (exact, two-sided): U = 36, p = 0.002. Fisher
 | Session tokens, median | 312k | 253k |
 | Cost, median | $0.48 | $0.34 |
 
-Mann–Whitney on time to the edit (exact, two-sided): U = 36, p = 0.002. Fisher exact on asked: p = 0.002.
+Mann–Whitney on time to the edit (exact, two-sided): U = 36, p = 0.0022. Fisher exact on asked: p = 0.0022.
 
 
 ## Reading it
 
-- **The question is the effect.** With a screenshot the agent stopped to ask which orb in 11 of 12 runs; with a
+- **The question is the effect.** With a screenshot the agent stopped to ask which orb in 17 of 18 runs; with a
   Locant capture it asked in 0 of 12. The one screenshot run that did not ask (build condition, pair 1) guessed
   Product Ideas and happened to be right.
-- **Time.** Locant reached the edit in a tight band, 22 s without a build and 16 s with one, versus 39 s and 32 s
-  medians for the screenshot side even after excluding the human's answer time. Both differences are at p = 0.002.
+- **Time.** Locant reached the edit in a tight band, 22 s without a build and 16 s with one, versus 39 s and 33 s
+  medians for the screenshot side even after excluding the human's answer time. The differences are at p = 0.002 (no build) and p < 0.001 (build).
 - **Build verification changes nothing about the comparison.** Both sides built successfully every time; the
   gap in time, turns and tokens is the same shape. Absolute times are lower in the build condition because
   permission checks were skipped there for both sides, so do not compare seconds across conditions.
 - **Tokens and cost.** Locant used fewer on every pair in both conditions (medians 253k against 312k, 162k against
-  250k). The saving is the turns spent looking and asking, not the image.
-- **Correctness.** 12 of 12 on both sides once the question was answered. The tool does not make the agent
+  287k). The saving is the turns spent looking and asking, not the image.
+- **Correctness.** 18 of 18 screenshot runs and 12 of 12 Locant runs once the question was answered. The tool does not make the agent
   smarter; it removes the one thing the agent could not know from pixels.
 
 ## Threats to validity, stated
@@ -109,6 +116,9 @@ Mann–Whitney on time to the edit (exact, two-sided): U = 36, p = 0.002. Fisher
 - Answer time is excluded. Including any realistic value (five to fifteen seconds) widens the gap.
 - Earlier measurements in this folder used a full-display screenshot (unfair to the screenshot side) or a model
   at high effort; they are kept for the record and superseded by this one.
+
+Figures (16:9, 2560×1440): `figures/1-comparison.png`, `figures/2-all-runs.png`, `figures/3-outcome.png`,
+rendered by `gen_figs.py` from the tsv files.
 
 Raw data: `results-claude-opus-5-nobuild.tsv`, `results-claude-opus-5-build.tsv`, one `.jsonl` transcript and
 one `.diff` per run, `run.sh`, `check.py`, `rejudge.py`, `stats.py`, `binary-mtime.log`.
