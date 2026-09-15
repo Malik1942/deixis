@@ -30,6 +30,7 @@
     --shadow: 0 1px 2px rgba(0,0,0,.06), 0 12px 32px rgba(0,0,0,.08);
     --icon-shadow: 0 2px 4px rgba(0,0,0,.10), 0 14px 28px rgba(0,0,0,.16);
     --icon: url("assets/icon-light.png");
+    --show-light: block; --show-dark: none;
     color-scheme: light;
   }
   @media (prefers-color-scheme: dark) {
@@ -55,6 +56,7 @@
       --shadow: 0 1px 2px rgba(0,0,0,.4), 0 12px 32px rgba(0,0,0,.5);
       --icon-shadow: 0 2px 4px rgba(0,0,0,.4), 0 14px 28px rgba(0,0,0,.5);
       --icon: url("assets/icon-dark.png");
+      --show-light: none; --show-dark: block;
       color-scheme: dark;
     }
   }
@@ -80,6 +82,7 @@
     --shadow: 0 1px 2px rgba(0,0,0,.4), 0 12px 32px rgba(0,0,0,.5);
     --icon-shadow: 0 2px 4px rgba(0,0,0,.4), 0 14px 28px rgba(0,0,0,.5);
     --icon: url("assets/icon-dark.png");
+    --show-light: none; --show-dark: block;
     color-scheme: dark;
   }
 
@@ -359,7 +362,9 @@
   .ba .facts .file { color: var(--muted); }
 
   .shot { display: grid; justify-items: center; }
-  .shot img { width: 100%; max-width: 980px; height: auto; display: block; }   /* the full column, like the hero stage */
+  .shot img { width: 100%; max-width: 980px; height: auto; }   /* the full column, like the hero stage */
+  .shot img.light { display: var(--show-light); }
+  .shot img.dark { display: var(--show-dark); }
 
   .grid2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
   .grid2 .item { display: grid; gap: 6px; align-content: start; padding: 18px 20px; background: var(--surface); border-radius: 16px; box-shadow: 0 0 0 1px var(--hair); }
@@ -638,7 +643,7 @@ make this rounded, match the other pills</pre>
       <p class="lede">The one place Deixis is a window. Every default works on first launch.</p>
     </div>
     <figure class="shot" style="margin: 0;">
-      <img src="assets/settings-dark.png" width="1264" height="1124" alt="Deixis Settings window, General tab: capture hotkey set to double-tap Control, a toggle to adjust the selection before capturing, and per-action hotkeys for Snap, Text, Color, and Cut">
+      <img class="light" src="assets/settings-light.png" width="1424" height="1344" alt="Deixis Settings window, General tab: Accessibility and Screen Recording granted, capture hotkey set to double-tap Control, a toggle to adjust the selection before capturing, and per-action hotkeys for Point, Snap, Text, Color, and Cut"><img class="dark" src="assets/settings-dark.png" width="1424" height="1344" alt="Deixis Settings window, General tab: Accessibility and Screen Recording granted, capture hotkey set to double-tap Control, a toggle to adjust the selection before capturing, and per-action hotkeys for Point, Snap, Text, Color, and Cut">
     </figure>
   </section>
 
