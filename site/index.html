@@ -354,6 +354,8 @@
 
   @media (max-width: 720px) {
     .hero { padding-block: 56px 36px; }
+    /* phones get the loop cut at 4:5 (hero-mobile.mp4): the same take, framed on each shot's subject */
+    .demo { aspect-ratio: 4 / 5; object-fit: cover; border-radius: 14px; }
     .fine .g { flex-basis: 100%; justify-content: center; }
     .fine .g + .g::before { content: none; }
     /* phones get the same window captured at its narrowest (480 pt), so macOS wraps the text itself */
@@ -415,7 +417,7 @@
   </header>
 
   <figure class="wide" style="margin-block: 0;">
-    <video class="demo" autoplay muted loop playsinline preload="metadata" poster="assets/hero-poster.jpg" width="1920" height="1080" aria-label="The loop, recorded: the ball wakes and is clicked, the overlay dims the screen, hovering the orb in the iPhone Simulator shows button · oceanCurrent.product.ideas, a click opens the note field, the note is typed, Enter copies, and the Markdown payload lands in Cursor's chat with the image path first"><source src="assets/hero.mp4" type="video/mp4"></video>
+    <video class="demo" autoplay muted loop playsinline preload="metadata" poster="assets/hero-poster.jpg" width="1920" height="1080" aria-label="The loop, recorded: the ball wakes and is clicked, the overlay dims the screen, hovering the orb in the iPhone Simulator shows button · oceanCurrent.product.ideas, a click opens the note field, the note is typed, Enter copies, and the Markdown payload lands in Cursor's chat with the image path first"><source media="(max-width: 720px)" src="assets/hero-mobile.mp4" type="video/mp4"><source src="assets/hero.mp4" type="video/mp4"></video>
     <figcaption>Click the ball, hover, click, say what should change, paste. Every frame is a real capture.</figcaption>
   </figure>
 
