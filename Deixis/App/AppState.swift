@@ -50,7 +50,9 @@ final class AppState {
     @ObservationIgnored private var colorSession: ColorPickerSession?
     @ObservationIgnored private var clipboardOnlyPreset = false
     @ObservationIgnored private var sweepTask: Task<Void, Never>?
+    @ObservationIgnored private var updateTask: Task<Void, Never>?
     @ObservationIgnored private let beforeAfter = BeforeAfterWindow()
+    @ObservationIgnored private let help = HelpWindow()
     /// R25: the last ten picked colors, in memory only.
     @ObservationIgnored private(set) var recentColors: [ColorValue] = []
     @ObservationIgnored private var clickPoint: CGPoint = .zero
@@ -73,7 +75,9 @@ final class AppState {
             self.ball?.autoHide = self.preferences.ballAutoHide
         }
         updateBall()
+        showHelpOnFirstLaunch()
         scheduleSweeps()
+        scheduleUpdateChecks()
         overlay.onHover = { [weak self] point in self?.hover(point) }
         overlay.onClick = { [weak self] point in self?.click(point) }
         overlay.onCancel = { [weak self] in self?.cancel() }
@@ -176,6 +180,73 @@ final class AppState {
         }
     }
 
+    // MARK: Updates (v0.6 R45)
+
+    /// 10 s after launch, then every 24 hours while running; skipped when the last check, on any
+    /// launch, is under 24 hours old or the switch is off. Failures are silent.
+    private func scheduleUpdateChecks() {
+        updateTask?.cancel()
+        updateTask = Task { @MainActor [weak self] in
+            try? await Task.sleep(for: UpdateCheck.launchDelay)
+            while !Task.isCancelled {
+                guard let self else { return }
+                if self.preferences.checksForUpdates, UpdateCheck.isDue(lastCheck: self.preferences.lastUpdateCheck) {
+                    await self.checkForUpdates(manual: false)
+                }
+                try? await Task.sleep(for: .seconds(UpdateCheck.interval))
+            }
+        }
+    }
+
+    /// The daily check, or Settings › General "Check Now…" (`manual`), which ignores the daily
+    /// limit and the skipped version and always answers with an alert (R47).
+    func checkForUpdates(manual: Bool) async {
+        guard let current = UpdateCheck.currentVersion else { return }
+        preferences.lastUpdateCheck = .now
+        let latest: GitHubRelease
+        do {
+            latest = try await UpdateCheck.fetch(current: current)
+        } catch {
+            if manual { inform("Deixis could not reach GitHub.", detail: "Try again later. The check runs by itself once a day.") }
+            return
+        }
+        switch UpdateCheck.outcome(latest: latest, current: current, skipped: manual ? nil : preferences.skippedUpdateVersion) {
+        case .available(let release):
+            // R48: never over the overlay; the daily check tries again tomorrow instead of waiting.
+            guard manual || phase == .idle else { return }
+            offerUpdate(release, current: current)
+        case .upToDate:
+            if manual { inform("Deixis \(current) is up to date.", detail: "The newest release on GitHub is \(latest.tagName).") }
+        case .skipped:
+            break
+        }
+    }
+
+    private func offerUpdate(_ release: GitHubRelease, current: AppVersion) {
+        let newest = release.version.map(\.description) ?? release.tagName
+        let alert = NSAlert()
+        alert.messageText = "Deixis \(newest) is available"
+        alert.informativeText = "You have \(current). Download the dmg and drag Deixis over the copy in Applications; the permissions carry over because every release is signed with the same Developer ID."
+        alert.addButton(withTitle: "Download")
+        alert.addButton(withTitle: "Later")
+        alert.addButton(withTitle: "Skip This Version")
+        NSApp.activate()
+        switch alert.runModal() {
+        case .alertFirstButtonReturn: NSWorkspace.shared.open(release.downloadURL)
+        case .alertThirdButtonReturn: preferences.skippedUpdateVersion = newest
+        default: break
+        }
+    }
+
+    private func inform(_ message: String, detail: String) {
+        let alert = NSAlert()
+        alert.messageText = message
+        alert.informativeText = detail
+        alert.addButton(withTitle: "OK")
+        NSApp.activate()
+        alert.runModal()
+    }
+
     // MARK: Verify (v0.4)
 
     /// The newest Point capture: an image with a sidecar.
@@ -271,18 +342,7 @@ final class AppState {
             beforeAfter.show(capture)
             return
         }
-        toast.show(HudText.plain("No verified capture yet · use Capture after"), near: Self.mainScreenCenterCG())
-    }
-
-    /// Menu bar: keep the newest capture out of the sweep.
-    func pinLastCapture() {
-        let folder = preferences.captureFolderURL
-        guard let newest = Lifecycle.newest(in: folder) else {
-            toast.show(HudText.plain("No capture to pin"), near: Self.mainScreenCenterCG())
-            return
-        }
-        Lifecycle.pin(newest.urls)
-        toast.show(HudText.copied(identifier: nil).string == "Copied" ? HudText.plain("Pinned · \(newest.urls[0].lastPathComponent)") : HudText.plain("Pinned"), near: Self.mainScreenCenterCG())
+        toast.show(HudText.plain("No verified capture yet · use See what changed"), near: Self.mainScreenCenterCG())
     }
 
     /// R25: the magnifier session. Click copies the pixel in the chosen format; Esc cancels.
@@ -306,9 +366,11 @@ final class AppState {
         session.onCancel = { [weak self] in self?.endColorPick() }
         colorSession = session
         session.start()
+        showHintIfNeeded(key: "color", text: "↩ copies · arrows nudge")
     }
 
     private func endColorPick() {
+        toast.hide()
         colorSession?.stop()
         colorSession = nil
         phase = .idle
@@ -334,6 +396,50 @@ final class AppState {
             context = collected
             windows = WindowList.onScreen()
             overlay.show()
+            showHintIfNeeded(key: Self.hintKey(for: requested), text: Self.hintText(for: requested))
+        }
+    }
+
+    // MARK: Hints (v0.5 R40)
+
+    private static let hintShowings = 3
+
+    /// R43: the one-page guide, once, after the permission alerts. Waits for the ball's fade-in.
+    private func showHelpOnFirstLaunch() {
+        guard preferences.hintCount("help") == 0 else { return }
+        preferences.markHintShown("help")
+        Task { @MainActor in
+            try? await Task.sleep(for: .seconds(1))
+            self.showHelp()
+        }
+    }
+
+    /// Settings › General "Deixis Help": the same page, any time.
+    func showHelp() {
+        help.show(state: self)
+    }
+
+    /// The first three opens of a mode: the gestures, at the bottom of the display under the cursor.
+    private func showHintIfNeeded(key: String, text: String) {
+        guard preferences.hintCount(key) < Self.hintShowings else { return }
+        preferences.markHintShown(key)
+        toast.show(HudText.plain(text), atBottomOf: NSEvent.mouseLocation, life: DesignTokens.hintLife)
+    }
+
+    private static func hintKey(for action: Action) -> String {
+        switch action {
+        case .point: "overlay.point"
+        case .snap: "overlay.snap"
+        case .text: "overlay.text"
+        case .cut: "overlay.cut"
+        }
+    }
+
+    private static func hintText(for action: Action) -> String {
+        switch action {
+        case .point: "↩ picks · drag for a frame · ⌥ for the parent"
+        case .snap, .cut: "↩ takes the window · drag for a frame"
+        case .text: "↩ takes the text · drag for a frame"
         }
     }
 
@@ -437,6 +543,7 @@ final class AppState {
 
     private func click(_ point: CGPoint) {
         guard phase == .hovering, context != nil else { return }
+        toast.hide()
         switch action {
         case .point:
             break
@@ -504,6 +611,7 @@ final class AppState {
     /// it the primary `element`, and the frame itself is the crop.
     private func region(_ rect: CGRect, start: CGPoint) {
         guard phase == .hovering, let context else { return }
+        toast.hide()
         if action != .point {
             runOneShot(on: rect, at: start, fromRegion: true)
             return
@@ -664,6 +772,7 @@ final class AppState {
     /// Esc at any point: nothing on disk, clipboard untouched.
     func cancel() {
         guard phase != .idle else { return }
+        toast.hide()
         cropTask?.cancel()
         reset()
     }

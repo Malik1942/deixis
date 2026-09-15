@@ -6,9 +6,15 @@ import SwiftUI
 /// the forms reflow with the width and the My Apps list takes the height.
 struct SettingsView: View {
     var body: some View {
+        // v0.6 R51: four tabs, the way System Settings groups things. General is what the app is
+        // and needs; Hotkeys is every key; Captures is what is written and how; My Apps is the list.
         TabView {
             GeneralSettings()
                 .tabItem { Label("General", systemImage: "gearshape") }
+            HotkeySettings()
+                .tabItem { Label("Hotkeys", systemImage: "keyboard") }
+            CaptureSettings()
+                .tabItem { Label("Captures", systemImage: "photo.on.rectangle") }
             MyAppsSettings()
                 .tabItem { Label("My Apps", systemImage: "app.badge.checkmark") }
         }
@@ -85,11 +91,11 @@ private struct ConflictNote: View {
 
 struct GeneralSettings: View {
     @Environment(AppState.self) private var state
-    /// R29: a warning under each hotkey row, by action name ("capture" for the capture hotkey).
-    @State private var conflicts: [String: String] = [:]
     /// The two grants Deixis needs, re-read while the window is open so a change in System Settings shows at once.
     @State private var accessibilityGranted = AccessibilityReader.isTrusted(prompt: false)
     @State private var screenRecordingGranted = ScreenCapture.hasPermission()
+    /// Check Now… in flight; the button waits for the answer.
+    @State private var checking = false
 
     var body: some View {
         @Bindable var preferences = state.preferences
@@ -116,6 +122,82 @@ struct GeneralSettings: View {
                 }
             }
             Section {
+                Toggle(isOn: $preferences.ballEnabled) {
+                    Text("Floating ball")
+                    Text("A quiet disc that wakes when you approach. Click it to point, hold for the ring. The hotkey works either way.")
+                }
+                .toggleStyle(.switch)
+                Toggle(isOn: $preferences.ballAutoHide) {
+                    Text("Auto-hide")
+                    Text("After 2 seconds without use, the ball tucks into the nearest screen edge with part of it showing. Move toward it to bring it back.")
+                }
+                .toggleStyle(.switch)
+                .disabled(!preferences.ballEnabled)
+            }
+            Section {
+                Toggle(isOn: $preferences.checksForUpdates) {
+                    Text("Check for updates")
+                    Text("Once a day, Deixis asks GitHub for the newest release. The request carries the version number and nothing about you or your captures.")
+                }
+                .toggleStyle(.switch)
+                LabeledContent {
+                    Button("Check Now…") {
+                        checking = true
+                        Task {
+                            await state.checkForUpdates(manual: true)
+                            checking = false
+                        }
+                    }
+                    .disabled(checking)
+                } label: {
+                    Text("Version \(UpdateCheck.currentVersion?.description ?? "unknown")")
+                    if let lastCheck = preferences.lastUpdateCheck {
+                        Text("Last checked \(lastCheck.formatted(.relative(presentation: .named))).")
+                    } else {
+                        Text("Not checked yet.")
+                    }
+                }
+            }
+            Section {
+                LabeledContent {
+                    Button("Show…") { state.showHelp() }
+                } label: {
+                    Text("Deixis Help")
+                    Text("The one-page guide shown on first launch: every action, its hotkey, and the gestures on the overlay.")
+                }
+            }
+        }
+        .formStyle(.grouped)
+        .task {
+            while !Task.isCancelled {
+                refreshPermissions()
+                try? await Task.sleep(for: .seconds(1))
+            }
+        }
+    }
+
+    private func refreshPermissions() {
+        accessibilityGranted = AccessibilityReader.isTrusted(prompt: false)
+        screenRecordingGranted = ScreenCapture.hasPermission()
+    }
+
+    private func openPrivacyPane(_ pane: String) {
+        if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?\(pane)") {
+            NSWorkspace.shared.open(url)
+        }
+    }
+}
+
+/// R51: the capture hotkey and the five action hotkeys, with their clashes, on one tab.
+struct HotkeySettings: View {
+    @Environment(AppState.self) private var state
+    /// R29: a warning under each hotkey row, by action name ("capture" for the capture hotkey).
+    @State private var conflicts: [String: String] = [:]
+
+    var body: some View {
+        @Bindable var preferences = state.preferences
+        Form {
+            Section {
                 // System Settings row: title and description in the label, the control trailing.
                 LabeledContent {
                     HotkeyRecorder(
@@ -129,11 +211,6 @@ struct GeneralSettings: View {
                     Text("Press a key with modifiers, or double-tap one modifier. Double-tap Command is used by Codex; double-tap Option by Claude Desktop.")
                     if let warning = conflicts["capture"] { ConflictNote(text: warning) }
                 }
-                Toggle(isOn: $preferences.adjustSelection) {
-                    Text("Adjust selection before capturing")
-                    Text("After you drag a region for Snap, Text, or Cut, handles let you fine-tune it. Press Return to capture, Esc to cancel.")
-                }
-                .toggleStyle(.switch)
             }
             Section {
                 ForEach(Preferences.hotkeyActions, id: \.self) { action in
@@ -152,6 +229,37 @@ struct GeneralSettings: View {
                 }
                 Footnote(text: "Control-Option and the action's number, in menu order; the ring shows each number. Point also answers to the capture hotkey above. Snap, Text, Color, and Cut are on the ball too: press and hold it.")
             }
+        }
+        .formStyle(.grouped)
+        .task { refreshConflicts() }
+        .onChange(of: preferences.hotkey) { refreshConflicts() }
+        .onChange(of: preferences.actionHotkeys) { refreshConflicts() }
+    }
+
+    /// The clash inside Deixis that the recorder refuses; a clash with macOS is only shown afterwards.
+    private func rejection(for hotkey: Hotkey, action: String) -> String? {
+        state.preferences.action(using: hotkey, excluding: action).map { HotkeyConflict.deixis(action: $0).message }
+    }
+
+    private func refreshConflicts() {
+        let preferences = state.preferences
+        var found: [String: String] = [:]
+        found["capture"] = HotkeyConflicts.check(preferences.hotkey, for: "capture", in: preferences).first?.message
+        for action in Preferences.hotkeyActions {
+            guard let hotkey = preferences.actionHotkeys[action] else { continue }
+            found[action] = HotkeyConflicts.check(hotkey, for: action, in: preferences).first?.message
+        }
+        conflicts = found
+    }
+}
+
+/// R51: where captures go and how they are kept, the selection handles, and the Color format.
+struct CaptureSettings: View {
+    @Environment(AppState.self) private var state
+
+    var body: some View {
+        @Bindable var preferences = state.preferences
+        Form {
             Section {
                 LabeledContent("Capture folder") {
                     HStack {
@@ -173,7 +281,14 @@ struct GeneralSettings: View {
                     }
                 }
                 .pickerStyle(.menu)
-                Footnote(text: "Each capture writes a PNG and a JSON sidecar here. Finder tags are always added: Deixis, the app, fix or reference, and the project when known. Older images go to the Trash; pinned and resolved captures stay.")
+                Footnote(text: "Each capture writes a PNG and a JSON sidecar here. Finder tags are always added: Deixis, the app, fix or reference, and the project when known. Older images go to the Trash; captures an agent marked resolved stay.")
+            }
+            Section {
+                Toggle(isOn: $preferences.adjustSelection) {
+                    Text("Adjust selection before capturing")
+                    Text("After you drag a region for Snap, Text, or Cut, handles let you fine-tune it. Press Return to capture, Esc to cancel.")
+                }
+                .toggleStyle(.switch)
             }
             Section {
                 Picker("Color format", selection: $preferences.colorFormat) {
@@ -186,57 +301,8 @@ struct GeneralSettings: View {
                 .pickerStyle(.menu)
                 Footnote(text: "The Color action copies the pixel under the cursor in this format.")
             }
-            Section {
-                Toggle(isOn: $preferences.ballEnabled) {
-                    Text("Floating ball")
-                    Text("A quiet disc that wakes when you approach. Click it to point, hold for the ring. The hotkey works either way.")
-                }
-                .toggleStyle(.switch)
-                Toggle(isOn: $preferences.ballAutoHide) {
-                    Text("Auto-hide")
-                    Text("After 2 seconds without use, the ball tucks into the nearest screen edge with part of it showing. Move toward it to bring it back.")
-                }
-                .toggleStyle(.switch)
-                .disabled(!preferences.ballEnabled)
-            }
         }
         .formStyle(.grouped)
-        .task { refreshConflicts() }
-        .task {
-            while !Task.isCancelled {
-                refreshPermissions()
-                try? await Task.sleep(for: .seconds(1))
-            }
-        }
-        .onChange(of: preferences.hotkey) { refreshConflicts() }
-        .onChange(of: preferences.actionHotkeys) { refreshConflicts() }
-    }
-
-    private func refreshPermissions() {
-        accessibilityGranted = AccessibilityReader.isTrusted(prompt: false)
-        screenRecordingGranted = ScreenCapture.hasPermission()
-    }
-
-    private func openPrivacyPane(_ pane: String) {
-        if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?\(pane)") {
-            NSWorkspace.shared.open(url)
-        }
-    }
-
-    /// The clash inside Deixis that the recorder refuses; a clash with macOS is only shown afterwards.
-    private func rejection(for hotkey: Hotkey, action: String) -> String? {
-        state.preferences.action(using: hotkey, excluding: action).map { HotkeyConflict.deixis(action: $0).message }
-    }
-
-    private func refreshConflicts() {
-        let preferences = state.preferences
-        var found: [String: String] = [:]
-        found["capture"] = HotkeyConflicts.check(preferences.hotkey, for: "capture", in: preferences).first?.message
-        for action in Preferences.hotkeyActions {
-            guard let hotkey = preferences.actionHotkeys[action] else { continue }
-            found[action] = HotkeyConflicts.check(hotkey, for: action, in: preferences).first?.message
-        }
-        conflicts = found
     }
 
     private func chooseFolder(_ preferences: Preferences) {

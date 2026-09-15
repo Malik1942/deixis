@@ -70,12 +70,15 @@ enum Lifecycle {
         getxattr(url.path(percentEncoded: false), pinAttribute, nil, 0, 0, 0) >= 0
     }
 
+    /// v0.5 R44 removed the menu item; files pinned by v0.4 keep their attribute and stay out of the
+    /// sweep. Kept for the tests that prove that.
     static func pin(_ urls: [URL]) {
         var flag: UInt8 = 1
         for url in urls {
             setxattr(url.path(percentEncoded: false), pinAttribute, &flag, 1, 0, 0)
         }
     }
+
 
     /// The most recently modified capture under `folder`.
     static func newest(in folder: URL) -> LifecycleEntry? {

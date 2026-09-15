@@ -52,7 +52,8 @@ final class Ring {
         static let outerRadius: CGFloat = 92
         /// The center is the disc as it looks under the cursor, so the ring reads as growing from it.
         static var innerRadius: CGFloat { FloatingBall.Tokens.diameter / 2 * FloatingBall.Tokens.hoverScale }
-        static let holdDelay: TimeInterval = 0.3
+        /// v0.5 R39: AppKit's press default (`NSPressGestureRecognizer.minimumPressDuration`); a slower click stays a click.
+        static let holdDelay: TimeInterval = 0.5
         static let labelDelay: TimeInterval = 0.2
         static let iconRadius: CGFloat = 54
     }
