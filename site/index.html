@@ -177,7 +177,7 @@
   .fine .g { display: inline-flex; }
   .fine span + span::before { content: "·"; margin-inline: 8px; }
 
-  /* the hero loop: the real flow, recorded, ten seconds */
+  /* the hero loop: the real flow, recorded, seventeen seconds */
   .demo { display: block; width: 100%; max-width: 100%; height: auto; border-radius: 18px; box-shadow: var(--shadow); margin-top: 36px; }
   figcaption { margin-top: 14px; font-size: 14px; color: var(--muted); text-align: center; }
 
@@ -415,8 +415,8 @@
   </header>
 
   <figure class="wide" style="margin-block: 0;">
-    <img class="demo" src="assets/hero.gif" width="960" height="540" alt="The loop, recorded: the overlay over an iPhone Simulator shows button · oceanCurrent.product.ideas under the cursor; a click opens the note field, the note is typed, Enter copies, and the Markdown payload lands in Cursor's chat with the image path first">
-    <figcaption>Hover, click, say what should change, paste. Every frame is a real capture.</figcaption>
+    <video class="demo" autoplay muted loop playsinline preload="metadata" poster="assets/hero-poster.jpg" width="1920" height="1080" aria-label="The loop, recorded: the ball wakes and is clicked, the overlay dims the screen, hovering the orb in the iPhone Simulator shows button · oceanCurrent.product.ideas, a click opens the note field, the note is typed, Enter copies, and the Markdown payload lands in Cursor's chat with the image path first"><source src="assets/hero.mp4" type="video/mp4"></video>
+    <figcaption>Click the ball, hover, click, say what should change, paste. Every frame is a real capture.</figcaption>
   </figure>
 
   <section class="wide" id="how">
