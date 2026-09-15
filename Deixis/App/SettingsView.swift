@@ -253,7 +253,7 @@ struct HotkeySettings: View {
     }
 }
 
-/// R51: where captures go and how they are kept, the selection handles, and the Color format.
+/// R51: where captures go and how they are kept, iterations (R52), the selection handles, and the Color format.
 struct CaptureSettings: View {
     @Environment(AppState.self) private var state
 
@@ -282,6 +282,13 @@ struct CaptureSettings: View {
                 }
                 .pickerStyle(.menu)
                 Footnote(text: "Each capture writes a PNG and a JSON sidecar here. Finder tags are always added: Deixis, the app, fix or reference, and the project when known. Older images go to the Trash; captures an agent marked resolved stay.")
+            }
+            Section {
+                Toggle(isOn: $preferences.collectsIterations) {
+                    Text("Collect iterations")
+                    Text("After you point at an element in an app you build, each time that app launches or comes to the front within a day, Deixis captures the element again and keeps the git diff, when it looks different. See them with Show before & after in the menu bar.")
+                }
+                .toggleStyle(.switch)
             }
             Section {
                 Toggle(isOn: $preferences.adjustSelection) {
