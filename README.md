@@ -95,6 +95,36 @@ make this rounded, match the other pills
 The image path comes first because terminal agents receive only the text on paste; the path lets them
 open the PNG themselves.
 
+## Or let the agent fetch it
+
+Locant is its own MCP server. The app binary started with `--mcp` speaks MCP over stdio and reads the
+sidecars in the capture folder; nothing to install, nothing runs until an agent starts it. Four tools:
+`latest_capture`, `list_captures`, `get_capture`, `resolve_capture`. Every result is text with the image
+path first; an image block is added only when the agent asks for it (`include_image`); there is never
+`structuredContent`, so Codex sees the text too.
+
+Connect from **Settings › Agents**: one row each for Claude Code, Cursor, and Codex, with Connect and
+Disconnect. Each writes one server named `locant` into that agent's own user-level configuration. Or by
+hand:
+
+```bash
+# Claude Code
+claude mcp add --scope user locant -- /Applications/Locant.app/Contents/MacOS/Locant --mcp
+# Codex
+codex mcp add locant -- /Applications/Locant.app/Contents/MacOS/Locant --mcp
+```
+
+Cursor, in `~/.cursor/mcp.json` or a project's `.cursor/mcp.json`; Cursor asks once whether to enable
+it, and the agent CLI needs `cursor-agent mcp enable locant`:
+
+```json
+{ "mcpServers": { "locant": { "command": "/Applications/Locant.app/Contents/MacOS/Locant", "args": ["--mcp"] } } }
+```
+
+Then say "fix what I just pointed at". The agent calls `latest_capture`, greps for the identifier,
+edits, and may call `resolve_capture`, after which Locant keeps that capture past the retention period.
+The server reads the folder chosen in Settings › Captures; `--folder <path>` names another.
+
 ## What it does
 
 **Point**, the primary action
@@ -131,7 +161,7 @@ the hotkey.
 
 <p align="center">
   <img src="site/assets/settings-light.png" width="620" alt="The Locant Settings window, General tab: permissions, the floating ball, updates, and the help page.">
-  <br><sub>Settings (⌘,): General, Hotkeys, Captures, My Apps. Every default works on first launch.</sub>
+  <br><sub>Settings (⌘,): General, Hotkeys, Captures, My Apps, Agents. Every default works on first launch.</sub>
 </p>
 
 <details>
@@ -155,18 +185,18 @@ the hotkey.
 
 ## Works where you paste
 
-The payload is plain Markdown, so any agent takes it on paste. Whether it also opens the image, as
-of 0.7:
+The payload is plain Markdown, so any agent takes it on paste; over MCP the agent fetches it instead.
+What each one did, and when it was run:
 
-| Agent | Paste | Image | Status |
+| Agent | Over MCP | On paste | Tested |
 |---|---|---|---|
-| Claude Code | Markdown text | reads the PNG from the `Image:` path | expected to work; not yet verified end to end |
-| Cursor | Markdown text | reads the path | untested |
-| Codex CLI | Markdown text | `view_image` on the path | untested |
-| Gemini CLI / Antigravity | Markdown text | untested | untested |
+| Claude Code 2.1.272 | Works: `latest_capture` answered "what did I just point at" with the element, app, and image path | Markdown text; reads the PNG from the `Image:` path | Sep 15, 2026 |
+| Cursor (agent CLI 2026.09) | Works, after `cursor-agent mcp enable locant`; the IDE prompts once instead | Markdown text; reads the path | Sep 15, 2026 |
+| Codex CLI 0.147.0 | Works: same answer; `view_image` opens the path, image blocks are never sent unasked | Markdown text | Sep 15, 2026 |
+| Gemini CLI / Antigravity | The snippet from Settings › Agents; untested | Markdown text; untested | |
 
-Statuses say "untested" until someone tests them. A report of what your agent did with a payload is a
-welcome issue.
+Statuses say "untested" until someone tests them. A report of what your agent did with a payload, or
+over MCP, is a welcome issue.
 
 ## Known limitations
 

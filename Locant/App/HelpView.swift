@@ -48,6 +48,7 @@ struct HelpView: View {
                     Row(symbol: "arrow.triangle.2.circlepath", title: "Iterations", detail: "Point at an element in an app you build, let your agent edit, run the app again: Locant captures the element again with the git diff whenever it looks different. Show before & after is in the menu bar.", key: preferences.collectsIterations ? "On" : "Off")
                     Row(symbol: "clock.arrow.circlepath", title: "Old images are cleaned up", detail: "Older images go to the Trash. Change the period, or keep everything, in Settings.", key: preferences.retentionDays == 0 ? "Forever" : "\(preferences.retentionDays) days")
                     Row(symbol: "arrow.down.circle", title: "Updates", detail: "Once a day Locant asks GitHub whether a newer version exists and tells you. Turn it off in Settings.", key: preferences.checksForUpdates ? "Daily" : "Off")
+                    Row(symbol: "terminal", title: "Or let the agent fetch it", detail: "Connect Claude Code, Cursor, or Codex in Settings › Agents. Say what should change; the agent pulls the capture itself, image included.", key: "MCP")
                 }
             }
             .formStyle(.grouped)
