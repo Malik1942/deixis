@@ -7,13 +7,14 @@
 <p align="center">
   <b>Point, don't describe.</b><br>
   Point at one element in any Mac app. Your coding agent gets the element, not a screenshot.<br>
-  Free, macOS 15+, Apple silicon and Intel.
+  Free, open source, macOS 15+, Apple silicon and Intel.
 </p>
 
 <p align="center">
   <a href="https://github.com/Malik1942/locant/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/Malik1942/locant?label=release&color=0A84FF"></a>
   <img alt="macOS 15+" src="https://img.shields.io/badge/macOS-15%2B-black?logo=apple">
   <a href="https://github.com/Malik1942/locant/releases"><img alt="Downloads" src="https://img.shields.io/github/downloads/Malik1942/locant/total?color=0A84FF"></a>
+  <a href="LICENSE"><img alt="MIT" src="https://img.shields.io/badge/license-MIT-blue"></a>
 </p>
 
 <p align="center">
@@ -353,3 +354,7 @@ Locant was called Deixis until Sep 14, 2026; tags up to v0.6.1 carry the old nam
 Solo project; issues and PRs are welcome. The most useful bug report is the JSON sidecar of the capture
 that went wrong, plus the name of the app you pointed at. Next on the table, not promised: an MCP
 server that serves captures to agents directly, and reading Safari and Chrome tab URLs.
+
+## License
+
+MIT, see [LICENSE](LICENSE).
