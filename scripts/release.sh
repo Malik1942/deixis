@@ -1,25 +1,25 @@
 #!/bin/zsh
 # Build, sign with Developer ID, package a dmg, notarize, staple.
 # Usage: scripts/release.sh            (version read from the project)
-#        NOTARY_PROFILE=deixis-notary scripts/release.sh
+#        NOTARY_PROFILE=locant-notary scripts/release.sh
 # Notarization needs a keychain profile created once with:
-#   xcrun notarytool store-credentials deixis-notary --apple-id <you@icloud.com> --team-id MVAUZXPK9M
+#   xcrun notarytool store-credentials locant-notary --apple-id <you@icloud.com> --team-id MVAUZXPK9M
 # (it asks for an app-specific password from appleid.apple.com; never put it in this script)
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
 TEAM_ID=MVAUZXPK9M
 IDENTITY="Developer ID Application: YUE ZHANG ($TEAM_ID)"
-PROFILE="${NOTARY_PROFILE:-deixis-notary}"
+PROFILE="${NOTARY_PROFILE:-locant-notary}"
 OUT=build/release
 DERIVED=build/DerivedData-release
-VERSION=$(sed -n 's/.*MARKETING_VERSION = \(.*\);/\1/p' Deixis.xcodeproj/project.pbxproj | head -1)
-DMG="$OUT/Deixis-$VERSION.dmg"
+VERSION=$(sed -n 's/.*MARKETING_VERSION = \(.*\);/\1/p' Locant.xcodeproj/project.pbxproj | head -1)
+DMG="$OUT/Locant-$VERSION.dmg"
 
 rm -rf "$OUT"; mkdir -p "$OUT"
 
-echo "▸ Building Deixis $VERSION (Release, hardened runtime, $IDENTITY)"
-xcodebuild -scheme Deixis -configuration Release -derivedDataPath "$DERIVED" build \
+echo "▸ Building Locant $VERSION (Release, hardened runtime, $IDENTITY)"
+xcodebuild -scheme Locant -configuration Release -derivedDataPath "$DERIVED" build \
   CODE_SIGN_STYLE=Manual \
   CODE_SIGN_IDENTITY="$IDENTITY" \
   DEVELOPMENT_TEAM="$TEAM_ID" \
@@ -29,22 +29,22 @@ xcodebuild -scheme Deixis -configuration Release -derivedDataPath "$DERIVED" bui
   ARCHS="arm64 x86_64" ONLY_ACTIVE_ARCH=NO \
   -quiet
 
-APP="$DERIVED/Build/Products/Release/Deixis.app"
-cp -R "$APP" "$OUT/Deixis.app"
-APP="$OUT/Deixis.app"
+APP="$DERIVED/Build/Products/Release/Locant.app"
+cp -R "$APP" "$OUT/Locant.app"
+APP="$OUT/Locant.app"
 
 echo "▸ Verifying signature"
 codesign --verify --deep --strict --verbose=2 "$APP"
 codesign -dvv "$APP" 2>&1 | grep -E "Authority=Developer ID|flags=|TeamIdentifier"
 ENT=$(codesign -d --entitlements - "$APP" 2>/dev/null | grep -c get-task-allow || true)
 [ "$ENT" = "0" ] || { echo "get-task-allow present; notarization would reject"; exit 1; }
-lipo -archs "$APP/Contents/MacOS/Deixis"
+lipo -archs "$APP/Contents/MacOS/Locant"
 
 echo "▸ Packaging $DMG"
 STAGE=$(mktemp -d)
-cp -R "$APP" "$STAGE/Deixis.app"
+cp -R "$APP" "$STAGE/Locant.app"
 ln -s /Applications "$STAGE/Applications"
-hdiutil create -volname "Deixis" -srcfolder "$STAGE" -ov -format UDZO -quiet "$DMG"
+hdiutil create -volname "Locant" -srcfolder "$STAGE" -ov -format UDZO -quiet "$DMG"
 rm -rf "$STAGE"
 codesign --sign "$IDENTITY" --timestamp "$DMG"
 
