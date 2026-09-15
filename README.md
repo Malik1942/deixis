@@ -24,8 +24,7 @@
 
 <p align="center">
   <a href="https://locant.malikzhang.com">Website</a> ·
-  <a href="https://github.com/Malik1942/locant/releases/latest/download/Locant.dmg">Download</a> ·
-  <a href="schema/capture.schema.json">Payload schema</a>
+  <a href="https://github.com/Malik1942/locant/releases/latest/download/Locant.dmg">Download</a>
 </p>
 
 ## Why
