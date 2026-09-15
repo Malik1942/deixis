@@ -33,7 +33,7 @@ Verdicts from frames of the delivered reel.
 | 8 | Any app | 1:19–1:23 at 1.35, three cuts: `button · Eight`, `slider · no identifier`, `button · oceanCurrent.product ideas` | MET |
 | 9 | Any agent | 1:24–1:34 Codex 0.154, whole window: payload, send, "I'll inspect the captured orb"; 1:34–1:44 Claude Code, whole window: paste expanded, send, thinking | MET |
 | 10 | (Added Sep 15) Scene 8, a web page | 1:23–1:26 at 1.35: the site in Safari, `link "Download for Mac" · no identifier` with a tight frame on the button, then `staticText · no identifier` on the How it works link. Web elements carry no identifier, so the label is the text: rung 2 | MET |
-| 11 | (Attempted) Locant over its own Settings | Not in the reel. Locant's hit test skips its own windows; the overlay over Settings read the Cursor window behind it (`button "Oryne/App/SeedScreenshot.swift"`). The pitch uses the build recording for "Locant to build Locant" | DROPPED |
+| 11 | Locant over its own Settings | Not in the reel; cut as `sceneF-comp.mp4` (3.4 s) for section 2's second challenge. Locant's hit test skips its own windows, so the overlay over Settings names the Cursor window behind it: `button "Oryne/App/SeedScreenshot.swift" · no identifier`. That is the point of the beat, not a defect | MET (repurposed) |
 
 ## Gulfs
 
