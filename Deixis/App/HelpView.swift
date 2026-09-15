@@ -45,7 +45,7 @@ struct HelpView: View {
                     Row(symbol: "circle.circle", title: "The ring", detail: "All four are on the ball: hold it for half a second and release on one. A shorter press is Point.", key: nil)
                 }
                 Section("Afterwards") {
-                    Row(symbol: "arrow.triangle.2.circlepath", title: "See what changed", detail: "In the menu bar, once your agent has edited: Deixis finds the same element again and shows before and after with the git diff.", key: nil)
+                    Row(symbol: "arrow.triangle.2.circlepath", title: "Iterations", detail: "Point at an element in an app you build, let your agent edit, run the app again: Deixis captures the element again with the git diff whenever it looks different. Show before & after is in the menu bar.", key: preferences.collectsIterations ? "On" : "Off")
                     Row(symbol: "clock.arrow.circlepath", title: "Old images are cleaned up", detail: "Older images go to the Trash. Change the period, or keep everything, in Settings.", key: preferences.retentionDays == 0 ? "Forever" : "\(preferences.retentionDays) days")
                     Row(symbol: "arrow.down.circle", title: "Updates", detail: "Once a day Deixis asks GitHub whether a newer version exists and tells you. Turn it off in Settings.", key: preferences.checksForUpdates ? "Daily" : "Off")
                 }

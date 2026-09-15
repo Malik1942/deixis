@@ -117,6 +117,7 @@ final class Preferences {
         static let actionHotkeys = "actionHotkeys" // v0.3 early builds: only what the user recorded; migrated on read
         static let actionHotkeySettings = "actionHotkeySettings"
         static let hintCounts = "hintCounts" // v0.5 R40
+        static let collectsIterations = "collectsIterations" // v0.6 R52
         static let checksForUpdates = "checksForUpdates" // v0.6 R46
         static let lastUpdateCheck = "lastUpdateCheck"
         static let skippedUpdateVersion = "skippedUpdateVersion"
@@ -260,6 +261,12 @@ final class Preferences {
 
     func markHintShown(_ key: String) { hintCounts[key] = hintCount(key) + 1 }
 
+    /// v0.6 R52: after a Point capture in one of the user's apps, capture the element again each
+    /// time that app launches or comes forward within a day, when it looks different.
+    var collectsIterations: Bool {
+        didSet { defaults.set(collectsIterations, forKey: Key.collectsIterations) }
+    }
+
     /// v0.6 R46: the daily release check (R45). Off means Deixis opens no socket at all.
     var checksForUpdates: Bool {
         didSet { defaults.set(checksForUpdates, forKey: Key.checksForUpdates) }
@@ -313,6 +320,7 @@ final class Preferences {
         retentionDays = defaults.object(forKey: Key.retentionDays) as? Int ?? 30
         adjustSelection = defaults.object(forKey: Key.adjustSelection) as? Bool ?? true
         hintCounts = defaults.dictionary(forKey: Key.hintCounts) as? [String: Int] ?? [:]
+        collectsIterations = defaults.object(forKey: Key.collectsIterations) as? Bool ?? true
         checksForUpdates = defaults.object(forKey: Key.checksForUpdates) as? Bool ?? true
         lastUpdateCheck = defaults.object(forKey: Key.lastUpdateCheck) as? Date
         skippedUpdateVersion = defaults.string(forKey: Key.skippedUpdateVersion)

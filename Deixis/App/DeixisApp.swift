@@ -41,7 +41,8 @@ struct DeixisApp: App {
     }
 }
 
-/// R10: Capture, Open capture folder, Settings…, Quit; v0.4 See what changed and Show before & after (R44).
+/// R10: Capture, Open capture folder, Settings…, Quit; v0.4 Show before & after (R44). Iterations
+/// are collected by themselves since v0.6 R52, so "See what changed" left the menu.
 private struct StatusMenu: View {
     @Environment(AppState.self) private var state
     @Environment(\.openSettings) private var openSettings
@@ -50,7 +51,6 @@ private struct StatusMenu: View {
         Button(captureTitle) {
             state.beginCapture()
         }
-        Button("See what changed") { state.captureAfter() }
         Button("Show before & after") { state.showBeforeAfter() }
         Divider()
         Button(title("Snap", "snap")) { state.beginAction(.snap) }

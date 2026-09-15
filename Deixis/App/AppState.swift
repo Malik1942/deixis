@@ -51,6 +51,9 @@ final class AppState {
     @ObservationIgnored private var clipboardOnlyPreset = false
     @ObservationIgnored private var sweepTask: Task<Void, Never>?
     @ObservationIgnored private var updateTask: Task<Void, Never>?
+    /// R52: NSWorkspace launch and activation observers, and whether an iteration is being collected.
+    @ObservationIgnored private var appObservers: [any NSObjectProtocol] = []
+    @ObservationIgnored private var collecting = false
     @ObservationIgnored private let beforeAfter = BeforeAfterWindow()
     @ObservationIgnored private let help = HelpWindow()
     /// R25: the last ten picked colors, in memory only.
@@ -78,6 +81,7 @@ final class AppState {
         showHelpOnFirstLaunch()
         scheduleSweeps()
         scheduleUpdateChecks()
+        watchAppsForIterations()
         overlay.onHover = { [weak self] point in self?.hover(point) }
         overlay.onClick = { [weak self] point in self?.click(point) }
         overlay.onCancel = { [weak self] in self?.cancel() }
@@ -180,6 +184,21 @@ final class AppState {
         }
     }
 
+    // MARK: Iterations (v0.6 R52)
+
+    /// The captured app launching or coming forward is the moment to look at the element again.
+    private func watchAppsForIterations() {
+        let center = NSWorkspace.shared.notificationCenter
+        for name in [NSWorkspace.didLaunchApplicationNotification, NSWorkspace.didActivateApplicationNotification] {
+            appObservers.append(center.addObserver(forName: name, object: nil, queue: .main) { [weak self] note in
+                guard let app = note.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication,
+                      let bundleId = app.bundleIdentifier else { return }
+                let pid = app.processIdentifier
+                MainActor.assumeIsolated { self?.appCameForward(bundleId: bundleId, pid: pid) }
+            })
+        }
+    }
+
     // MARK: Updates (v0.6 R45)
 
     /// 10 s after launch, then every 24 hours while running; skipped when the last check, on any
@@ -257,77 +276,68 @@ final class AppState {
             .urls.first(where: { $0.pathExtension == "json" })
     }
 
-    /// R31–R34: find the newest capture's element again in the running app, capture it, record the
-    /// git facts, append the iteration, and show the panel.
-    func captureAfter() {
-        guard phase == .idle else { return }
-        guard let sidecar = newestSidecar(), let capture = try? IterationStore.load(sidecar) else {
-            toast.show(HudText.plain("No capture to verify"), near: Self.mainScreenCenterCG())
-            return
+    /// R52: the app of the newest capture launched or came forward. If the capture is worth it
+    /// (`AutoVerify.wants`), wait for the window to draw, find the element again, and keep an
+    /// iteration when it looks different. Never a toast on failure: the next activation tries again.
+    private func appCameForward(bundleId: String, pid: pid_t) {
+        guard preferences.collectsIterations, phase == .idle, !collecting else { return }
+        guard let sidecar = newestSidecar(), let capture = try? IterationStore.load(sidecar),
+              AutoVerify.wants(capture, activated: bundleId), let element = capture.element else { return }
+        collecting = true
+        Task { @MainActor in
+            defer { collecting = false }
+            try? await Task.sleep(for: AutoVerify.settle)
+            guard preferences.collectsIterations, phase == .idle, ScreenCapture.hasPermission() else { return }
+            await collectIteration(sidecar: sidecar, capture: capture, element: element, pid: pid)
         }
-        guard let element = capture.element, element.role != ElementResolver.clusterRole else {
-            toast.show(HudText.plain("Nothing to re-find in the last capture"), near: Self.mainScreenCenterCG())
-            return
+    }
+
+    /// R31–R34: find the element again in the running app (by identifier, then role and label, then
+    /// the nearest frame), capture it, and when the pixels changed record the git facts and append
+    /// the iteration. The Before & After window is not opened; "Show before & after" is in the menu.
+    private func collectIteration(sidecar: URL, capture: Capture, element: ResolvedElement, pid: pid_t) async {
+        var found: ResolvedElement?
+        var windowBounds: CGRect?
+        for attempt in 0..<ElementRefinder.retries {
+            let windows = WindowList.onScreen().filter { $0.ownerPID == pid && $0.layer == 0 }
+            let largest = windows.max { $0.bounds.width * $0.bounds.height < $1.bounds.width * $1.bounds.height }
+            windowBounds = largest?.bounds
+            let region = largest?.bounds ?? SelectionOverlay.displayFrameCG(containing: element.frame.cgRect.origin)
+            let snapshots = await reader.elements(in: region, pid: pid)
+            found = ElementRefinder.match(element, among: snapshots)
+            if found != nil { break }
+            if attempt < ElementRefinder.retries - 1 { try? await Task.sleep(for: ElementRefinder.retryInterval) }
         }
-        let bundleId = capture.source.app.bundleId
-        guard let app = NSRunningApplication.runningApplications(withBundleIdentifier: bundleId).first else {
-            toast.show(HudText.plain("\(capture.source.app.name) is not running"), near: Self.mainScreenCenterCG())
-            return
-        }
-        guard ScreenCapture.hasPermission() else {
-            fail(.noScreenRecordingPermission, nearRect: nil)
-            return
-        }
-        phase = .writing
-        let pid = app.processIdentifier
-        let name = element.identifier ?? element.label ?? element.role
-        Task {
-            var found: ResolvedElement?
-            var windowBounds: CGRect?
-            for attempt in 0..<ElementRefinder.retries {
-                let windows = WindowList.onScreen().filter { $0.ownerPID == pid && $0.layer == 0 }
-                let largest = windows.max { $0.bounds.width * $0.bounds.height < $1.bounds.width * $1.bounds.height }
-                windowBounds = largest?.bounds
-                let region = largest?.bounds ?? SelectionOverlay.displayFrameCG(containing: element.frame.cgRect.origin)
-                let snapshots = await reader.elements(in: region, pid: pid)
-                found = ElementRefinder.match(element, among: snapshots)
-                if found != nil { break }
-                if attempt < ElementRefinder.retries - 1 { try? await Task.sleep(for: ElementRefinder.retryInterval) }
-            }
-            guard let found else {
-                phase = .idle
-                toast.show(HudText.plain("Element not found · \(name)"), near: element.frame.cgRect)
-                return
-            }
-            do {
-                let center = CGPoint(x: found.frame.x + found.frame.w / 2, y: found.frame.y + found.frame.h / 2)
-                let display = SelectionOverlay.displayFrameCG(containing: center)
-                let crop = Geometry.cropRect(element: found.frame.cgRect, clickPoint: center, window: windowBounds, display: display)
-                let image = try await ScreenCapture.crop(crop)
-                let index = capture.iterations.count + 1
-                let afterURL = IterationStore.afterImageURL(for: sidecar, index: index)
-                try image.png.write(to: afterURL, options: .atomic)
-                FileStore.setFinderTags(FileStore.tags(for: capture) + ["after"], on: afterURL)
-                let root = capture.source.projectRoot
-                let before = capture.source.gitCommit
-                let change: GitChange = await Task.detached {
-                    root.map { GitFacts.changes(at: $0, since: before) } ?? GitChange(before: before, after: nil, diffStat: nil, files: [])
-                }.value
-                let iteration = Iteration(
-                    capturedAt: FileStore.isoTimestamp(date: Date()),
-                    imagePath: afterURL.path(percentEncoded: false),
-                    gitBefore: change.before, gitAfter: change.after, diffStat: change.diffStat, files: change.files,
-                    frame: found.frame
-                )
-                let updated = try IterationStore.append(iteration, to: sidecar)
-                phase = .idle
-                let summary = GitFacts.summaryLine(of: change.diffStat) ?? (root == nil ? "no project folder" : "no changes")
-                toast.show(HudText.plain("After #\(index) · \(summary)"), near: found.frame.cgRect)
-                beforeAfter.show(updated)
-            } catch {
-                phase = .idle
-                fail(.captureFailed(error), nearRect: found.frame.cgRect)
-            }
+        guard let found, phase == .idle else { return }
+        do {
+            let center = CGPoint(x: found.frame.x + found.frame.w / 2, y: found.frame.y + found.frame.h / 2)
+            let display = SelectionOverlay.displayFrameCG(containing: center)
+            let crop = Geometry.cropRect(element: found.frame.cgRect, clickPoint: center, window: windowBounds, display: display)
+            let image = try await ScreenCapture.crop(crop)
+            let previous = try? Data(contentsOf: URL(filePath: AutoVerify.previousImagePath(of: capture)))
+            let png = image.png
+            let changed = await Task.detached { previous.map { ImageDiff.differs(png: $0, png: png) } ?? true }.value
+            guard changed else { return }
+            let index = capture.iterations.count + 1
+            let afterURL = IterationStore.afterImageURL(for: sidecar, index: index)
+            try png.write(to: afterURL, options: .atomic)
+            FileStore.setFinderTags(FileStore.tags(for: capture) + ["after"], on: afterURL)
+            let root = capture.source.projectRoot
+            let before = capture.source.gitCommit
+            let change: GitChange = await Task.detached {
+                root.map { GitFacts.changes(at: $0, since: before) } ?? GitChange(before: before, after: nil, diffStat: nil, files: [])
+            }.value
+            let iteration = Iteration(
+                capturedAt: FileStore.isoTimestamp(date: Date()),
+                imagePath: afterURL.path(percentEncoded: false),
+                gitBefore: change.before, gitAfter: change.after, diffStat: change.diffStat, files: change.files,
+                frame: found.frame
+            )
+            _ = try IterationStore.append(iteration, to: sidecar)
+            let summary = GitFacts.summaryLine(of: change.diffStat) ?? (root == nil ? "no project folder" : "no changes")
+            toast.show(HudText.plain("After #\(index) · \(summary)"), near: found.frame.cgRect)
+        } catch {
+            // Silent (R52): the element was found but the capture or the write failed; try on the next activation.
         }
     }
 
@@ -342,7 +352,7 @@ final class AppState {
             beforeAfter.show(capture)
             return
         }
-        toast.show(HudText.plain("No verified capture yet · use See what changed"), near: Self.mainScreenCenterCG())
+        toast.show(HudText.plain("No iterations yet · point in your app, then run it again"), near: Self.mainScreenCenterCG())
     }
 
     /// R25: the magnifier session. Click copies the pixel in the chosen format; Esc cancels.
