@@ -37,7 +37,7 @@ Take G (`takeG.mov`, composing a prompt in Cursor and deleting it, sped 2.6×) i
 | 2:18 | 26 | demo: Show before & after (5.0 s) | After the rebuild, Locant finds the same element again on its own. Show before & after: |
 | 2:23 | 27 | demo: divider (4.0 s) | both images, with the diff beneath. |
 | 2:27 | 28 | demo: Flip (2.0 s) |  |
-| 2:29 | 29 | results table (16.0 s) | From a screenshot, the agent read the whole screen and opened several files before it found the button. From Locant, it went straight there. From paste to the edit: fifty-two seconds with Locant, a hundred and twelve from a screenshot. Same tokens, half the time. |
+| 2:29 | 29 | results table (16.0 s) | Same fix, two ways, six runs each. From a screenshot, the agent stopped to ask me which orb, five times out of six. From Locant, it never asked: it grepped the identifier and opened the file. What Locant saves is the question. |
 | 2:45 | 30 | next: the web page hover (9.0 s) | Next is the web: a small extension that adds the CSS selector, so pointing works the same on any page.  Point, don't describe. |
 | 2:54 | 31 | END CARD (4.0 s) | *(end card, silent)* |
 

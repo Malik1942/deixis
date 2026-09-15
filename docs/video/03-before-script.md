@@ -73,36 +73,48 @@ Oryne reset with `git checkout -- Oryne` between runs. Runner and transcripts: `
 - Tokens are the session totals from Claude Code's result event (input + output + cache writes + cache reads);
   "files opened" counts Read plus Grep/Glob calls, and greps run through Bash are listed separately.
 
-## Results (Sep 15, 2026, Claude Code 2.1.272, model claude-fable-5-1, three runs per side)
+## Results (Sep 15, 2026, refined)
 
-| | Screenshot (median of 3) | Locant (median of 3) |
+The measurement that counts is the third one. The first used a full-display screenshot (unfair; nobody pastes
+that). The second used a ⌘⇧4 crop but ran on Fable at high effort with the earlier runner. The third, below, is
+the one the video quotes: `claude-opus-5` at medium effort, no MCP server on either side, no project memory for
+the working directory, a fresh session per run, Oryne reset between runs, the screenshot a ⌘⇧4 crop of the
+Simulator window (912×1944). Six pairs; the screenshot side went first in pairs 1, 3, 5 and Locant first in 2, 4, 6.
+When the agent stopped to ask which orb, the session was resumed once with `the Product Ideas orb, the big one at
+the top left` and the two halves are summed (the human's answer time is not counted). Runner: `measure-v2.sh`,
+`resume-v2.sh`; raw rows in `results-v2.tsv`.
+
+| Pair | Order | Screenshot: to the edit | Asked which orb | Locant: to the edit | Asked |
+|---|---|---|---|---|---|
+| 1 | screenshot first | 48 s | no | 94 s | no |
+| 2 | Locant first | 47 s | yes | 40 s | no |
+| 3 | screenshot first | 80 s | yes | 47 s | no |
+| 4 | Locant first | 51 s | yes | 39 s | no |
+| 5 | screenshot first | 52 s | yes | 40 s | no |
+| 6 | Locant first | 107 s | yes | 41 s | no |
+
+| Medians of six | Screenshot, ⌘⇧4 crop | Locant |
 |---|---|---|
-| Human time before the paste | not timed (headless) | not timed (headless) |
-| Agent time, paste to first edit | 112 s | 52 s |
-| Files the agent read | 7 | 4 |
-| Shell greps and finds | 20 | 17 |
-| Clarifying questions | 0 | 0 |
-| Session tokens (input + output + cache) | 485k | 483k |
-| Tokens not served from cache | 28.4k | 24.0k |
-| Cost reported by Claude Code | $1.22 | $0.95 |
-| First edit in the right file (`SeedScreenshot.swift`) | 3 of 3 | 3 of 3 |
+| Stopped to ask which orb | 5 of 6 | 0 of 6 |
+| Paste to first edit (answer time excluded) | 52 s | 41 s |
+| Files the agent read | 4 | 4 |
+| Session tokens | 532k | 514k |
+| Cost reported by Claude Code | $0.70 | $0.59 |
+| First edit in the right file (`SeedScreenshot.swift`) | 6 of 6 | 6 of 6 |
 
-Raw runs, paste to first edit: screenshot 83.5 s, 112.1 s, 128.3 s; Locant 26.0 s, 51.7 s, 114.3 s. Every run
-ended with the seed edit made and then a blocked `xcodebuild` (the sandbox refuses builds on both sides alike), so
-wall time past the edit is not comparable and is not reported.
+What the numbers support:
 
-What the numbers support, and what they do not:
+- **The question.** Five screenshot runs out of six stopped and asked which orb; every Locant run went to the file.
+  That is the line the video says.
+- **Time.** Locant's median is 41 s against 52 s, and the screenshot side's number already leaves out the seconds a
+  person spends answering. Say "faster" if you like; do not say a ratio.
+- **Tokens and cost.** Close (532k / $0.70 against 514k / $0.59). Do not claim them.
+- Both sides found the right file every time.
 
-- **Time.** Locant halved the median time to the edit. Say "half the time", not a ratio to two decimals; the spread
-  is wide (one Locant run took 114 s, one screenshot run 84 s).
-- **Tokens.** No difference to claim. The session totals are dominated by cache reads, which scale with turns, not
-  with the image; the screenshot's image is larger (575 KB of base64 in the transcript versus 117 KB for the crop)
-  but current models cap image tokens, so the pasted image is not where the cost lives. Do not say "fewer tokens".
-- **Files.** Both sides found the right file first; the screenshot side searched longer (more reads, more greps)
-  before editing. "It went straight there" is fair as a relative statement, not an absolute one.
-- **Caveat.** One screenshot run and one Locant run spawned a subagent whose tokens are not in the parent's total.
-  The agents on both sides grepped for the words in the note ("Light And Color", "Product Ideas") before the
-  identifier, because in this app the identifier is derived from the same label.
+The earlier measurements, for the record: full-display screenshot on Fable, medians 112 s / 485k versus Locant
+52 s / 483k; ⌘⇧4 crop on Fable at high effort, 57 s / 984k. A hand-run pair in the Claude Code desktop app on
+Opus 5 (memory and the Locant MCP available on both sides, `measure/app/`): 62 s with one question versus 61 s
+with none, the Locant side costing more because it also rebuilt the app, installed it and resolved the capture.
 
 ## The one number you can compute
 

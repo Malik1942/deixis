@@ -82,11 +82,10 @@ the diff beneath.
 
 ## 4. Before and after · 45 words · 2:27 to 2:44
 
-From a screenshot, the agent read the whole screen and opened several files before it found the button.
-From Locant, it went straight there.
+Same fix, two ways, six runs each. From a screenshot, the agent stopped to ask me which orb, five times out
+of six. From Locant, it never asked: it grepped the identifier and opened the file.
 
-From paste to the edit: fifty-two seconds with Locant, a hundred and twelve from a screenshot.
-Same tokens, half the time.
+What Locant saves is the question.
 
 ---
 

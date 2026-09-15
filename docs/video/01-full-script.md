@@ -157,20 +157,20 @@ not narrated.
 ## 4. Before and after (2:27 to 2:44)
 
 **SCREEN**
-The results table from `03-before-script.md`, rendered at `~/Desktop/locant-film/v4/measure/results-table.png`,
-rows appearing one at a time, time first. The runs were headless (no split-screen footage); if you want the
-split screen, re-run one pair on camera with `03`'s interactive steps and cut it under the same line.
+Two Claude Code app sessions side by side, from the Sep 15 rerun (`measure/app/`): on the left the screenshot
+session stopped at its question card, "Which orb should become bigger?"; on the right the Locant session already
+in `SeedScreenshot.swift`. Then the results table (`measure/results-table.png`), rows one at a time, the question row first.
 
 **VOICE**
-> From a screenshot, the agent read the whole screen and opened several files before it found the button.
-> From Locant, it went straight there.
+> Same fix, two ways, six runs each. From a screenshot, the agent stopped to ask me which orb, five times out
+> of six. From Locant, it never asked: it grepped the identifier and opened the file.
 >
-> > From paste to the edit: fifty-two seconds with Locant, a hundred and twelve from a screenshot.
-> Same tokens, half the time.
+> What Locant saves is the question.
 
 **NOTE**
-The numbers are the medians of three headless runs per side (`03`, "Results"). The token claim is deliberately
-"same": the session totals came out equal. Do not say "fewer tokens" on camera.
+Numbers from the refined measurement in `03`: six pairs on Opus 5 at medium effort, no MCP, no memory, the
+screenshot a ⌘⇧4 crop of the phone. "Five times out of six" and "never" are counts, not estimates. Time (41 s
+against 52 s) and tokens stay in the table on screen and out of the narration.
 
 ---
 
