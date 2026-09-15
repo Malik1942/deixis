@@ -413,9 +413,8 @@
     .fine .g { flex-basis: 100%; justify-content: center; }
     .fine .g + .g::before { content: none; }
     .stage { aspect-ratio: 4 / 3; }
-    /* phones get a closer crop of the Settings window (tabs through Auto-hide), bled toward the edges */
-    .shot { margin-inline: -12px !important; }
-    .shot img { border-radius: 12px; box-shadow: var(--shadow); }               /* room for the mock window, its label, and the ball */
+    /* phones get the same window captured at its narrowest (480 pt), so macOS wraps the text itself */
+    .shot img { max-width: 480px; border-radius: 12px; box-shadow: var(--shadow); }               /* room for the mock window, its label, and the ball */
     pre.payload { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 12px; padding: 14px 16px; }
     footer .links { margin-left: 0; flex-basis: 100%; }
     .app-icon { width: 96px; height: 96px; border-radius: 21.5px; }
@@ -669,7 +668,7 @@ make this rounded, match the other pills</pre>
       <p class="lede">The one place Locant is a window. Every default works on first launch.</p>
     </div>
     <figure class="shot" style="margin: 0;">
-      <picture class="light"><source media="(max-width: 720px)" srcset="assets/settings-light-phone.png" width="1432" height="690"><img src="assets/settings-light.png" width="2024" height="1124" alt="Locant Settings window, General tab: Accessibility and Screen Recording granted, the floating ball and auto-hide on, a daily update check, version 0.7.0"></picture><picture class="dark"><source media="(max-width: 720px)" srcset="assets/settings-dark-phone.png" width="1432" height="690"><img src="assets/settings-dark.png" width="2024" height="1124" alt="Locant Settings window, General tab: Accessibility and Screen Recording granted, the floating ball and auto-hide on, a daily update check, version 0.7.0"></picture>
+      <picture class="light"><source media="(max-width: 720px)" srcset="assets/settings-light-phone.png" width="960" height="1160"><img src="assets/settings-light.png" width="2024" height="1124" alt="Locant Settings window, General tab: Accessibility and Screen Recording granted, the floating ball and auto-hide on, a daily update check, version 0.7.0"></picture><picture class="dark"><source media="(max-width: 720px)" srcset="assets/settings-dark-phone.png" width="960" height="1160"><img src="assets/settings-dark.png" width="2024" height="1124" alt="Locant Settings window, General tab: Accessibility and Screen Recording granted, the floating ball and auto-hide on, a daily update check, version 0.7.0"></picture>
     </figure>
   </section>
 
