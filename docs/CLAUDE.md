@@ -1,4 +1,4 @@
-# Deixis
+# Locant
 
 Native macOS menu bar tool: point at any UI element, hand a coding agent a grep-able reference.
 Read `docs/PRD.md` for background only. The task you are working on is always the file I name in `specs/`. If the spec and the PRD disagree, the spec wins; say so and continue.
@@ -18,7 +18,7 @@ Read `docs/PRD.md` for background only. The task you are working on is always th
 - Pure functions for anything transformable: AX attributes → `ResolvedElement`, `Capture` → Markdown. These get tests; UI does not in v0.1.
 - No third-party packages. Foundation, AppKit, SwiftUI, ScreenCaptureKit, Vision, ApplicationServices only.
 - Accessibility calls run on a background actor. The main actor touches AppKit only.
-- Deixis must never appear in its own captures. Every ScreenCaptureKit call goes through a filter that excludes our windows.
+- Locant must never appear in its own captures. Every ScreenCaptureKit call goes through a filter that excludes our windows.
 - Never overwrite the clipboard on a failed capture.
 - No network calls except the release check (specs/v0.6.md R45). No telemetry. No analytics.
 

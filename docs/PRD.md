@@ -1,4 +1,4 @@
-# Deixis: Product Requirements Document
+# Locant: Product Requirements Document
 
 **Status:** Draft v0.5 (Sep 13, 2026: design language; native Settings tokens; orb rest glow)
 **Owner:** Malik Zhang
@@ -8,11 +8,11 @@
 
 ## One-line description
 
-Deixis is a native macOS tool that lets you point at any element in any app and hand a coding agent a precise, grep-able description of it, then shows you what the agent changed. Screenshot, OCR, color picking, and subject cutout are supporting tools around that loop.
+Locant is a native macOS tool that lets you point at any element in any app and hand a coding agent a precise, grep-able description of it, then shows you what the agent changed. Screenshot, OCR, color picking, and subject cutout are supporting tools around that loop.
 
-The name is the linguistics term for words like "this," "here," and "that one," which only make sense when someone is pointing. Agents do not understand deixis. Deixis makes them.
+The name is a term from chemical nomenclature: the locant is the number in a compound name that says exactly which position a group is attached to. A screenshot says roughly where; Locant says exactly which. See Appendix C.
 
-**Positioning line:** Appshots gives your agent the window. Deixis gives it the element.
+**Positioning line:** Appshots gives your agent the window. Locant gives it the element.
 
 ---
 
@@ -38,19 +38,19 @@ The cost is felt every time a SwiftUI builder iterates on UI with an agent: desc
 2. **One gesture, zero mode switching.** From hotkey to payload on the clipboard in under 3 seconds of user time, with no dialog and no window to dismiss.
 3. **Works everywhere, degrades honestly.** The same gesture produces a useful payload on any app. When the accessibility tree is poor, the payload says so and falls back to image plus note rather than failing.
 4. **Agent-agnostic output.** The payload works in Claude Code, Codex, Cursor, and Xcode 27's agent via clipboard, and via MCP wherever the agent supports it. No agent gets a private integration the others lack.
-5. **The loop closes.** After the agent edits, Deixis can show before and after for the pointed element alongside the code diff, without the user re-pointing.
+5. **The loop closes.** After the agent edits, Locant can show before and after for the pointed element alongside the code diff, without the user re-pointing.
 6. **Lightweight by design.** Idle memory under 30 MB, no Dock icon, no accounts, no network calls, no telemetry.
 
 ## 4. Non-goals
 
-- **Not window-level context.** Codex Appshots and Claude Desktop quick entry already send the front window to their own agent. Deixis captures the element under the cursor and its crop, not the window.
-- **Not a visual regression suite.** Chromatic, Percy, Playwright snapshots, and swift-snapshot-testing capture everything on every commit and fail CI on pixel diffs. Deixis captures one element when a human pointed at it and shows the human the change; it never judges pass or fail.
+- **Not window-level context.** Codex Appshots and Claude Desktop quick entry already send the front window to their own agent. Locant captures the element under the cursor and its crop, not the window.
+- **Not a visual regression suite.** Chromatic, Percy, Playwright snapshots, and swift-snapshot-testing capture everything on every commit and fail CI on pixel diffs. Locant captures one element when a human pointed at it and shows the human the change; it never judges pass or fail.
 - **Not a screen recorder, GIF tool, or scrolling-capture tool.** CleanShot X and a dozen open-source alternatives own this.
-- **Not a cloud upload or share-link service.** Deixis is local.
+- **Not a cloud upload or share-link service.** Locant is local.
 - **Not an annotation editor.** No arrows or shapes on images in v1. The payload is the annotation.
-- **Not an asset library.** No browsing UI, no smart folders. Deixis writes metadata (Finder tags, extended attributes) so Finder, Raycast, and Eagle can find captures.
-- **Not a web DOM inspector.** For browser pages Deixis uses the browser's accessibility tree, not the DOM.
-- **Not an autonomous agent.** Deixis never edits code and never talks to a model. It produces input for agents the user already runs.
+- **Not an asset library.** No browsing UI, no smart folders. Locant writes metadata (Finder tags, extended attributes) so Finder, Raycast, and Eagle can find captures.
+- **Not a web DOM inspector.** For browser pages Locant uses the browser's accessibility tree, not the DOM.
+- **Not an autonomous agent.** Locant never edits code and never talks to a model. It produces input for agents the user already runs.
 
 ## 5. User stories
 
@@ -67,7 +67,7 @@ Ordered by priority.
 - As a Codex user, I want the same MCP tool to give me the image path and structured text, so that Codex can read the image with its own viewer even though it cannot consume MCP image blocks reliably.
 
 **Core: seeing what changed**
-- As a SwiftUI builder, after the agent edits and the app rebuilds, I want Deixis to re-capture the same element by identifier and show me before and after next to the git diff, so that I can judge the change without re-pointing.
+- As a SwiftUI builder, after the agent edits and the app rebuilds, I want Locant to re-capture the same element by identifier and show me before and after next to the git diff, so that I can judge the change without re-pointing.
 - As a SwiftUI builder, when the agent makes three passes, I want the three afters chained under my original capture, so that I can see the iteration, not just the endpoint.
 
 **Core: pointing at someone else's app**
@@ -83,7 +83,7 @@ Ordered by priority.
 **Entry points**
 - As a trackpad user, I want an optional floating ball that is nearly invisible at rest, wakes as my cursor approaches, starts Point on click, and opens a four-way ring on press-and-hold.
 - As a keyboard user, I want to keep the ball off and use hotkeys only.
-- As a Raycast user, I want to trigger each Deixis action from Raycast.
+- As a Raycast user, I want to trigger each Locant action from Raycast.
 
 **Edge cases**
 - As a user, when resolution, OCR, or cutout produces nothing, I want a short visible failure signal and an unchanged clipboard.
@@ -91,13 +91,13 @@ Ordered by priority.
 
 ## 6. Design language
 
-Deixis has almost no interface, only moments. Of its eleven surfaces, eight live for a few seconds, two are always present but tiny, and only Settings and the before/after panel are conventional windows. The visual language is therefore specified as "what one appearance should feel like," not as pages.
+Locant has almost no interface, only moments. Of its eleven surfaces, eight live for a few seconds, two are always present but tiny, and only Settings and the before/after panel are conventional windows. The visual language is therefore specified as "what one appearance should feel like," not as pages.
 
 ### 6.0 Feel in one sentence
-**A system-level transient.** Deixis should feel like something macOS grew, in the family of the ⌘⇧4 crosshair, Live Text's selection, and Spotlight: it appears, is used, and is gone. The user should feel "the system has a new gesture," never "I opened an app." From Oryne it borrows quietness; from macOS it borrows nativeness.
+**A system-level transient.** Locant should feel like something macOS grew, in the family of the ⌘⇧4 crosshair, Live Text's selection, and Spotlight: it appears, is used, and is gone. The user should feel "the system has a new gesture," never "I opened an app." From Oryne it borrows quietness; from macOS it borrows nativeness.
 
 ### 6.1 Principles
-1. **Borrow, don't brand.** System accent color, SF Pro, system materials, system cursors. No logo color, no custom font, no drawn window chrome. The only Deixis-specific mark is the pointing-hand glyph.
+1. **Borrow, don't brand.** System accent color, SF Pro, system materials, system cursors. No logo color, no custom font, no drawn window chrome. The only Locant-specific mark is the pointing-hand glyph.
 2. **Nothing lingers.** Every capture surface dismisses itself. No panel stays open waiting for the user; confirmation is one second, then gone.
 3. **Quiet until approached.** Rest states are nearly invisible (the ball, the menu bar glyph). Proximity and intent reveal detail. The only permitted rest motion is the ball's slow glow; nothing pulses at notification speed, badges, or bounces to get attention.
 
@@ -153,12 +153,12 @@ Dark and light appearance come free from the system constants; no second palette
 
 **Text selection layer (v0.3).** Recognized lines drawn as selectable regions with the system text-selection color; behaves like Live Text.
 
-**Settings (v0.3).** The one place Deixis is a window, so it must be indistinguishable from an Apple app's preferences. A SwiftUI `Settings` scene with `TabView`; `Form` with `.formStyle(.grouped)`; `settings.*` tokens throughout; no custom drawing, no custom colors, no header art or app name. Two tabs: **General** (`gearshape`: hotkeys per action, capture folder with a Choose… button, retention picker 7 / 30 / 90 days / never, floating ball toggle, URL scheme toggle) and **My Apps** (`app.badge.checkmark`: a list of bundle ids that count as fix mode, with `+` / `−` in the standard bottom bar). Each toggle that needs a sentence gets a `.footnote` description beneath it, the way System Settings does. Nothing in Settings is required for first use; a fresh install works with every default.
+**Settings (v0.3).** The one place Locant is a window, so it must be indistinguishable from an Apple app's preferences. A SwiftUI `Settings` scene with `TabView`; `Form` with `.formStyle(.grouped)`; `settings.*` tokens throughout; no custom drawing, no custom colors, no header art or app name. Two tabs: **General** (`gearshape`: hotkeys per action, capture folder with a Choose… button, retention picker 7 / 30 / 90 days / never, floating ball toggle, URL scheme toggle) and **My Apps** (`app.badge.checkmark`: a list of bundle ids that count as fix mode, with `+` / `−` in the standard bottom bar). Each toggle that needs a sentence gets a `.footnote` description beneath it, the way System Settings does. Nothing in Settings is required for first use; a fresh install works with every default.
 
 **Before/after panel (v0.4).** A single standard window, two images side by side with a shared zoom, the diff stat and file list in `label.mono` beneath, the original note above. No timeline, no gallery, no annotations.
 
 ### 6.4 Native fidelity check
-Two surfaces prove the language: the overlay must feel like a system gesture, and Settings must feel like an Apple preferences window. A quick test for each: put a Deixis screenshot next to ⌘⇧5's toolbar and next to System Settings > Desktop & Dock; if either Deixis surface looks like it came from a different vendor, fix it before shipping that version. Reference: Apple Human Interface Guidelines for macOS (Settings, Menus, Materials).
+Two surfaces prove the language: the overlay must feel like a system gesture, and Settings must feel like an Apple preferences window. A quick test for each: put a Locant screenshot next to ⌘⇧5's toolbar and next to System Settings > Desktop & Dock; if either Locant surface looks like it came from a different vendor, fix it before shipping that version. Reference: Apple Human Interface Guidelines for macOS (Settings, Menus, Materials).
 
 ### 6.5 What the language forbids
 Custom window chrome, brand colors, drop shadows on overlays, animated icons, onboarding tours, empty-state illustrations, badges, and any element that waits for the user.
@@ -169,8 +169,8 @@ Custom window chrome, brand colors, drop shadows on overlays, animated icons, on
 
 **P0.1 Hotkey.** Double-tap Control (350 ms window) opens the selection overlay. Chosen to avoid Codex's ⌘⌘ and Claude Desktop's ⌥⌥. Configurable later.
 
-**P0.2 Selection overlay.** Full-screen transparent `NSPanel` per display showing a frozen frame from ScreenCaptureKit, with Deixis's own windows excluded via `SCContentFilter`. Hover highlights the accessibility element under the cursor. Click captures it. Esc cancels with no side effects.
-- Acceptance: overlay appears within 150 ms; Deixis never appears in its own capture.
+**P0.2 Selection overlay.** Full-screen transparent `NSPanel` per display showing a frozen frame from ScreenCaptureKit, with Locant's own windows excluded via `SCContentFilter`. Hover highlights the accessibility element under the cursor. Click captures it. Esc cancels with no side effects.
+- Acceptance: overlay appears within 150 ms; Locant never appears in its own capture.
 
 **P0.3 Context at trigger time.** Front app bundle ID and name, window title, Safari/Chrome tab URL, Simulator device and app bundle ID where obtainable. Collected before the overlay appears.
 
@@ -187,8 +187,8 @@ Custom window chrome, brand colors, drop shadows on overlays, animated icons, on
 **P0.8 Payload.** One `NSPasteboardItem` with PNG and Markdown. The Markdown's first line after the heading is `Image: <absolute path>` because terminal agents receive only the text representation on paste and read the PNG from disk.
 
 ```
-## Deixis capture (fix)
-Image: /Users/malik/Pictures/Deixis/deixis-moti-20260912-140312.png
+## Locant capture (fix)
+Image: /Users/malik/Pictures/Locant/locant-moti-20260912-140312.png
 App: Simulator (com.malikzhang.moti) · Window: iPhone 17 Pro
 Captured: 2026-09-12 14:03 · Element region: 320×88 pt @2x
 
@@ -201,13 +201,13 @@ Path: navigationBar > group > button#saveButton
 make this rounded, match the other pill buttons
 ```
 
-**P0.9 Storage.** PNG plus a JSON sidecar conforming to `schema/capture.schema.json` in `~/Pictures/Deixis/`. The sidecar is the contract for the MCP server and the verify feature; the app never needs to change for either.
+**P0.9 Storage.** PNG plus a JSON sidecar conforming to `schema/capture.schema.json` in `~/Pictures/Locant/`. The sidecar is the contract for the MCP server and the verify feature; the app never needs to change for either.
 
 **P0.10 Failure feedback.** Typed `CaptureError`. Permission errors open System Settings once. Capture failure shows a 1-second toast and leaves clipboard and disk untouched.
 
 ### 7.2 P1: MCP server (v0.2)
 
-**P1.1 Package.** `deixis-mcp`, TypeScript, `@modelcontextprotocol/sdk`, stdio transport, installed with `npx deixis-mcp`. Reads the JSON sidecars; no HTTP server, no watcher, no state.
+**P1.1 Package.** `locant-mcp`, TypeScript, `@modelcontextprotocol/sdk`, stdio transport, installed with `npx locant-mcp`. Reads the JSON sidecars; no HTTP server, no watcher, no state.
 
 **P1.2 Tools.**
 - `list_captures(unresolved_only?: boolean)` → id, createdAt, mode, app, note summary
@@ -227,7 +227,7 @@ The v0.3 surface is one primary action plus four one-shot actions, organized by 
 
 | Action | You paste | Trigger | Clipboard | Disk |
 |---|---|---|---|---|
-| **Point** (primary) | element reference + crop + note | ⌃⌃, ball click, `deixis://capture` | yes | yes, 30 days; captures the agent resolved or the user pinned are kept |
+| **Point** (primary) | element reference + crop + note | ⌃⌃, ball click, `locant://capture` | yes | yes, 30 days; captures the agent resolved or the user pinned are kept |
 | **Snap** | an image | ring ↑, hotkey | yes | yes, 30 days. Hold ⌥: clipboard only, no file |
 | **Text** | recognized text (OCR) | ring →, hotkey | yes | no (text is also written as an xattr on any Snap it came from) |
 | **Color** | a color value | ring ↓, hotkey | yes | no; last 10 colors in memory |
@@ -235,7 +235,7 @@ The v0.3 surface is one primary action plus four one-shot actions, organized by 
 
 Point is the only action that leaves a record the agent and Verify can return to. The four ring actions are things you grab and move on.
 
-**P1.5 Snap.** Region or window capture from the frozen frame; ⌥ suppresses the file. This is the "normal screenshot" replacement: same speed as ⌘⇧4, but files go to the Deixis folder and expire instead of piling up on the Desktop.
+**P1.5 Snap.** Region or window capture from the frozen frame; ⌥ suppresses the file. This is the "normal screenshot" replacement: same speed as ⌘⇧4, but files go to the Locant folder and expire instead of piling up on the Desktop.
 
 **P1.6 Text (OCR).** `VNRecognizeTextRequest`, `.accurate`, zh-Hans and en-US, language correction off for code editors, reading order rebuilt by line geometry. A second hotkey keeps the overlay and makes each recognized line drag-selectable.
 
@@ -245,7 +245,7 @@ Point is the only action that leaves a record the agent and Verify can return to
 
 **P1.9 Drag selection for Point.** Hold ⇧ while pointing to drag a region; every element at least 50 percent inside is included, capped at 12.
 
-**P1.10 Lifecycle.** Daily cleanup moves image files older than N days (default 30) to Trash unless pinned via extended attribute. Pin-last available from the menu bar and `deixis://pin-last`.
+**P1.10 Lifecycle.** Daily cleanup moves image files older than N days (default 30) to Trash unless pinned via extended attribute. Pin-last available from the menu bar and `locant://pin-last`.
 
 **P1.11 Floating ball.** Optional second entry point, off by default (the hotkey is the default). Its design principle is borrowed from Oryne's orbs, not copied: quiet at rest, present when approached. The ball and Oryne's orb should read as relatives, not twins.
 
@@ -267,7 +267,7 @@ Point is the only action that leaves a record the agent and Verify can return to
 
 *Icons.* Menu bar and ring center: `hand.point.up.left` (template, 18×18). Snap: `camera.viewfinder`. Text: `text.viewfinder` (Apple's own Live Text glyph). Color: `eyedropper`. Cut: `person.and.background.dotted` (fallback `scissors`). Verify symbol names against the installed SF Symbols release.
 
-**P1.12 URL scheme and Raycast.** `deixis://capture`, `deixis://snap`, `deixis://text`, `deixis://color`, `deixis://cut`, `deixis://pin-last`. Off by default. Thin Raycast extension calling these.
+**P1.12 URL scheme and Raycast.** `locant://capture`, `locant://snap`, `locant://text`, `locant://color`, `locant://cut`, `locant://pin-last`. Off by default. Thin Raycast extension calling these.
 
 **P1.13 Settings.** Hotkeys per action, capture folder, retention days, "my apps" list, ball on/off, URL scheme on/off.
 
@@ -277,9 +277,9 @@ Point is the only action that leaves a record the agent and Verify can return to
 
 The third act: point → fix → see what changed.
 
-**P2.1 Trigger.** After a fix-mode capture, Deixis arms a one-shot listener for "the app was rebuilt." Trigger sources, in order of preference: Xcode build-succeeded notification, git `post-commit` hook installed by Deixis in the project, Claude Code `Stop` hook. The user can also trigger manually ("Capture after" in the menu).
+**P2.1 Trigger.** After a fix-mode capture, Locant arms a one-shot listener for "the app was rebuilt." Trigger sources, in order of preference: Xcode build-succeeded notification, git `post-commit` hook installed by Locant in the project, Claude Code `Stop` hook. The user can also trigger manually ("Capture after" in the menu).
 
-**P2.2 Re-find.** Deixis locates the same element by `source.app` plus `element.identifier` (fallback: role plus label plus nearest frame) in the rebuilt app, retrying every 500 ms for up to 5 seconds while the UI comes up. Anchoring by identifier, not by pixel position, is what makes this work when the element moves.
+**P2.2 Re-find.** Locant locates the same element by `source.app` plus `element.identifier` (fallback: role plus label plus nearest frame) in the rebuilt app, retrying every 500 ms for up to 5 seconds while the UI comes up. Anchoring by identifier, not by pixel position, is what makes this work when the element moves.
 
 **P2.3 Iteration record.** Each after is stored as an `iteration` under the original capture: after-image path, git SHA before and after, `git diff --stat` between them, and the list of files touched. A capture can hold many iterations.
 
@@ -287,7 +287,7 @@ The third act: point → fix → see what changed.
 
 **P2.5 No judgment.** No pixel-diff threshold, no pass/fail, no alerts. The human decides.
 
-- Acceptance: point at `saveButton`, note "make this rounded", agent edits, app rebuilds, Deixis shows the button before and after with "1 file changed" and the file name, without the user pointing again.
+- Acceptance: point at `saveButton`, note "make this rounded", agent edits, app rebuilds, Locant shows the button before and after with "1 file changed" and the file name, without the user pointing again.
 - Acceptance: three consecutive agent edits produce three iterations under one capture.
 - Blocking spike before P2 starts: confirm the rebuilt Simulator app exposes the same identifier within 5 seconds and that at least one trigger source fires reliably.
 
@@ -296,7 +296,7 @@ The third act: point → fix → see what changed.
 - AX quality scoring per app, stored locally, to warn before capture.
 - Structured document OCR via `RecognizeDocumentsRequest` (macOS 26).
 - Two-color contrast picking (WCAG and APCA).
-- **Web, native.** Two steps. First, zero-install: Safari and Chrome expose the DOM through the accessibility tree, so Point already returns role, label, and frame for page elements plus the tab URL; enough for reference mode. Second, an optional companion browser extension that, when Point lands in a browser, returns the element's CSS selector, tag, classes, id, and key computed styles over native messaging, upgrading the payload to Agentation-level precision on any page, without installing anything into the project. The schema gains an optional `web: { selector, tag, classes, id, computedStyles }` field; the MCP server does not change. Deixis on the web stays the same sentence: point at an element, give the agent a reference. No DOM export, no "copy as component."
+- **Web, native.** Two steps. First, zero-install: Safari and Chrome expose the DOM through the accessibility tree, so Point already returns role, label, and frame for page elements plus the tab URL; enough for reference mode. Second, an optional companion browser extension that, when Point lands in a browser, returns the element's CSS selector, tag, classes, id, and key computed styles over native messaging, upgrading the payload to Agentation-level precision on any page, without installing anything into the project. The schema gains an optional `web: { selector, tag, classes, id, computedStyles }` field; the MCP server does not change. Locant on the web stays the same sentence: point at an element, give the agent a reference. No DOM export, no "copy as component."
 - Windows port. The element schema is already platform-neutral because Windows UI Automation exposes the same concepts; the MCP server would be shared.
 - Reuse Peekaboo's `see` for AX parsing if its output proves richer than `ElementResolver` at low cost.
 
@@ -311,7 +311,7 @@ Measured on Malik's own usage for 30 days after v0.3, revisited if released.
 - Share of fix-mode captures that get at least one verify iteration (after v0.4): tracked, no target.
 
 **Lagging**
-- Built-in macOS screenshot hotkeys stay remapped to Deixis.
+- Built-in macOS screenshot hotkeys stay remapped to Locant.
 - Zero screenshot files on the Desktop at day 30.
 - If released: GitHub stars and release download counts are reported, not success criteria.
 
@@ -349,7 +349,7 @@ Role names are lowercase and platform-neutral (`button`, `textField`, `staticTex
 
 ### 9.3 Module boundaries
 ```
-Deixis/      Swift app
+Locant/      Swift app
   Capture/   HotkeyMonitor, SelectionOverlay, FrozenFrame, ContextCollector
   Resolve/   ElementResolver (pure, tested), ModeClassifier
   Modules/   Screenshot, OCR, ColorPicker, Cutout   (protocol CaptureModule)
@@ -363,7 +363,7 @@ schema/      capture.schema.json, the only interface between app and mcp
 The app and the MCP server communicate only through files on disk. Neither knows the other is running.
 
 ### 9.4 Known limitation to state in the README
-Element data quality depends on the target app's accessibility implementation. SwiftUI and AppKit apps and the iOS Simulator work well. Electron apps, Figma, games, and custom-drawn UIs often expose little; Deixis falls back to image plus note there.
+Element data quality depends on the target app's accessibility implementation. SwiftUI and AppKit apps and the iOS Simulator work well. Electron apps, Figma, games, and custom-drawn UIs often expose little; Locant falls back to image plus note there.
 
 ## 10. Open questions
 
@@ -374,7 +374,7 @@ Element data quality depends on the target app's accessibility implementation. S
 **Non-blocking**
 - (Design) Ball on or off by default at first launch? Current answer: off.
 - (Engineering) Cleanup via LaunchAgent or only while the app runs?
-- (Product) Register `deixis.app` or `deixis.dev` before public release. Name check as of Sep 2026: no USPTO record found via search, no Mac or developer-tool product with the name, Deixis PBC (Seattle) unrelated.
+- (Product) Register `locant.app` or `locant.dev` before public release. Name check as of Sep 14, 2026: no software product with the exact name on the app stores, GitHub, Product Hunt, or general web search. The earlier name was dropped that day because three unrelated products in the same space already used it; see Appendix C.
 
 ## 11. Phasing
 
@@ -405,13 +405,13 @@ Public launch (site, X, LinkedIn, download count) after v0.2. Palantir submissio
 | Windows-Use, CliGate, ScreenHand, agent-aid | Agent | Element (UIA / AX) | No | MCP, Python | Windows, some macOS |
 | Chromatic, Percy, swift-snapshot-testing | CI | Everything | No | Test report | Web, iOS tests |
 | CleanShot X, Shottr, Snapzy, macshot | Human | Pixels | No | Clipboard, file | Any Mac app |
-| **Deixis** | **Human (click)** | **Element (AX), platform-neutral schema** | **Yes** | **Clipboard + MCP, any agent** | **Any Mac app, Simulator** |
+| **Locant** | **Human (click)** | **Element (AX), platform-neutral schema** | **Yes** | **Clipboard + MCP, any agent** | **Any Mac app, Simulator** |
 
 The empty cell across platforms: human-triggered, element-level, with a note, agent-agnostic, native. Web has Agentation and Stagewise; macOS, Windows, and Linux have only agent-driven tools.
 
 ## Appendix B: Agent MCP image support (tested or sourced, Sep 2026)
 
-| Agent | MCP image block | Deixis strategy |
+| Agent | MCP image block | Locant strategy |
 |---|---|---|
 | Claude Code | Consumed (Peekaboo depends on it) | Text + path; `include_image` optional |
 | Cursor | Consumed (official docs) | Same |
@@ -419,6 +419,10 @@ The empty cell across platforms: human-triggered, element-level, with a note, ag
 | Gemini CLI / Antigravity | Unconfirmed (issue #2136) | Text + path; mark untested |
 | Anything else | Unknown | Clipboard Markdown as the floor |
 
-## Appendix C: Name
+## Appendix C: Naming
 
-"Deixis" (/ˈdaɪksɪs/): the linguistic term for expressions whose meaning depends on pointing. README opening line: "Agents don't understand *this*. Now they do."
+"Locant" is a term from chemical nomenclature. In a compound name such as 2-methylbutane, the "2" is the locant: the number that tells you exactly which position on the carbon chain the methyl group is attached to. Without it, the name describes a family of possible molecules. With it, the name describes one molecule, unambiguously.
+
+That is the job of this tool. A screenshot tells an agent roughly where something is. Locant tells it exactly which element, with a reference the agent can grep for. The name carries the precision half of the positioning; the tagline, "Point, don't describe.", carries the other half.
+
+The name is pronounced LOH-kant, two syllables. It is a word borrowed from outside software on purpose: terms that feel obviously fitting to tool builders (pointer, index, deixis) tend to be taken already.

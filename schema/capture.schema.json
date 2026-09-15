@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/malikzhang/deixis/schema/capture.schema.json",
-  "title": "Deixis capture",
-  "description": "One capture: the element the user pointed at, the cropped image on disk, and the context it came from. This file is the only interface between the Deixis app and anything else. The Markdown on the clipboard is derived from it, never the other way around. Field names are platform-neutral.",
+  "$id": "https://github.com/malikzhang/locant/schema/capture.schema.json",
+  "title": "Locant capture",
+  "description": "One capture: the element the user pointed at, the cropped image on disk, and the context it came from. This file is the only interface between the Locant app and anything else. The Markdown on the clipboard is derived from it, never the other way around. Field names are platform-neutral.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -216,7 +216,7 @@
         },
         "projectRoot": {
           "type": "string",
-          "description": "Absolute path of the project directory that produced the app, when Deixis could infer it (DerivedData, an ancestor with .xcodeproj/.xcworkspace/Package.swift). Absent otherwise; never guessed."
+          "description": "Absolute path of the project directory that produced the app, when Locant could infer it (DerivedData, an ancestor with .xcodeproj/.xcworkspace/Package.swift). Absent otherwise; never guessed."
         },
         "gitCommit": {
           "type": "string",
@@ -299,7 +299,7 @@
     "role": {
       "type": "string",
       "pattern": "^[a-z][A-Za-z0-9]*$",
-      "description": "Lowercase, platform-neutral role: button, textField, staticText, image, group, toolbar, navigationBar, unknown, and so on. Never AX-prefixed. `cluster` is a visual grouping computed by Deixis from neighbouring elements when the platform exposes no container (rawRole DeixisCluster); it is not an accessibility element and carries `members`."
+      "description": "Lowercase, platform-neutral role: button, textField, staticText, image, group, toolbar, navigationBar, unknown, and so on. Never AX-prefixed. `cluster` is a visual grouping computed by Locant from neighboring elements when the platform exposes no container (rawRole LocantCluster); it is not an accessibility element and carries `members`."
     },
     "frame": {
       "type": "object",

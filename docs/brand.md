@@ -1,4 +1,4 @@
-# Deixis brand
+# Locant brand
 
 **Status:** decisions as of Sep 13, 2026. Owner: Malik Zhang.
 
@@ -8,17 +8,18 @@ Everything else stays borrowed on purpose.
 
 ## Name
 
-Deixis, the linguistics term for words like *this*, *here*, and *that one*, which only mean something when someone
-is pointing. Tagline, always set with *this* in italic:
+Locant, a term from chemical nomenclature: in 2-methylbutane, the 2 is the locant, the number that says exactly
+which position the methyl group is attached to. Without it the name describes a family of molecules; with it, one.
+Pronounced LOH-kant, two syllables. Tagline, always with the comma and the period:
 
-> Agents don't understand *this*. Deixis does.
+> Point, don't describe.
 
-Say "Deixis" as a proper noun, never "the Deixis app". Say "capture" for the act, "payload" for what lands on the
+Say "Locant" as a proper noun, never "the Locant app". Say "capture" for the act, "payload" for what lands on the
 clipboard, "the ball" for the floating disc, "the overlay" for the frozen frame. Never "screenshot tool".
 
 ## Icon
 
-`Deixis/AppIcon.icon`, an Icon Composer package the system renders on macOS 26; `AppIcon.appiconset` holds the PNG
+`Locant/AppIcon.icon`, an Icon Composer package the system renders on macOS 26; `AppIcon.appiconset` holds the PNG
 fallback for macOS 15. Regeneration tools and the current renders live in `design/icon/`.
 
 - Two elements: a clear glass disc, the ball made solid, and two selection corners with a 10 percent gap.
