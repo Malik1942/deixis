@@ -109,6 +109,7 @@
   .wide { max-width: 980px; margin-inline: auto; }
 
   h1, h2, h3 { margin: 0; text-wrap: balance; letter-spacing: -0.022em; }
+  p { text-wrap: pretty; }
   h1 { font-size: clamp(38px, 6.4vw, 60px); line-height: 1.06; font-weight: 600; }
   h2 { font-size: clamp(32px, 4.2vw, 48px); line-height: 1.08; font-weight: 600; }
   h3 { font-size: 21px; line-height: 1.25; font-weight: 600; letter-spacing: -0.012em; }
@@ -321,7 +322,7 @@
   .rung b { color: var(--ink); font-weight: 600; }
 
   .actions { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
-  .action { display: grid; gap: 8px; padding: 18px 16px; background: var(--surface); border-radius: 16px; box-shadow: 0 0 0 1px var(--hair); align-content: start; }
+  .action { display: grid; grid-template-rows: auto auto 1fr auto; gap: 8px; padding: 18px 16px; background: var(--surface); border-radius: 16px; box-shadow: 0 0 0 1px var(--hair); }
   /* the ring's four symbols, drawn in the label color like the app draws them */
   .action .glyph { width: 30px; height: 30px; background: var(--ink); -webkit-mask: var(--glyph) center / contain no-repeat; mask: var(--glyph) center / contain no-repeat; }
   .action .glyph.snap { --glyph: url("assets/glyph-snap.png"); }
@@ -330,7 +331,7 @@
   .action .glyph.cut { --glyph: url("assets/glyph-cut.png"); }
   .action h3 { font-size: 19px; }
   .action p { font-size: 17px; color: var(--muted); }
-  .action .keeps { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .action .keeps { font-size: 12px; color: var(--muted); margin-top: 2px; align-self: end; }
   .rulebox { margin-top: 18px; font-size: 17px; color: var(--muted); }
 
   .split { display: grid; grid-template-columns: 1.15fr 1fr; gap: 40px; align-items: center; }
@@ -683,7 +684,7 @@ make this rounded, match the other pills</pre>
         <h3>Two permissions, both explained</h3><p>Accessibility reads what is under your cursor. Screen Recording captures the pixels. There is no third prompt.</p>
       </div>
       <div class="item">
-        <h3>Nothing leaves the machine</h3><p>No telemetry, no accounts. The one request is a daily check for a newer version on GitHub, and you can turn it off.</p>
+        <h3>Nothing leaves the machine</h3><p>No telemetry, no accounts. The one request is a daily check for a newer version on GitHub, and you can turn it&nbsp;off.</p>
       </div>
       <div class="item">
         <h3>Signed and notarized</h3><p>Every build is signed with a Developer ID and notarized by Apple. A dmg from GitHub, not the App Store.</p>
