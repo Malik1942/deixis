@@ -90,6 +90,8 @@ struct GeneralSettings: View {
     /// The two grants Deixis needs, re-read while the window is open so a change in System Settings shows at once.
     @State private var accessibilityGranted = AccessibilityReader.isTrusted(prompt: false)
     @State private var screenRecordingGranted = ScreenCapture.hasPermission()
+    /// Check Now… in flight; the button waits for the answer.
+    @State private var checking = false
 
     var body: some View {
         @Bindable var preferences = state.preferences
@@ -198,6 +200,30 @@ struct GeneralSettings: View {
                 }
                 .toggleStyle(.switch)
                 .disabled(!preferences.ballEnabled)
+            }
+            Section {
+                Toggle(isOn: $preferences.checksForUpdates) {
+                    Text("Check for updates")
+                    Text("Once a day, Deixis asks GitHub for the newest release. The request carries the version number and nothing about you or your captures.")
+                }
+                .toggleStyle(.switch)
+                LabeledContent {
+                    Button("Check Now…") {
+                        checking = true
+                        Task {
+                            await state.checkForUpdates(manual: true)
+                            checking = false
+                        }
+                    }
+                    .disabled(checking)
+                } label: {
+                    Text("Version \(UpdateCheck.currentVersion?.description ?? "unknown")")
+                    if let lastCheck = preferences.lastUpdateCheck {
+                        Text("Last checked \(lastCheck.formatted(.relative(presentation: .named))).")
+                    } else {
+                        Text("Not checked yet.")
+                    }
+                }
             }
             Section {
                 LabeledContent {

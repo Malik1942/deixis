@@ -23,6 +23,9 @@ final class PreferencesTests: XCTestCase {
         XCTAssertEqual(p.myApps, [])
         XCTAssertEqual(p.organization, .none)
         XCTAssertTrue(p.adjustSelection)
+        XCTAssertTrue(p.checksForUpdates)
+        XCTAssertNil(p.lastUpdateCheck)
+        XCTAssertNil(p.skippedUpdateVersion)
         XCTAssertEqual(p.actionHotkeys, Preferences.defaultActionHotkeys)
         XCTAssertEqual(p.actionHotkeys["point"]?.title, "⌃⌥1")
         XCTAssertEqual(p.actionHotkeys["snap"]?.title, "⌃⌥2")
@@ -107,6 +110,9 @@ final class PreferencesTests: XCTestCase {
         p.myApps = ["com.inspireocean.app"]
         p.organization = .byProject
         p.adjustSelection = false
+        p.checksForUpdates = false
+        p.lastUpdateCheck = Date(timeIntervalSince1970: 1_800_000_000)
+        p.skippedUpdateVersion = "0.7.0"
         XCTAssertEqual(hotkeyChanges, 1, "only a real change restarts the monitor")
 
         let again = Preferences(defaults: defaults)
@@ -119,7 +125,15 @@ final class PreferencesTests: XCTestCase {
         XCTAssertEqual(again.myApps, ["com.inspireocean.app"])
         XCTAssertEqual(again.organization, .byProject)
         XCTAssertFalse(again.adjustSelection)
+        XCTAssertFalse(again.checksForUpdates)
+        XCTAssertEqual(again.lastUpdateCheck, Date(timeIntervalSince1970: 1_800_000_000))
+        XCTAssertEqual(again.skippedUpdateVersion, "0.7.0")
         XCTAssertEqual(again.captureFolderURL.path(percentEncoded: false), "/tmp/captures/")
+        again.skippedUpdateVersion = nil
+        again.lastUpdateCheck = nil
+        let third = Preferences(defaults: defaults)
+        XCTAssertNil(third.skippedUpdateVersion)
+        XCTAssertNil(third.lastUpdateCheck)
     }
 
     func testLegacyHotkeyModifierMigrates() {

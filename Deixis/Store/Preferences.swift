@@ -117,6 +117,9 @@ final class Preferences {
         static let actionHotkeys = "actionHotkeys" // v0.3 early builds: only what the user recorded; migrated on read
         static let actionHotkeySettings = "actionHotkeySettings"
         static let hintCounts = "hintCounts" // v0.5 R40
+        static let checksForUpdates = "checksForUpdates" // v0.6 R46
+        static let lastUpdateCheck = "lastUpdateCheck"
+        static let skippedUpdateVersion = "skippedUpdateVersion"
     }
 
     /// The actions that can carry a hotkey (R29), in menu and ring order; each one's digit is its position here.
@@ -257,6 +260,33 @@ final class Preferences {
 
     func markHintShown(_ key: String) { hintCounts[key] = hintCount(key) + 1 }
 
+    /// v0.6 R46: the daily release check (R45). Off means Deixis opens no socket at all.
+    var checksForUpdates: Bool {
+        didSet { defaults.set(checksForUpdates, forKey: Key.checksForUpdates) }
+    }
+
+    /// When the last check ran, whatever it found; nil until the first.
+    var lastUpdateCheck: Date? {
+        didSet {
+            if let lastUpdateCheck {
+                defaults.set(lastUpdateCheck, forKey: Key.lastUpdateCheck)
+            } else {
+                defaults.removeObject(forKey: Key.lastUpdateCheck)
+            }
+        }
+    }
+
+    /// The version the user chose "Skip This Version" for; the next one asks again.
+    var skippedUpdateVersion: String? {
+        didSet {
+            if let skippedUpdateVersion {
+                defaults.set(skippedUpdateVersion, forKey: Key.skippedUpdateVersion)
+            } else {
+                defaults.removeObject(forKey: Key.skippedUpdateVersion)
+            }
+        }
+    }
+
     var captureFolderURL: URL { URL(filePath: captureFolder, directoryHint: .isDirectory) }
 
     init(defaults: UserDefaults = .standard) {
@@ -283,6 +313,9 @@ final class Preferences {
         retentionDays = defaults.object(forKey: Key.retentionDays) as? Int ?? 30
         adjustSelection = defaults.object(forKey: Key.adjustSelection) as? Bool ?? true
         hintCounts = defaults.dictionary(forKey: Key.hintCounts) as? [String: Int] ?? [:]
+        checksForUpdates = defaults.object(forKey: Key.checksForUpdates) as? Bool ?? true
+        lastUpdateCheck = defaults.object(forKey: Key.lastUpdateCheck) as? Date
+        skippedUpdateVersion = defaults.string(forKey: Key.skippedUpdateVersion)
         if let data = defaults.data(forKey: Key.actionHotkeySettings), let stored = try? JSONDecoder().decode([String: ActionHotkeySetting].self, from: data) {
             actionHotkeySettings = stored
         } else if let data = defaults.data(forKey: Key.actionHotkeys), let legacy = try? JSONDecoder().decode([String: Hotkey].self, from: data) {
