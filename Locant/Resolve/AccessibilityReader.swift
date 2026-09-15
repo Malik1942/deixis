@@ -23,7 +23,8 @@ actor AccessibilityReader {
     /// Electron apps expose `AXManualAccessibility` for the same purpose and are detected by it.
     private static let chromiumBundleIDs: Set<String> = [
         "com.google.Chrome", "com.google.Chrome.canary", "com.google.Chrome.beta", "org.chromium.Chromium",
-        "com.microsoft.edgemac", "com.brave.Browser", "company.thebrowser.Browser", "com.vivaldi.Vivaldi",
+        "com.microsoft.edgemac", "com.brave.Browser", "company.thebrowser.Browser", "company.thebrowser.dia",
+        "com.vivaldi.Vivaldi",
     ]
 
     /// R3: Electron and Chromium apps expose only window-sized groups until accessibility is enabled
