@@ -57,11 +57,18 @@ private struct PermissionRow: View {
     let granted: Bool
     let grant: () -> Void
 
+    /// Apple's macOS system green as the light appearance draws it (#28CD41). The dark appearance
+    /// lightens its green by design, and on a 13 pt tick that read as pale and washed out
+    /// (Malik, Sep 14 2026), so the light value is pinned in both appearances. Measured in the dark
+    /// grouped Form: `.green` renders P3 #68CE67, this renders #63CA56, same lightness, more chroma.
+    private static let grantedGreen = Color(red: 0x28 / 255.0, green: 0xCD / 255.0, blue: 0x41 / 255.0)
+
     var body: some View {
         LabeledContent {
             HStack(spacing: 8) {
                 Image(systemName: granted ? "checkmark.circle.fill" : "exclamationmark.circle.fill")
-                    .foregroundStyle(granted ? .green : .orange)
+                    .symbolRenderingMode(.monochrome)
+                    .foregroundStyle(granted ? Self.grantedGreen : .orange)
                 Text(granted ? "Granted" : "Not granted")
                     .foregroundStyle(.secondary)
                 if !granted {
