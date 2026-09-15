@@ -25,6 +25,7 @@ Read `docs/PRD.md` for background only. The task you are working on is always th
 ## Data contract
 - `schema/capture.schema.json` is the only interface between the app and anything else. Field names are platform-neutral (`role`, `label`, `identifier`, `frame`, `path`), never `AX`-prefixed.
 - Every capture writes a PNG and a JSON sidecar. The Markdown on the clipboard is derived from the JSON, never the other way around.
+- The MCP server (`Locant --mcp`, specs/v0.7.1.md) reads the sidecars through the same `Capture` model and writes only `resolved`. It adds no second interface.
 
 ## Do not
 - Do not create windows, dashboards, onboarding, or Settings unless the spec names them.

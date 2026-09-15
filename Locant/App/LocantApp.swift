@@ -1,10 +1,22 @@
 import AppKit
 import SwiftUI
 
+/// The entry point. v0.7.1 R53: `Locant --mcp` is the MCP server on stdio and never touches
+/// AppKit; anything else is the app.
+@main
+enum Main {
+    @MainActor static func main() {
+        if let options = MCPServer.Options(arguments: CommandLine.arguments) {
+            MCPServer.serve(options)
+            return
+        }
+        LocantApp.main()
+    }
+}
+
 /// LSUIElement app: no Dock icon, no document windows. Two scenes: the menu bar item (R10, a
 /// standard menu rendered by `MenuBarExtra`) and Settings (v0.3 R19). The delegate keeps the
 /// permission alerts and `AppState`.
-@main
 struct LocantApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var delegate
 

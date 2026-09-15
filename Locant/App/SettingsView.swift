@@ -6,8 +6,9 @@ import SwiftUI
 /// every tab is a grouped Form that reflows with the width.
 struct SettingsView: View {
     var body: some View {
-        // v0.6 R51: four tabs, the way System Settings groups things. General is what the app is
-        // and needs; Hotkeys is every key; Captures is what is written and how; My Apps is the list.
+        // v0.6 R51: tabs, the way System Settings groups things. General is what the app is
+        // and needs; Hotkeys is every key; Captures is what is written and how; My Apps is the list;
+        // Agents (v0.7.1 R56) is who fetches captures over MCP.
         TabView {
             GeneralSettings()
                 .tabItem { Label("General", systemImage: "gearshape") }
@@ -17,6 +18,8 @@ struct SettingsView: View {
                 .tabItem { Label("Captures", systemImage: "photo.on.rectangle") }
             MyAppsSettings()
                 .tabItem { Label("My Apps", systemImage: "app.badge.checkmark") }
+            AgentSettings()
+                .tabItem { Label("Agents", systemImage: "terminal") }
         }
         .frame(minWidth: 480, idealWidth: 520, maxWidth: .infinity, minHeight: 360, idealHeight: 560, maxHeight: .infinity)
         .background(SettingsWindowConfigurator())
@@ -61,7 +64,7 @@ private struct PermissionRow: View {
     /// lightens its green by design, and on a 13 pt tick that read as pale and washed out
     /// (Malik, Sep 14 2026), so the light value is pinned in both appearances. Measured in the dark
     /// grouped Form: `.green` renders P3 #68CE67, this renders #63CA56, same lightness, more chroma.
-    private static let grantedGreen = Color(red: 0x28 / 255.0, green: 0xCD / 255.0, blue: 0x41 / 255.0)
+    fileprivate static let grantedGreen = Color(red: 0x28 / 255.0, green: 0xCD / 255.0, blue: 0x41 / 255.0)
 
     var body: some View {
         LabeledContent {
@@ -569,5 +572,139 @@ private struct MyAppRow: View {
             ?? (bundle?.object(forInfoDictionaryKey: "CFBundleName") as? String)
             ?? url.deletingPathExtension().lastPathComponent
         return (name, NSWorkspace.shared.icon(forFile: url.path(percentEncoded: false)))
+    }
+}
+
+/// v0.7.1 R56: one row per agent, its state re-read while the window is open, Connect or
+/// Disconnect trailing, the way the permission rows read. The writes run off the main actor:
+/// the CLIs take a second.
+struct AgentSettings: View {
+    @State private var statuses: [Agent: AgentStatus] = [:]
+    @State private var failures: [Agent: String] = [:]
+    @State private var busy: Set<Agent> = []
+    @State private var copied = false
+
+    private var executable: String { AgentConnector.executable }
+
+    var body: some View {
+        Form {
+            Section {
+                ForEach(Agent.allCases) { agent in
+                    AgentRow(
+                        agent: agent,
+                        status: statuses[agent],
+                        executable: executable,
+                        busy: busy.contains(agent),
+                        failure: failures[agent],
+                        connect: { act(agent, connect: true) },
+                        disconnect: { act(agent, connect: false) }
+                    )
+                }
+                Footnote(text: "Connect adds one server named locant to the agent's own configuration. It runs \(executable) --mcp when the agent starts, and gives it four tools: the latest capture, a list, one capture by id, and resolve. Nothing runs until then.")
+            }
+            Section {
+                LabeledContent {
+                    Button(copied ? "Copied" : "Copy") {
+                        NSPasteboard.general.clearContents()
+                        NSPasteboard.general.setString(AgentConfig.jsonSnippet(executable: executable), forType: .string)
+                        copied = true
+                        Task {
+                            try? await Task.sleep(for: .seconds(2))
+                            copied = false
+                        }
+                    }
+                } label: {
+                    Text("Any other agent")
+                    Text("A JSON snippet for an MCP client that runs stdio servers: Gemini CLI, Windsurf, Zed, Claude Desktop.")
+                }
+            }
+        }
+        .formStyle(.grouped)
+        .task {
+            while !Task.isCancelled {
+                await refresh()
+                try? await Task.sleep(for: .seconds(2))
+            }
+        }
+    }
+
+    private func refresh() async {
+        let found = await Task.detached {
+            Dictionary(uniqueKeysWithValues: Agent.allCases.map { ($0, AgentConnector.status($0)) })
+        }.value
+        statuses = found
+    }
+
+    private func act(_ agent: Agent, connect: Bool) {
+        busy.insert(agent)
+        failures[agent] = nil
+        Task {
+            do {
+                try await Task.detached {
+                    if connect { try AgentConnector.connect(agent) } else { try AgentConnector.disconnect(agent) }
+                }.value
+            } catch {
+                failures[agent] = error.localizedDescription
+            }
+            await refresh()
+            busy.remove(agent)
+        }
+    }
+}
+
+private struct AgentRow: View {
+    let agent: Agent
+    let status: AgentStatus?
+    let executable: String
+    let busy: Bool
+    let failure: String?
+    let connect: () -> Void
+    let disconnect: () -> Void
+
+    var body: some View {
+        // The state is one row of plain views, rebuilt as a whole on each change: a disabled
+        // container left the text invisible after the buttons swapped (Sep 15, 2026).
+        LabeledContent {
+            HStack(spacing: 8) {
+                if busy {
+                    ProgressView()
+                        .controlSize(.small)
+                    Text("Working…")
+                        .foregroundStyle(.secondary)
+                } else if let status {
+                    Image(systemName: connected(status) ? "checkmark.circle.fill" : "exclamationmark.circle.fill")
+                        .symbolRenderingMode(.monochrome)
+                        .foregroundStyle(connected(status) ? PermissionRow.grantedGreen : .orange)
+                    Text(stateText(status))
+                        .foregroundStyle(.secondary)
+                    switch status {
+                    case .notConnected:
+                        Button("Connect", action: connect)
+                    case .connected(let found) where found == executable:
+                        Button("Disconnect", action: disconnect)
+                    case .connected:
+                        Button("Reconnect", action: connect)
+                        Button("Disconnect", action: disconnect)
+                    }
+                }
+            }
+            .id(busy)
+        } label: {
+            Text(agent.title)
+            Text(agent.detail)
+            if let failure { ConflictNote(text: failure) }
+        }
+    }
+
+    private func connected(_ status: AgentStatus) -> Bool {
+        if case .connected(let found) = status { return found == executable }
+        return false
+    }
+
+    private func stateText(_ status: AgentStatus) -> String {
+        switch status {
+        case .notConnected: "Not connected"
+        case .connected(let found): found == executable ? "Connected" : "Connected to another copy"
+        }
     }
 }
