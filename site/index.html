@@ -303,10 +303,11 @@
   }
   pre.payload .h { color: var(--muted); }
   pre.payload .k { color: var(--accent); }
-  .notes { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 32px; }
-  .note { display: grid; gap: 2px; font-size: 17px; padding-left: 14px; border-left: 2px solid var(--hair); }
-  .note b { font-weight: 600; }
-  .note span { color: var(--muted); }
+  /* the same cards as Privacy and Known limitations */
+  .notes { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .note { display: grid; gap: 6px; align-content: start; padding: 18px 20px; background: var(--surface); border-radius: 16px; box-shadow: 0 0 0 1px var(--hair); }
+  .note h3 { font-size: 17px; }
+  .note p { font-size: 17px; color: var(--muted); }
 
   /* the fallback ladder: the target line the payload carries at each rung */
   .ladder { display: grid; background: var(--surface); border-radius: 14px; box-shadow: 0 0 0 1px var(--hair); overflow: hidden; }
@@ -590,10 +591,10 @@ button · id=captureButton
 <span class="h">### Note</span>
 make this rounded, match the other pills</pre>
       <div class="notes">
-        <div class="note"><b>Image first</b><span>Terminal agents get only the text on paste. The path leads, so the agent can open the PNG.</span></div>
-        <div class="note"><b>Fix or reference</b><span>Your own apps are inferred: the Simulator, anything built on this Mac, anything signed with your Team ID.</span></div>
-        <div class="note"><b>Identifier and path</b><span>The accessibility identifier is what the agent greps for. The path says where in the tree it sits.</span></div>
-        <div class="note"><b>On disk too</b><span>A PNG and a JSON sidecar in Pictures, tagged in Finder, validating against a published schema.</span></div>
+        <div class="note"><h3>Image first</h3><p>Terminal agents get only the text on paste. The path leads, so the agent can open the PNG.</p></div>
+        <div class="note"><h3>Fix or reference</h3><p>Your own apps are inferred: the Simulator, anything built on this Mac, anything signed with your Team ID.</p></div>
+        <div class="note"><h3>Identifier and path</h3><p>The accessibility identifier is what the agent greps for. The path says where in the tree it sits.</p></div>
+        <div class="note"><h3>On disk too</h3><p>A PNG and a JSON sidecar in Pictures, tagged in Finder, validating against a published schema.</p></div>
       </div>
     </div>
   </section>
