@@ -3,7 +3,7 @@ import SwiftUI
 
 /// v0.3 R19: the one place Locant is a window. PRD §6.3 "Settings": grouped forms, system
 /// controls at default sizes, footnotes under rows, nothing custom. Resizable from 480×360;
-/// the forms reflow with the width and the My Apps list takes the height.
+/// every tab is a grouped Form that reflows with the width.
 struct SettingsView: View {
     var body: some View {
         // v0.6 R51: four tabs, the way System Settings groups things. General is what the app is
@@ -463,35 +463,48 @@ struct HotkeyRecorder: View {
     }
 }
 
+/// R51: the apps that count as yours, in the grouped idiom of the other tabs. One row per app with
+/// its icon, name, and bundle id and Remove trailing, like Grant… and Choose… elsewhere; a second
+/// group adds one by picking an .app on this Mac or by typing a bundle id.
 struct MyAppsSettings: View {
     @Environment(AppState.self) private var state
-    @State private var selection: String?
     @State private var typed = ""
 
     var body: some View {
         @Bindable var preferences = state.preferences
-        // Not a Form: the list should take whatever height the window has.
-        VStack(alignment: .leading, spacing: 8) {
-            List(preferences.myApps, id: \.self, selection: $selection) { bundleId in
-                Text(bundleId)
+        Form {
+            Section {
+                if preferences.myApps.isEmpty {
+                    Text("No apps added")
+                        .foregroundStyle(.secondary)
+                }
+                ForEach(preferences.myApps, id: \.self) { bundleId in
+                    MyAppRow(bundleId: bundleId) { remove(bundleId, from: preferences) }
+                }
+                Footnote(text: "Locant already treats apps you build (Simulator, Xcode builds, your signing identity) as yours. Add anything it misses.")
             }
-            .listStyle(.bordered(alternatesRowBackgrounds: true))
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            HStack(spacing: 8) {
-                Button { addFromPanel(preferences) } label: { Image(systemName: "plus") }
-                Button { remove(preferences) } label: { Image(systemName: "minus") }
-                    .disabled(selection == nil)
-                Spacer()
-                TextField("Bundle id", text: $typed)
-                    .textFieldStyle(.roundedBorder)
-                    .frame(minWidth: 160, idealWidth: 220, maxWidth: 320)
-                    .onSubmit { addTyped(preferences) }
-                Button("Add") { addTyped(preferences) }
-                    .disabled(typed.trimmingCharacters(in: .whitespaces).isEmpty)
+            Section {
+                LabeledContent {
+                    Button("Choose…") { addFromPanel(preferences) }
+                } label: {
+                    Text("Add an app")
+                    Text("Pick an app on this Mac; its bundle id is added.")
+                }
+                LabeledContent {
+                    HStack(spacing: 8) {
+                        TextField("", text: $typed, prompt: Text("com.example.app"))
+                            .textFieldStyle(.roundedBorder)
+                            .onSubmit { addTyped(preferences) }
+                        Button("Add") { addTyped(preferences) }
+                            .disabled(typed.trimmingCharacters(in: .whitespaces).isEmpty)
+                    }
+                } label: {
+                    Text("Bundle id")
+                    Text("For an app that is not on this Mac, such as one that runs only in the Simulator.")
+                }
             }
-            Footnote(text: "Locant already treats apps you build (Simulator, Xcode builds, your signing identity) as yours. Add anything it misses.")
         }
-        .padding(20)
+        .formStyle(.grouped)
     }
 
     private func addFromPanel(_ preferences: Preferences) {
@@ -517,12 +530,44 @@ struct MyAppsSettings: View {
     private func append(_ id: String, to preferences: Preferences) {
         guard !preferences.myApps.contains(id) else { return }
         preferences.myApps.append(id)
-        selection = id
     }
 
-    private func remove(_ preferences: Preferences) {
-        guard let selection else { return }
-        preferences.myApps.removeAll { $0 == selection }
-        self.selection = nil
+    private func remove(_ id: String, from preferences: Preferences) {
+        preferences.myApps.removeAll { $0 == id }
+    }
+}
+
+/// One app in My Apps: the icon and name when the app is on this Mac, the bundle id beneath;
+/// only the id, and a plain app icon, when it is not (a Simulator-only app, say).
+private struct MyAppRow: View {
+    let bundleId: String
+    let remove: () -> Void
+
+    var body: some View {
+        let installed = Self.installed(bundleId)
+        LabeledContent {
+            Button("Remove", action: remove)
+        } label: {
+            HStack(spacing: 10) {
+                Image(nsImage: installed?.icon ?? NSWorkspace.shared.icon(for: .applicationBundle))
+                    .resizable()
+                    .frame(width: 32, height: 32)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(installed?.name ?? bundleId)
+                    Text(installed == nil ? "Not on this Mac; matched by bundle id." : bundleId)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
+            }
+        }
+    }
+
+    private static func installed(_ bundleId: String) -> (name: String, icon: NSImage)? {
+        guard let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleId) else { return nil }
+        let bundle = Bundle(url: url)
+        let name = (bundle?.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String)
+            ?? (bundle?.object(forInfoDictionaryKey: "CFBundleName") as? String)
+            ?? url.deletingPathExtension().lastPathComponent
+        return (name, NSWorkspace.shared.icon(forFile: url.path(percentEncoded: false)))
     }
 }
