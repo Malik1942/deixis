@@ -1,6 +1,6 @@
 # Locant: full script
 
-Runtime target **2:55** (measured from the word counts below). Hard cap 3:00. The brief says less is more, so cut before you pad.
+Runtime target **2:57** (measured from the word counts below). Hard cap 3:00. The brief says less is more, so cut before you pad.
 
 Framing: this is a pitch told as a path. Frustration, approach, proof, next. The demo is evidence for the pitch,
 not the point of the video. Every section ends on one sentence the viewer can repeat.
@@ -199,14 +199,14 @@ three before the demo, three on the end card, three of pauses between sections.
 
 | Section | Target | Words | Read at 160 wpm | Read at 150 wpm |
 |---|---|---|---|---|
-| 1 Why | 0:38 | 96 | 0:36 | 0:38 |
+| 1 Why | 0:38 | 101 | 0:38 | 0:40 |
 | 2 How | 1:28 | 233 | 1:27 | 1:33 |
 | 3 Demo | 0:18 | 41 | 0:15 | 0:16 |
 | 4 Before and after | 0:17 | 45 | 0:17 | 0:18 |
 | 5 Next | 0:12 | 23 | 0:09 | 0:09 |
 | Silence | 0:11 | | 0:11 | 0:11 |
-| **Total** | **2:55** | **438** | **2:55** | **3:05** |
+| **Total** | **2:57** | **443** | **2:57** | **3:08** |
 
-Read at 160 words a minute and the video lands at 2:55. At 150 it lands at 3:05, so at that pace apply the
-remaining cuts in `04-voiceover.md` (they save about eight seconds) or trim the silence. Read aloud with a
+Read at 160 words a minute and the video lands at 2:57. At 150 it lands at 3:08, so at that pace apply the
+remaining cuts in `04-voiceover.md` (they save about six seconds) and trim the silence to eight seconds. Read aloud with a
 stopwatch before recording anything; do not speed up to fit.

@@ -39,6 +39,6 @@ b-roll only.
   timer counting down is the visual for "three hours" and needs no caption.
 - Freeze on 1:20 (the null element on the orb) for the "invisible to accessibility" line, at 1×.
 - Freeze on 1:50 (your "finish the product first" message) for "AI came in everywhere except the decisions."
-- Land on 2:50 with the timer at 0:12:54 for the [CONFIRM] sentence. Suggested wording, now that the timer is
+- Land on 2:50 with the timer at 0:12:54 for the time-window sentence (confirmed Sep 15). Wording, now that the timer is
   on screen: *"Versions 0.1 to 0.4 were built inside the three-hour window, timer running. Version 0.5 came the
   next day. I'm the only author."*
