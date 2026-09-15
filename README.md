@@ -161,7 +161,7 @@ the hotkey.
 
 <p align="center">
   <img src="site/assets/settings-light.png" width="620" alt="The Locant Settings window, General tab: permissions, the floating ball, updates, and the help page.">
-  <br><sub>Settings (⌘,): General, Hotkeys, Captures, My Apps. Every default works on first launch.</sub>
+  <br><sub>Settings (⌘,): General, Hotkeys, Captures, My Apps, Agents. Every default works on first launch.</sub>
 </p>
 
 <details>
