@@ -392,6 +392,9 @@
   footer .word p { margin: 0; }
   footer .word .head { margin-bottom: 2px; }
   footer .word b { color: var(--ink); font-weight: 600; font-size: 14px; }
+  footer .word b a { color: inherit; text-decoration: none; transition: color 0.15s ease; }
+  footer .word b a:hover { color: var(--accent); }
+  footer .word b a:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 3px; }
   footer .word .say { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 12px; margin-inline: 6px 8px; }
   footer .word i { font-style: italic; }
   footer .word .nowrap { white-space: nowrap; }
@@ -706,7 +709,7 @@ make this rounded, match the other pills</pre>
 
   <footer class="col">
     <div class="word">
-      <p class="head"><b>lo·cant</b><span class="say">/ˈloʊ·kənt/</span><i>noun</i></p>
+      <p class="head"><b><a href="https://github.com/Malik1942/locant/releases/latest/download/Locant.dmg" title="Download Locant for Mac">lo·cant</a></b><span class="say">/ˈloʊ·kənt/</span><i>noun</i></p>
       <p>The number in a chemical name that says exactly where a group is attached, as the&nbsp;2 in 2‑methylbutane. <span class="nowrap">One number, one molecule.</span></p>
     </div>
     <div class="row">
