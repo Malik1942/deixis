@@ -141,9 +141,11 @@ final class Ring {
     }
 }
 
-/// The disc's glass at ring size (the system's clear glass on macOS 26, `label.bg` before) with
+/// The disc's glass at ring size (the system's regular glass on macOS 26, `label.bg` before) with
 /// four wedges, outline symbols, labels that fade in, and the filled hand at center. It unfolds
-/// from the disc on the system spring and folds back on close.
+/// from the disc on the system spring and folds back on close. Unlike the disc, the ring carries
+/// text, so it uses the regular glass, which tints itself against whatever is behind it: over a
+/// white web page in Dark mode the clear glass left white symbols on white, an empty disc.
 final class RingView: NSView {
     private let wedges = WedgeView()
     private var icons: [Ring.Segment: NSImageView] = [:]
@@ -154,10 +156,14 @@ final class RingView: NSView {
     override init(frame frameRect: NSRect) {
         super.init(frame: frameRect)
         wantsLayer = true
+        // Everything drawn on the glass lives in one view: on macOS 26 it is the glass's content,
+        // so the symbols and labels get the glass's legibility treatment; before, it sits over the material.
+        let content = NSView(frame: bounds)
         if #available(macOS 26.0, *) {
             let glass = NSGlassEffectView(frame: bounds)
-            glass.style = .clear
+            glass.style = .regular
             glass.cornerRadius = frameRect.width / 2
+            glass.contentView = content
             addSubview(glass)
         } else {
             let material = NSVisualEffectView(frame: bounds)
@@ -168,9 +174,10 @@ final class RingView: NSView {
             material.layer?.cornerRadius = frameRect.width / 2
             material.layer?.masksToBounds = true
             addSubview(material)
+            addSubview(content)
         }
         wedges.frame = bounds
-        addSubview(wedges)
+        content.addSubview(wedges)
 
         let center = CGPoint(x: bounds.midX, y: bounds.midY)
         for segment in Ring.Segment.allCases {
@@ -182,7 +189,7 @@ final class RingView: NSView {
             icon.contentTintColor = .labelColor
             let position = CGPoint(x: center.x + segment.direction.x * Ring.Tokens.iconRadius, y: center.y + segment.direction.y * Ring.Tokens.iconRadius)
             icon.frame = NSRect(x: position.x - 12, y: position.y - 6, width: 24, height: 24)
-            addSubview(icon)
+            content.addSubview(icon)
             icons[segment] = icon
 
             let label = NSTextField(labelWithString: segment.title)
@@ -192,7 +199,7 @@ final class RingView: NSView {
             label.sizeToFit()
             label.frame.origin = CGPoint(x: position.x - label.frame.width / 2, y: position.y - 22)
             label.alphaValue = 0
-            addSubview(label)
+            content.addSubview(label)
             labels[segment] = label
 
             if segment.acceptsClipboardOnly {
@@ -202,7 +209,7 @@ final class RingView: NSView {
                 badge.sizeToFit()
                 badge.frame.origin = CGPoint(x: icon.frame.maxX + 2, y: icon.frame.midY - badge.frame.height / 2)
                 badge.alphaValue = 0
-                addSubview(badge)
+                content.addSubview(badge)
                 badges[segment] = badge
             }
         }
@@ -213,7 +220,7 @@ final class RingView: NSView {
         hand.contentTintColor = .labelColor
         let handSide = FloatingBall.Tokens.diameter - 2 * FloatingBall.Tokens.iconInset
         hand.frame = NSRect(x: center.x - handSide / 2, y: center.y - handSide / 2, width: handSide, height: handSide)
-        addSubview(hand)
+        content.addSubview(hand)
     }
 
     @available(*, unavailable)
