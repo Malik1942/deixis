@@ -39,6 +39,32 @@ Path: application > window > group > group > button#captureButton
 make this rounded, match the other pills
 ```
 
+## Over MCP
+
+Instead of pasting, let the agent fetch the capture. Locant is its own MCP server: the app binary started with `--mcp` speaks MCP over stdio and reads the sidecars in the capture folder. Four tools: `latest_capture`, `list_captures`, `get_capture`, `resolve_capture`. Every result is text with the image path first; an image block is added only when the agent asks for it (`include_image`); there is never `structuredContent`, so Codex sees the text too.
+
+Connect from **Settings › Agents**: one row each for Claude Code, Cursor, and Codex, with Connect and Disconnect. Each writes one server named `locant` into that agent's own user-level configuration. Or by hand:
+
+Claude Code:
+
+```bash
+claude mcp add --scope user locant -- /Applications/Locant.app/Contents/MacOS/Locant --mcp
+```
+
+Cursor, in `~/.cursor/mcp.json` (or a project's `.cursor/mcp.json`). Cursor asks once whether to enable it; the agent CLI needs `cursor-agent mcp enable locant`:
+
+```json
+{ "mcpServers": { "locant": { "command": "/Applications/Locant.app/Contents/MacOS/Locant", "args": ["--mcp"] } } }
+```
+
+Codex:
+
+```bash
+codex mcp add locant -- /Applications/Locant.app/Contents/MacOS/Locant --mcp
+```
+
+Then say "fix what I just pointed at". The agent calls `latest_capture`, greps for the identifier, edits, and may call `resolve_capture`, after which Locant keeps that capture past the retention period. The server reads the folder chosen in Settings › Captures; `--folder <path>` names another. Nothing runs until the agent starts it, and it exits when the agent does.
+
 ## Settings and the ball
 
 - **Settings** (⌘, from the menu bar): the hotkey, recorded by pressing it, either a key with modifiers or a double-tap of one modifier; the capture folder and how it is organized; the floating ball toggle; and My Apps.
@@ -67,14 +93,14 @@ Git facts need a project folder. Locant finds it for Xcode builds, including app
 
 ## Agent compatibility
 
-| Agent | Paste | Image | Status |
+| Agent | Over MCP | On paste | Tested |
 |---|---|---|---|
-| Claude Code | Markdown text | reads the PNG from the `Image:` path | expected to work; not yet verified end to end |
-| Cursor | Markdown text | reads the path | untested |
-| Codex CLI | Markdown text | `view_image` on the path | untested |
-| Gemini CLI / Antigravity | Markdown text | untested | untested |
+| Claude Code 2.1.272 | Works: `latest_capture` answered "what did I just point at" with the element, app, and image path | Markdown text; reads the PNG from the `Image:` path | Sep 15, 2026 |
+| Cursor (agent CLI 2026.09) | Works, after `cursor-agent mcp enable locant`; the IDE prompts once instead | Markdown text; reads the path | Sep 15, 2026 |
+| Codex CLI 0.147.0 | Works: same answer; `view_image` opens the path, image blocks are never sent unasked | Markdown text | Sep 15, 2026 |
+| Gemini CLI / Antigravity | The snippet from Settings › Agents; untested | Markdown text; untested | |
 
-The image path comes first in the payload because terminal agents receive only the text representation on paste.
+The image path comes first in the payload because terminal agents receive only the text representation on paste, and because an agent that can open files needs nothing else.
 
 ## Known limitations
 
