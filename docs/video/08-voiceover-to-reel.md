@@ -1,35 +1,27 @@
 # Voice-over against the reel
 
-`~/Desktop/deixis-film/v3/locant-demo-reel.mp4` is silent, 1:48. It is footage, not the whole pitch: it serves
+`~/Desktop/locant-film/v4/locant-demo-reel-v4.mp4` is silent, 1:42. It is footage, not the whole pitch: it serves
 section 3 of `01-full-script.md` (the demo) and supplies the cutaways for sections 1 and 2. This page places the
 narration from `04-voiceover.md` against the reel's own timecodes, in the order the reel plays, so the demo can
 be narrated straight over the file. Timecodes are measured from the delivered reel.
 
 ## If you narrate the reel as it plays (a demo video on its own)
 
-| Reel | On screen | Say | Words |
-|---|---|---|---|
-| 0:00–0:06 | The desktop dims; the hint line along the bottom | *(nothing for two seconds, then)* Double-tap Control. | 2 |
-| 0:06–0:12 | The orb label, then Cooking, then back | Hover; Locant says what it sees before I click. | 9 |
-| 0:13–0:23 | Click, the note, Enter, the toast | *(silence; the click, the note and Enter are shown, not narrated)* | 0 |
-| 0:23–0:30 | The Markdown lands in Cursor's chat | Paste into Cursor. | 3 |
-| 0:32–0:45 | The agent asks Locant, then the diff chip | It asks Locant for the element, and opens the right file, first try. | 13 |
-| 0:46–0:53 | The Locant menu, Show before & after | After the rebuild, Locant finds the same element again on its own. | 12 |
-| 0:53–1:10 | The window: divider sweep, Flip, the diff line | Show before & after: both images, with the diff beneath. | 10 |
-| 1:12–1:21 | The ball wakes, the hand, the ring | One gesture, five actions. The ball is a quiet disc that wakes when you reach for it. Click to point. Hold it, a ring unfolds, release on the action you want. | 32 |
-| 1:21–1:30 | The magnifier to the card, the pick, the toast | *(silence; the toast reads `Copied · #363638`)* | 0 |
-| 1:30–1:34 | Three hovers: Calculator, CalmMouse, the orb | One element, in any app. | 5 |
-| 1:35–1:48 | The same payload into Codex, then Claude Code | Handed to whichever agent I'm using. Point, don't describe. | 10 |
+Timecodes for `locant-demo-reel-v4.mp4` (102 s).
 
-86 words over 1:48. That is a slow read with long silences, which is the intended feel: the picture leads, the
-voice names what just happened.
-
-Two lines above differ from `04-voiceover.md` on purpose, because the footage changed:
-- Section 3's "Paste into Cursor. It opens the right file, first try." became "Paste into Cursor. It asks Locant
-  for the element, and opens the right file, first try." The reel shows the agent calling Locant's MCP server
-  before it edits; the line should claim what is on screen. If you keep the shorter line, it is still true.
-- "One element, in any app" and "Handed to whichever agent I'm using" are section 1's universal-capture sentence,
-  split across the two cutaways; in the pitch they play under section 1, not here.
+| Reel | On screen | Say |
+|---|---|---|
+| 0:00–0:06 | The docked ball wakes, the click, the stage dims | The ball, or double-tap Control. |
+| 0:07–0:15 | "Ocean", then the Resurfacing card, then the orb, each labeled | Hover, and Locant names what it sees. Title. Card. The orb, with its identifier. |
+| 0:15–0:25 | Click, the note, Enter, the toast | *(silence)* |
+| 0:26–0:31 | The whole Cursor window; the Markdown lands in the chat | Paste into Cursor. |
+| 0:31–0:43 | The agent asks Locant, then the diff chip | It asks Locant for the element, and opens the right file, first try. |
+| 0:42–0:50 | The Locant menu, Show before & after | After the rebuild, Locant finds the same element again on its own. |
+| 0:50–1:03 | The window: divider sweep, Flip, the diff line | Show before & after: both images, with the diff beneath. |
+| 1:05–1:12 | The ball wakes, the hand, the ring | One gesture, five actions. Click to point. Hold, and a ring unfolds. |
+| 1:12–1:19 | Color, the magnifier to the card, the pick, the toast | *(silence)* |
+| 1:19–1:23 | Three hovers: Calculator, CalmMouse, the orb | One element, in any app. |
+| 1:24–1:44 | The same payload into Codex, then Claude Code | Handed to whichever agent I'm using. Point, don't describe. |
 
 ## If you cut the reel into the pitch (the submission video)
 

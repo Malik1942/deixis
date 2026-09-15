@@ -62,6 +62,50 @@ The v2 review (Sep 15) rejected four things. Each becomes a rule here.
 Unchanged from v2: no cards inside the clips; SF Pro and the system accent; silent.
 
 
+## v4 plan (Sep 15, after the v3 review)
+
+Five critiques, five changes. Everything else from v3 stands.
+
+| Critique | Cause in v3 | v4 rule |
+|---|---|---|
+| Zoomed shots are soft | Whole LG captured at 1.5×; a 3.0 punch upscaled 1504 source px to 2560 | Capture a compact 1920×1080 pt stage at 2× (3840×2160 px). Wide downscales; 1.35 is sharper than 1:1; nothing deeper than 1.5 |
+| Too much camera | Follow-pans between orbs, whip-pans across the LG | One framing per subject, held still: punch once onto the Simulator and let the selection move; cut, never pan, between subjects |
+| Laggy cursor | The helper posted about 28 events a second; a 60 fps capture showed a stepping pointer | 120 Hz minimum-jerk motion on a gentle arc, no jitter, no overshoot; the real pointer stays in the capture so Locant's frame is in sync |
+| Agent window cropped | 3.0 on a chat pane | Cursor at 1380×880 and the terminals at the same size, framed whole at 1.2 |
+| No trigger context | Hotkey off camera, ball never seen at the start | Every capture starts on the docked ball: approach, wake, click opens the overlay. The hotkey is named in narration; the ball is the visible trigger |
+
+Stage (LG-local coordinates; global = LG-local + (−1038, −1692)):
+- Capture region (1088, 0) 1920×1080: holds the menu bar, the right screen edge where the ball docks, the Simulator
+  and Cursor. The Dock and the hint line fall outside.
+- Simulator at (1120, 60), 456×972. Cursor at (1610, 60), 1380×880, fresh Agent chat. Terminals for the agent
+  cutaways take Cursor's place at the same size.
+- Framings: wide 1.0 for the ball and the dim; 1.35 on the upper Simulator for every hover, the note and the toast;
+  1.2 on the whole Cursor window; 1.35 on the Locant menu and on the Before & After window; 1.5 on the ball for
+  the ring; 1.2 on a whole terminal window.
+- Clipboard: after Locant's toast the take script replaces the clipboard with the Markdown alone (rebuilt from the
+  sidecar Locant just wrote), because Locant's own clipboard also carries the PNG and Cursor takes the PNG.
+
+## Capture log, v4 (Sep 15, 2026, compact 2× stage on the LG)
+
+Raw takes in `~/Desktop/locant-film/v4/`: ScreenCaptureKit at 2× of a 1920×1080 pt region (3840×2160 px), 60 fps
+verified by the gate's motion test, real pointer, 120 Hz minimum-jerk moves.
+
+| Take | File | Length | What it holds |
+|---|---|---|---|
+| A | `takeA.mov` | 263.7 s | Ball wake and click, overlay, "Ocean", Resurfacing, the orb, note, toast, the text paste into Cursor, the agent's edit (+29 −1). `takeA-0-nooverlay.mov` is a false start whose keystrokes went astray |
+| B | `takeB.mov` | 31.8 s | Menu, Show before & after, divider sweep, Flip and the flips |
+| C | `takeC.mov` | 17.5 s | Ball wake, hand, ring, Color, magnifier to the Resurfacing card, pick `#2A2B2C`, toast |
+| D | `takeD.mov` | 14.0 s | `button · Eight`, `slider · no identifier`, the orb |
+| E1 | `takeE1.mov` | 16.9 s | The payload into a fresh Codex session, sent, the agent starts |
+| E2 | `takeE2.mov` | 16.9 s | The payload into Claude Code, sent, the agent starts |
+
+Facts learned:
+- A ball click opens the overlay only once the ball has woken; approach to within 70 pt and wait two seconds.
+- A take script must never type unless the overlay is confirmed open (a layer-1000 Locant window); the first v4
+  attempt typed the note into the frontmost app.
+- The cursor helper's earlier moves posted about 28 events a second; the 120 Hz version reads smooth at 60 fps.
+- The compact 2× stage is what makes the punches sharp: 1.5 on a 1920 pt region is exactly 2560 px.
+
 ## Capture log, v3 (Sep 15, 2026, on the LG UltraFine)
 
 Raw takes in `~/Desktop/deixis-film/v3/`: ScreenCaptureKit at 1.5x of the LG's 3008x1692 pt (4512x2538 px), 60 fps

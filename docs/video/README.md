@@ -17,11 +17,11 @@ and optionally what you would do with more time. Less is more.
 
 ## Delivered footage
 
-`~/Desktop/deixis-film/v3/locant-demo-reel.mp4` is a silent 108 s review reel of six scene files in the same folder
-(`sceneA-comp.mp4` the loop and the Cursor agent, `sceneB-comp.mp4` Before & After, `sceneC-comp.mp4` the ball and
-ring, `sceneD-comp.mp4` two hovers, `sceneE1-comp.mp4` the Codex paste, `sceneE2-comp.mp4` the Claude Code paste), all 2560x1440 at 60 fps, shot on the LG with
-Locant 0.7.1. Cut the scene files under the narration; the reel is for review only. The v2 footage (Deixis 0.6.1,
-Claude Code in a Terminal) stays in `~/Desktop/deixis-film/`.
+`~/Desktop/locant-film/v4/locant-demo-reel-v4.mp4` is a silent 102 s review reel of six scene files in the same folder
+(`sceneA-comp.mp4` the ball trigger, the loop and the Cursor agent, `sceneB-comp.mp4` Before & After, `sceneC-comp.mp4`
+the ball and ring, `sceneD-comp.mp4` three hovers, `sceneE1-comp.mp4` Codex, `sceneE2-comp.mp4` Claude Code), all
+2560x1440 at 60 fps from a 2x capture of a compact stage on the LG with Locant 0.7.1. Cut the scene files under the
+narration; the reel is for review only. The v3 footage stays in `~/Desktop/locant-film/v3/`.
 
 ## Order of work
 

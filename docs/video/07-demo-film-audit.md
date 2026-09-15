@@ -1,4 +1,62 @@
-# Locant demo footage — Gap Audit (v3)
+# Locant demo footage — Gap Audit (v4)
+
+Delivered file: `~/Desktop/locant-film/v4/locant-demo-reel-v4.mp4` (2560×1440, 60 fps, 102.3 s, silent), stitched
+from six scene files in `~/Desktop/locant-film/v4/`: `sceneA-comp.mp4` (42.8 s, the ball trigger, the loop and the
+Cursor agent), `sceneB-comp.mp4` (21.3 s, Before & After), `sceneC-comp.mp4` (14.4 s, the ball and ring),
+`sceneD-comp.mp4` (4.2 s, three hovers), `sceneE1-comp.mp4` (10 s, Codex), `sceneE2-comp.mp4` (10 s, Claude Code).
+The v3 audit follows below as history; v2 is in `07-demo-film-audit-v2.md`.
+
+## What v4 changed, against the five critiques of v3
+
+| Critique | v4 |
+|---|---|
+| Zoomed shots soft | A compact 1920×1080 pt stage captured at 2× (3840×2160). The wide shot downscales; the 1.35 and 1.5 framings are sharper than 1:1; nothing deeper than 1.5 |
+| Too much camera | One framing per subject, held still. Scene A has three framings in 43 s: wide for the ball and the dim, 1.5 on the Simulator for every label, the note and the toast, then one ease to the whole Cursor window |
+| Laggy cursor | 120 Hz minimum-jerk motion on a gentle arc, no jitter, no overshoot |
+| Agent window cropped | Cursor and both terminals at 1380×880, framed whole at 1.2 |
+| No trigger context | Every capture opens from the docked ball: approach, wake, click. Scene A also hovers the "Ocean" title and the Resurfacing card before the orb, so the selection is seen changing |
+
+## Audit of v4
+
+Verdicts from frames of the delivered reel.
+
+| # | Promise | What the reel shows | Verdict |
+|---|---|---|---|
+| 1 | Trigger: the ball, wake, click, the dim | 0:00–0:06 wide: the docked ball at the right edge wakes as the pointer arrives, the click dims the stage | MET |
+| 2 | Hover: the selection changing, then the orb | 0:07–0:15 at 1.5, still: `staticText "Ocean" · no identifier`, then `button "Resurfacing, Catching a thought that drifted away" · no identifier`, then `button · oceanCurrent.product ideas` | MET |
+| 3 | Note and toast | 0:15–0:25: "What should change?", the note at 1.4×, `Copied · oceanCurrent.product ideas` | MET |
+| 4 | Paste into Cursor, text readable | 0:26–0:31: one ease to the whole Cursor window at 1.2; the Markdown lands in the input, heading, image path, `id=oceanCurrent.product ideas`, note, all readable | MET |
+| 5 | Agent finds it, the diff | 0:31–0:43: sent; "I'll start from the Locant capture you pointed at" and "Using Locant to pull the capture"; the `SeedScreenshot.swift +29 −1` chip | MET |
+| 6 | Verify | 0:42–1:03: 1.35 on the Locant menu, Show before & after; 1.35 on the window: note, identifier line, divider swept, Flip with "Before · click to flip" and the flip to After, `1 file changed, 29 insertions(+), 1 deletion(−)`, the file name | MET |
+| 7 | Ball and ring, Color, the pick | 1:05–1:19: 1.5 top-right: wake, hand, the ring with Snap / Cut / Text / Color, Color chosen, the magnifier; one ease to the Simulator; the pick on the Resurfacing card; `Copied · #2A2B2C` | MET |
+| 8 | Any app | 1:19–1:23 at 1.35, three cuts: `button · Eight`, `slider · no identifier`, `button · oceanCurrent.product ideas` | MET |
+| 9 | Any agent | 1:24–1:34 Codex 0.154, whole window: payload, send, "I'll inspect the captured orb"; 1:34–1:44 Claude Code, whole window: paste expanded, send, thinking | MET |
+
+## Gulfs
+
+None on the promises. Two notes for taste: the ball at the wide shot is 48 pt on a 1920 pt stage, visible but small
+(the wake and click are the cue); the Before & After window opens over the Simulator rather than beside it, because
+Locant centres it on the display that holds the mouse.
+
+## Deviations carried on purpose
+
+- Scene 5 is three jump cuts through a four-minute agent run.
+- The agent's change is seed data (Oryne sizes orbs by member count). The change was re-applied by hand for the
+  Before & After take after the tree had been reverted, then reverted again; the Simulator was reseeded.
+- The take script swaps Locant's clipboard for the Markdown alone after the toast, because Cursor prefers the PNG.
+
+## Verification
+
+Contact sheet of the reel every 2 s plus frame strips of every scene file. One pointer contract, no black edges, no
+card, two zoom-throughs and two breaths.
+
+## Remaining gaps
+
+None.
+
+---
+
+# v3 audit (history)
 
 Delivered file: `~/Desktop/deixis-film/v3/locant-demo-reel.mp4` (2560×1440, 60 fps, 108.0 s, silent), stitched from
 six scene files in the same folder: `sceneA-comp.mp4` (45.9 s, the loop and the Cursor agent), `sceneB-comp.mp4`
