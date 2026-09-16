@@ -14,7 +14,7 @@ struct HelpView: View {
     }
 
     var body: some View {
-        let preferences = state.preferences
+        @Bindable var preferences = state.preferences
         VStack(spacing: 0) {
             Form {
                 Section {
@@ -28,6 +28,18 @@ struct HelpView: View {
                             Text("Locant hands your coding agent the element under your cursor: role, identifier, frame, a cropped image, and your note. Paste it and the agent finds the right file.")
                                 .font(.callout)
                                 .foregroundStyle(.secondary)
+                            // The first capture should happen here, in seconds, not after reading.
+                            HStack(spacing: 10) {
+                                Button("Try it now") {
+                                    close()
+                                    state.tryPoint()
+                                }
+                                .buttonStyle(.borderedProminent)
+                                Text("The overlay opens over whatever is on screen. Hover, click, type a note, Return.")
+                                    .font(.footnote)
+                                    .foregroundStyle(.secondary)
+                            }
+                            .padding(.top, 6)
                         }
                     }
                     .padding(.vertical, 4)
@@ -36,6 +48,11 @@ struct HelpView: View {
                     Row(symbol: "keyboard", title: "Open the overlay", detail: "Press the hotkey, or click the ball. The pointing hand in the menu bar works too.", key: preferences.hotkey.symbol)
                     Row(symbol: "cursorarrow.rays", title: "Pick the element", detail: "Hover, then click or press Return. Drag for a frame with everything inside it; Option steps to the parent.", key: "↩")
                     Row(symbol: "text.cursor", title: "Say what should change", detail: "Type a note, press Return. The payload is on the clipboard; paste it into your agent. Esc at any point cancels, nothing written.", key: "↩")
+                    Row(symbol: "circle.dotted", title: "Keep the ball?", detail: "The glass disc at the edge of the screen. The hotkey works without it; change your mind any time in Settings.") {
+                        Toggle("Floating ball", isOn: $preferences.ballEnabled)
+                            .labelsHidden()
+                            .toggleStyle(.switch)
+                    }
                 }
                 Section("The other actions") {
                     Row(symbol: "camera.viewfinder", title: "Snap", detail: "A window or a dragged region as a PNG. Hold ⌥ at release to keep it off disk.", key: preferences.actionHotkeys["snap"]?.symbol)
@@ -70,19 +87,24 @@ struct HelpView: View {
         .frame(width: 560, height: Self.preferredHeight(for: NSScreen.main))
     }
 
-    /// Symbol, title, one line beneath, and the key on the trailing edge, the way Settings lays out a row.
-    private struct Row: View {
+    /// Symbol, title, one line beneath, and the key (or a control) on the trailing edge, the way
+    /// Settings lays out a row.
+    fileprivate struct Row<Trailing: View>: View {
         let symbol: String
         let title: String
         let detail: String
-        let key: String?
+        @ViewBuilder let trailing: () -> Trailing
+
+        init(symbol: String, title: String, detail: String, @ViewBuilder trailing: @escaping () -> Trailing) {
+            self.symbol = symbol
+            self.title = title
+            self.detail = detail
+            self.trailing = trailing
+        }
 
         var body: some View {
             LabeledContent {
-                if let key {
-                    Text(key)
-                        .foregroundStyle(.secondary)
-                }
+                trailing()
             } label: {
                 HStack(alignment: .top, spacing: 10) {
                     Image(systemName: symbol)
@@ -96,6 +118,15 @@ struct HelpView: View {
                     }
                 }
             }
+        }
+    }
+}
+
+extension HelpView.Row where Trailing == Text? {
+    /// The common row: a key or a value in secondary text on the trailing edge, or nothing.
+    init(symbol: String, title: String, detail: String, key: String?) {
+        self.init(symbol: symbol, title: title, detail: detail) {
+            key.map { Text($0).foregroundStyle(.secondary) }
         }
     }
 }
@@ -119,5 +150,9 @@ final class HelpWindow {
         }
         NSApp.activate()
         window?.makeKeyAndOrderFront(nil)
+    }
+
+    func close() {
+        window?.close()
     }
 }
