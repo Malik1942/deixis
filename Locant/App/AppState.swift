@@ -1,6 +1,11 @@
 import AppKit
 import Observation
 
+/// The five Settings tabs, in toolbar order.
+enum SettingsTab: Hashable, Sendable {
+    case general, hotkeys, captures, myApps, agents
+}
+
 /// The only shared object. Owns the system-resource objects (overlay, hotkey, toast, reader) and
 /// runs one capture session at a time: hover → click → note → write.
 @Observable
@@ -26,6 +31,9 @@ final class AppState {
 
     private(set) var phase: Phase = .idle
     let preferences = Preferences()
+    /// Which Settings tab shows next. The help page sets it before opening Settings, so a row
+    /// there lands on the tab that owns it.
+    var settingsTab: SettingsTab = .general
 
     @ObservationIgnored private let reader = AccessibilityReader()
     @ObservationIgnored private var userTeamIDs: Set<String> = []

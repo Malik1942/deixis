@@ -53,6 +53,9 @@ struct HelpView: View {
                             .labelsHidden()
                             .toggleStyle(.switch)
                     }
+                    Row(symbol: "keyboard.badge.ellipsis", title: "Change the hotkeys", detail: "Point and each action can be re-recorded as a chord, or as a double-tap of one modifier.") {
+                        Button("Hotkeys…") { goToSettings(.hotkeys) }
+                    }
                 }
                 Section("The other actions") {
                     Row(symbol: "camera.viewfinder", title: "Snap", detail: "A window or a dragged region as a PNG. Hold ⌥ at release to keep it off disk.", key: preferences.actionHotkeys["snap"]?.symbol)
@@ -61,11 +64,31 @@ struct HelpView: View {
                     Row(symbol: "person.and.background.dotted", title: "Cut", detail: "The subject cut onto a transparent background.", key: preferences.actionHotkeys["cut"]?.symbol)
                     Row(symbol: "circle.circle", title: "The ring", detail: "All four are on the ball: hold it for half a second and release on one. A shorter press is Point.", key: nil)
                 }
+                // These rows are the settings themselves, so a reader decides without leaving the page.
                 Section("Afterwards") {
-                    Row(symbol: "arrow.triangle.2.circlepath", title: "Iterations", detail: "Point at an element in an app you build, let your agent edit, run the app again: Locant captures the element again with the git diff whenever it looks different. Show before & after is in the menu bar.", key: preferences.collectsIterations ? "On" : "Off")
-                    Row(symbol: "clock.arrow.circlepath", title: "Old images are cleaned up", detail: "Older images go to the Trash. Change the period, or keep everything, in Settings.", key: preferences.retentionDays == 0 ? "Forever" : "\(preferences.retentionDays) days")
-                    Row(symbol: "arrow.down.circle", title: "Updates", detail: "Once a day Locant asks GitHub whether a newer version exists and tells you. Turn it off in Settings.", key: preferences.checksForUpdates ? "Daily" : "Off")
-                    Row(symbol: "terminal", title: "Or let the agent fetch it", detail: "Connect Claude Code, Cursor, or Codex in Settings › Agents. Say what should change; the agent pulls the capture itself, image included.", key: "MCP")
+                    Row(symbol: "arrow.triangle.2.circlepath", title: "Collect iterations", detail: "Point at an element in an app you build, let your agent edit, run the app again: Locant captures the element again with the git diff whenever it looks different. Show before & after is in the menu bar.") {
+                        Toggle("Collect iterations", isOn: $preferences.collectsIterations)
+                            .labelsHidden()
+                            .toggleStyle(.switch)
+                    }
+                    Row(symbol: "clock.arrow.circlepath", title: "Keep images", detail: "Older images go to the Trash with their sidecars. Captures an agent marked resolved stay.") {
+                        Picker("Keep images", selection: $preferences.retentionDays) {
+                            ForEach(Preferences.retentionChoices, id: \.self) { days in
+                                Text(days == 0 ? "Forever" : "\(days) days").tag(days)
+                            }
+                        }
+                        .labelsHidden()
+                        .pickerStyle(.menu)
+                        .fixedSize()
+                    }
+                    Row(symbol: "arrow.down.circle", title: "Check for updates", detail: "Once a day Locant asks GitHub whether a newer version exists and tells you. The request carries the version number and nothing else.") {
+                        Toggle("Check for updates", isOn: $preferences.checksForUpdates)
+                            .labelsHidden()
+                            .toggleStyle(.switch)
+                    }
+                    Row(symbol: "terminal", title: "Or let the agent fetch it", detail: "Connect Claude Code, Cursor, or Codex, then say what should change; the agent pulls the capture itself over MCP, image included.") {
+                        Button("Agents…") { goToSettings(.agents) }
+                    }
                 }
             }
             .formStyle(.grouped)
@@ -75,16 +98,20 @@ struct HelpView: View {
                     .font(.footnote)
                     .foregroundStyle(.secondary)
                 Spacer()
-                Button("Settings…") {
-                    close()
-                    openSettings()
-                }
+                Button("Settings…") { goToSettings(.general) }
                 Button("Close", action: close)
                     .keyboardShortcut(.defaultAction)
             }
             .padding(20)
         }
         .frame(width: 560, height: Self.preferredHeight(for: NSScreen.main))
+    }
+
+    /// Closes the page and opens Settings on `tab`.
+    private func goToSettings(_ tab: SettingsTab) {
+        close()
+        state.settingsTab = tab
+        openSettings()
     }
 
     /// Symbol, title, one line beneath, and the key (or a control) on the trailing edge, the way

@@ -5,21 +5,30 @@ import SwiftUI
 /// controls at default sizes, footnotes under rows, nothing custom. Resizable from 480×360;
 /// every tab is a grouped Form that reflows with the width.
 struct SettingsView: View {
+    @Environment(AppState.self) private var state
+
     var body: some View {
+        @Bindable var state = state
         // v0.6 R51: tabs, the way System Settings groups things. General is what the app is
         // and needs; Hotkeys is every key; Captures is what is written and how; My Apps is the list;
-        // Agents (v0.7.1 R56) is who fetches captures over MCP.
-        TabView {
+        // Agents (v0.7.1 R56) is who fetches captures over MCP. The selection lives in AppState so
+        // the help page can open Settings on the tab a row belongs to.
+        TabView(selection: $state.settingsTab) {
             GeneralSettings()
                 .tabItem { Label("General", systemImage: "gearshape") }
+                .tag(SettingsTab.general)
             HotkeySettings()
                 .tabItem { Label("Hotkeys", systemImage: "keyboard") }
+                .tag(SettingsTab.hotkeys)
             CaptureSettings()
                 .tabItem { Label("Captures", systemImage: "photo.on.rectangle") }
+                .tag(SettingsTab.captures)
             MyAppsSettings()
                 .tabItem { Label("My Apps", systemImage: "app.badge.checkmark") }
+                .tag(SettingsTab.myApps)
             AgentSettings()
                 .tabItem { Label("Agents", systemImage: "terminal") }
+                .tag(SettingsTab.agents)
         }
         .frame(minWidth: 480, idealWidth: 520, maxWidth: .infinity, minHeight: 360, idealHeight: 560, maxHeight: .infinity)
         .background(SettingsWindowConfigurator())
