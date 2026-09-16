@@ -87,8 +87,6 @@ struct HelpView: View {
                     .foregroundStyle(.secondary)
                 Spacer()
                 Button("Settings…") { goToSettings(.general) }
-                Button("Close", action: close)
-                    .keyboardShortcut(.cancelAction)
                 // The page's one action: the first capture should happen now, over whatever is on
                 // screen, not after reading. The page closes first; Locant never appears in its own captures.
                 Button("Try it now") {
