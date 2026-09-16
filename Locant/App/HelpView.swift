@@ -28,18 +28,6 @@ struct HelpView: View {
                             Text("Locant hands your coding agent the element under your cursor: role, identifier, frame, a cropped image, and your note. Paste it and the agent finds the right file.")
                                 .font(.callout)
                                 .foregroundStyle(.secondary)
-                            // The first capture should happen here, in seconds, not after reading.
-                            HStack(spacing: 10) {
-                                Button("Try it now") {
-                                    close()
-                                    state.tryPoint()
-                                }
-                                .buttonStyle(.borderedProminent)
-                                Text("The overlay opens over whatever is on screen. Hover, click, type a note, Return.")
-                                    .font(.footnote)
-                                    .foregroundStyle(.secondary)
-                            }
-                            .padding(.top, 6)
                         }
                     }
                     .padding(.vertical, 4)
@@ -100,7 +88,15 @@ struct HelpView: View {
                 Spacer()
                 Button("Settings…") { goToSettings(.general) }
                 Button("Close", action: close)
-                    .keyboardShortcut(.defaultAction)
+                    .keyboardShortcut(.cancelAction)
+                // The page's one action: the first capture should happen now, over whatever is on
+                // screen, not after reading. The page closes first; Locant never appears in its own captures.
+                Button("Try it now") {
+                    close()
+                    state.tryPoint()
+                }
+                .buttonStyle(.borderedProminent)
+                .keyboardShortcut(.defaultAction)
             }
             .padding(20)
         }
