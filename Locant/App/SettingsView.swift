@@ -36,7 +36,8 @@ struct SettingsView: View {
 }
 
 /// The `Settings` scene builds its window without a minimize button. This reaches the window
-/// once the view is in it and adds one; the scene itself remembers the frame.
+/// once the view is in it and adds one; the scene itself remembers the frame. It also grows a
+/// restored window that is shorter than the tab it opens on, so every row shows without scrolling.
 private struct SettingsWindowConfigurator: NSViewRepresentable {
     func makeNSView(context: Context) -> ConfiguratorView { ConfiguratorView() }
     func updateNSView(_ view: ConfiguratorView, context: Context) {}
@@ -49,6 +50,46 @@ private struct SettingsWindowConfigurator: NSViewRepresentable {
             guard let window, window !== configured else { return }
             configured = window
             window.styleMask.insert([.miniaturizable, .resizable])
+            // The form lays out over a few runloop turns after the frame is restored; check more
+            // than once, growing only, so the first short measurement is not the last word.
+            for delay in [0, 150, 400] {
+                DispatchQueue.main.asyncAfter(deadline: .now() + .milliseconds(delay)) { [weak window] in
+                    guard let window else { return }
+                    Self.growToFitContent(window)
+                }
+            }
+        }
+
+        /// Adds the height the open tab's form needs beyond what the window shows, keeping the top
+        /// edge in place and the window on its screen. Never shrinks.
+        private static func growToFitContent(_ window: NSWindow) {
+            guard let content = window.contentView else { return }
+            // The scroll view runs under the toolbar; what the form can use is the layout rect.
+            let shortfall = formHeight(in: content) - window.contentLayoutRect.height
+            guard shortfall > 0 else { return }
+            var frame = window.frame
+            frame.size.height += shortfall
+            frame.origin.y -= shortfall
+            if let screen = window.screen ?? NSScreen.main {
+                let bounds = screen.visibleFrame
+                frame.size.height = min(frame.height, bounds.height)
+                frame.origin.y = max(frame.origin.y, bounds.minY)
+            }
+            window.setFrame(frame, display: true, animate: false)
+        }
+
+        /// The height the open tab's grouped Form wants. The document view is stretched to fill the
+        /// clip, so it is measured from its sections: the last one's far edge plus the inset the
+        /// first one has from the near edge, which the Form mirrors at the bottom.
+        private static func formHeight(in view: NSView) -> CGFloat {
+            if let scroll = view as? NSScrollView, let document = scroll.documentView {
+                let sections = document.subviews.first?.subviews ?? []
+                if let far = sections.map(\.frame.maxY).max(), let near = sections.map(\.frame.minY).min() {
+                    return far + near
+                }
+                return document.frame.height
+            }
+            return view.subviews.map(formHeight(in:)).max() ?? 0
         }
     }
 }
