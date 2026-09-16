@@ -1,6 +1,11 @@
 import AppKit
 import Observation
 
+/// The five Settings tabs, in toolbar order.
+enum SettingsTab: Hashable, Sendable {
+    case general, hotkeys, captures, myApps, agents
+}
+
 /// The only shared object. Owns the system-resource objects (overlay, hotkey, toast, reader) and
 /// runs one capture session at a time: hover → click → note → write.
 @Observable
@@ -26,6 +31,9 @@ final class AppState {
 
     private(set) var phase: Phase = .idle
     let preferences = Preferences()
+    /// Which Settings tab shows next. The help page sets it before opening Settings, so a row
+    /// there lands on the tab that owns it.
+    var settingsTab: SettingsTab = .general
 
     @ObservationIgnored private let reader = AccessibilityReader()
     @ObservationIgnored private var userTeamIDs: Set<String> = []
@@ -429,6 +437,30 @@ final class AppState {
         help.show(state: self)
     }
 
+    /// "Try it now" on the help page: the page goes away and Point opens over whatever is on screen,
+    /// so the first capture happens in seconds. The help window is closed first because Locant never
+    /// appears in its own captures.
+    func tryPoint() {
+        help.close()
+        Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(250))
+            self.beginAction(.point)
+        }
+    }
+
+    /// Once per install, after the first Point capture lands on the clipboard and while no agent is
+    /// connected: the payload can be fetched instead of pasted. Waits for the Copied toast to go.
+    private func showAgentHintIfNeeded() {
+        guard preferences.hintCount("agents") == 0 else { return }
+        preferences.markHintShown("agents")
+        guard Agent.allCases.allSatisfy({ AgentConnector.status($0) == .notConnected }) else { return }
+        Task { @MainActor in
+            try? await Task.sleep(for: .seconds(DesignTokens.toastLife + 0.4))
+            guard phase == .idle else { return }
+            toast.show(HudText.plain("Your agent can fetch this itself · Settings › Agents"), atBottomOf: NSEvent.mouseLocation, life: DesignTokens.hintLife)
+        }
+    }
+
     /// The first three opens of a mode: the gestures, at the bottom of the display under the cursor.
     private func showHintIfNeeded(key: String, text: String) {
         guard preferences.hintCount(key) < Self.hintShowings else { return }
@@ -773,6 +805,7 @@ final class AppState {
                 PasteboardWriter.write(markdown: MarkdownBuilder.build(written), png: image.png)
                 reset()
                 toast.show(HudText.copied(identifier: element?.identifier), near: anchor)
+                showAgentHintIfNeeded()
             } catch {
                 fail(.captureFailed(error), nearRect: anchor)
             }

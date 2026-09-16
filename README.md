@@ -18,8 +18,8 @@
 </p>
 
 <p align="center">
-  <img src="site/assets/overlay-hover.jpg" width="720" alt="The Locant overlay over Calculator: the 8 key is outlined in blue, and a label under it reads button · Eight.">
-  <br><sub>Hover shows the element and its identifier. Nothing is written until Enter.</sub>
+  <img src="site/assets/hero.gif" width="720" alt="The loop, recorded: the ball is clicked, the overlay dims the screen, hovering an orb in the iPhone Simulator shows button · oceanCurrent.product.ideas, a note is typed, Enter copies, and the Markdown payload lands in the agent's chat with the image path first.">
+  <br><sub>Click the ball, hover, click, say what should change, paste. Every frame is a real capture.</sub>
 </p>
 
 <p align="center">

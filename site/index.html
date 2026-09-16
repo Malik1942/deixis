@@ -163,6 +163,10 @@
   .hero h1 { max-width: 22ch; }
   .hero h1 em { font-style: italic; font-weight: 600; }
   .hero .lede { max-width: 38ch; }
+  .hero .proof { font-size: 15px; color: var(--muted); max-width: 52ch; margin-top: -6px; text-wrap: balance; }
+  .hero .proof b { color: var(--ink); font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .hero .proof a { color: var(--accent); text-decoration: none; white-space: nowrap; }
+  .hero .proof a:hover { text-decoration: underline; }
   .cta { display: flex; gap: 10px 22px; align-items: center; flex-wrap: wrap; justify-content: center; margin-top: 4px; }
   .btn {
     display: inline-block; text-decoration: none;
@@ -407,7 +411,7 @@
   </div>
 </nav>
 <div class="ribbon">
-  <p><b>Made for the Palantir Product Design Show&nbsp;&amp;&nbsp;Tell.</b> v0.4.0 built in 3 hours. Iterated since to v0.7.2. <a href="https://github.com/Malik1942/locant/tags">See the commits&nbsp;›</a></p>
+  <p><b>Made for the Palantir Product Design Show&nbsp;&amp;&nbsp;Tell.</b> v0.4.0 built in 3 hours. Iterated since to v0.7.3. <a href="https://github.com/Malik1942/locant/tags">See the commits&nbsp;›</a></p>
 </div>
 <main id="top">
   <header class="hero col">
@@ -415,6 +419,7 @@
     <p class="name">Locant <span>for Mac</span></p>
     <h1>Point, don't&nbsp;describe.</h1>
     <p class="lede">Point at one element in any app. Your coding agent gets the element, not a screenshot.</p>
+    <p class="proof">Given a screenshot, the agent stopped to ask which element in <b>17 of 18</b> runs. Given a Locant capture, <b>0 of 12</b>. <a href="#measured">How it was measured</a></p>
     <div class="cta">
       <a class="btn" href="https://github.com/Malik1942/locant/releases/latest/download/Locant.dmg">Download for Mac</a>
       <a class="link" href="https://github.com/Malik1942/locant">View on GitHub</a>
@@ -676,7 +681,7 @@ make this rounded, match the other pills</pre>
       <p>The number in a chemical name that says exactly where a group is attached, as the&nbsp;2 in 2‑methylbutane. <span class="nowrap">One number, one molecule.</span></p>
     </div>
     <div class="row">
-      <span class="ver">Locant 0.7.2 for Mac</span>
+      <span class="ver">Locant 0.7.3 for Mac</span>
       <nav class="links" aria-label="Footer">
         <a href="https://github.com/Malik1942/locant/releases/latest/download/Locant.dmg">Download for Mac</a>
         <a href="https://github.com/Malik1942/locant">GitHub</a>

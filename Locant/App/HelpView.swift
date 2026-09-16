@@ -14,7 +14,7 @@ struct HelpView: View {
     }
 
     var body: some View {
-        let preferences = state.preferences
+        @Bindable var preferences = state.preferences
         VStack(spacing: 0) {
             Form {
                 Section {
@@ -36,6 +36,14 @@ struct HelpView: View {
                     Row(symbol: "keyboard", title: "Open the overlay", detail: "Press the hotkey, or click the ball. The pointing hand in the menu bar works too.", key: preferences.hotkey.symbol)
                     Row(symbol: "cursorarrow.rays", title: "Pick the element", detail: "Hover, then click or press Return. Drag for a frame with everything inside it; Option steps to the parent.", key: "↩")
                     Row(symbol: "text.cursor", title: "Say what should change", detail: "Type a note, press Return. The payload is on the clipboard; paste it into your agent. Esc at any point cancels, nothing written.", key: "↩")
+                    Row(symbol: "circle.dotted", title: "Keep the ball?", detail: "The glass disc at the edge of the screen. The hotkey works without it; change your mind any time in Settings.") {
+                        Toggle("Floating ball", isOn: $preferences.ballEnabled)
+                            .labelsHidden()
+                            .toggleStyle(.switch)
+                    }
+                    Row(symbol: "keyboard.badge.ellipsis", title: "Change the hotkeys", detail: "Point and each action can be re-recorded as a chord, or as a double-tap of one modifier.") {
+                        Button("Hotkeys…") { goToSettings(.hotkeys) }
+                    }
                 }
                 Section("The other actions") {
                     Row(symbol: "camera.viewfinder", title: "Snap", detail: "A window or a dragged region as a PNG. Hold ⌥ at release to keep it off disk.", key: preferences.actionHotkeys["snap"]?.symbol)
@@ -44,11 +52,31 @@ struct HelpView: View {
                     Row(symbol: "person.and.background.dotted", title: "Cut", detail: "The subject cut onto a transparent background.", key: preferences.actionHotkeys["cut"]?.symbol)
                     Row(symbol: "circle.circle", title: "The ring", detail: "All four are on the ball: hold it for half a second and release on one. A shorter press is Point.", key: nil)
                 }
+                // These rows are the settings themselves, so a reader decides without leaving the page.
                 Section("Afterwards") {
-                    Row(symbol: "arrow.triangle.2.circlepath", title: "Iterations", detail: "Point at an element in an app you build, let your agent edit, run the app again: Locant captures the element again with the git diff whenever it looks different. Show before & after is in the menu bar.", key: preferences.collectsIterations ? "On" : "Off")
-                    Row(symbol: "clock.arrow.circlepath", title: "Old images are cleaned up", detail: "Older images go to the Trash. Change the period, or keep everything, in Settings.", key: preferences.retentionDays == 0 ? "Forever" : "\(preferences.retentionDays) days")
-                    Row(symbol: "arrow.down.circle", title: "Updates", detail: "Once a day Locant asks GitHub whether a newer version exists and tells you. Turn it off in Settings.", key: preferences.checksForUpdates ? "Daily" : "Off")
-                    Row(symbol: "terminal", title: "Or let the agent fetch it", detail: "Connect Claude Code, Cursor, or Codex in Settings › Agents. Say what should change; the agent pulls the capture itself, image included.", key: "MCP")
+                    Row(symbol: "arrow.triangle.2.circlepath", title: "Collect iterations", detail: "Point at an element in an app you build, let your agent edit, run the app again: Locant captures the element again with the git diff whenever it looks different. Show before & after is in the menu bar.") {
+                        Toggle("Collect iterations", isOn: $preferences.collectsIterations)
+                            .labelsHidden()
+                            .toggleStyle(.switch)
+                    }
+                    Row(symbol: "clock.arrow.circlepath", title: "Keep images", detail: "Older images go to the Trash with their sidecars. Captures an agent marked resolved stay.") {
+                        Picker("Keep images", selection: $preferences.retentionDays) {
+                            ForEach(Preferences.retentionChoices, id: \.self) { days in
+                                Text(days == 0 ? "Forever" : "\(days) days").tag(days)
+                            }
+                        }
+                        .labelsHidden()
+                        .pickerStyle(.menu)
+                        .fixedSize()
+                    }
+                    Row(symbol: "arrow.down.circle", title: "Check for updates", detail: "Once a day Locant asks GitHub whether a newer version exists and tells you. The request carries the version number and nothing else.") {
+                        Toggle("Check for updates", isOn: $preferences.checksForUpdates)
+                            .labelsHidden()
+                            .toggleStyle(.switch)
+                    }
+                    Row(symbol: "terminal", title: "Or let the agent fetch it", detail: "Connect Claude Code, Cursor, or Codex, then say what should change; the agent pulls the capture itself over MCP, image included.") {
+                        Button("Agents…") { goToSettings(.agents) }
+                    }
                 }
             }
             .formStyle(.grouped)
@@ -58,31 +86,46 @@ struct HelpView: View {
                     .font(.footnote)
                     .foregroundStyle(.secondary)
                 Spacer()
-                Button("Settings…") {
+                Button("Settings…") { goToSettings(.general) }
+                // The page's one action: the first capture should happen now, over whatever is on
+                // screen, not after reading. The page closes first; Locant never appears in its own captures.
+                Button("Try it now") {
                     close()
-                    openSettings()
+                    state.tryPoint()
                 }
-                Button("Close", action: close)
-                    .keyboardShortcut(.defaultAction)
+                .buttonStyle(.borderedProminent)
+                .keyboardShortcut(.defaultAction)
             }
             .padding(20)
         }
         .frame(width: 560, height: Self.preferredHeight(for: NSScreen.main))
     }
 
-    /// Symbol, title, one line beneath, and the key on the trailing edge, the way Settings lays out a row.
-    private struct Row: View {
+    /// Closes the page and opens Settings on `tab`.
+    private func goToSettings(_ tab: SettingsTab) {
+        close()
+        state.settingsTab = tab
+        openSettings()
+    }
+
+    /// Symbol, title, one line beneath, and the key (or a control) on the trailing edge, the way
+    /// Settings lays out a row.
+    fileprivate struct Row<Trailing: View>: View {
         let symbol: String
         let title: String
         let detail: String
-        let key: String?
+        @ViewBuilder let trailing: () -> Trailing
+
+        init(symbol: String, title: String, detail: String, @ViewBuilder trailing: @escaping () -> Trailing) {
+            self.symbol = symbol
+            self.title = title
+            self.detail = detail
+            self.trailing = trailing
+        }
 
         var body: some View {
             LabeledContent {
-                if let key {
-                    Text(key)
-                        .foregroundStyle(.secondary)
-                }
+                trailing()
             } label: {
                 HStack(alignment: .top, spacing: 10) {
                     Image(systemName: symbol)
@@ -96,6 +139,15 @@ struct HelpView: View {
                     }
                 }
             }
+        }
+    }
+}
+
+extension HelpView.Row where Trailing == Text? {
+    /// The common row: a key or a value in secondary text on the trailing edge, or nothing.
+    init(symbol: String, title: String, detail: String, key: String?) {
+        self.init(symbol: symbol, title: title, detail: detail) {
+            key.map { Text($0).foregroundStyle(.secondary) }
         }
     }
 }
@@ -119,5 +171,9 @@ final class HelpWindow {
         }
         NSApp.activate()
         window?.makeKeyAndOrderFront(nil)
+    }
+
+    func close() {
+        window?.close()
     }
 }
