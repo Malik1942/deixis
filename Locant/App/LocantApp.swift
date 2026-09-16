@@ -60,15 +60,22 @@ private struct StatusMenu: View {
     @Environment(\.openSettings) private var openSettings
 
     var body: some View {
+        // Hotkeys show as the menu's own key equivalents, grey and right-aligned like ⌘, and ⌘Q.
+        // A double-tap has no key equivalent, so it stays in the title only when it is all Point has.
         Button(captureTitle) {
             state.beginCapture()
         }
+        .keyboardShortcut(captureShortcut)
         Button("Show before & after") { state.showBeforeAfter() }
         Divider()
-        Button(title("Snap", "snap")) { state.beginAction(.snap) }
-        Button(title("Text", "text")) { state.beginAction(.text) }
-        Button(title("Color", "color")) { state.beginColorPick() }
-        Button(title("Cut", "cut")) { state.beginAction(.cut) }
+        Button("Snap") { state.beginAction(.snap) }
+            .keyboardShortcut(shortcut("snap"))
+        Button("Text") { state.beginAction(.text) }
+            .keyboardShortcut(shortcut("text"))
+        Button("Color") { state.beginColorPick() }
+            .keyboardShortcut(shortcut("color"))
+        Button("Cut") { state.beginAction(.cut) }
+            .keyboardShortcut(shortcut("cut"))
         Divider()
         Button("Open capture folder") {
             state.openCaptureFolder()
@@ -85,17 +92,35 @@ private struct StatusMenu: View {
         .keyboardShortcut("q")
     }
 
-    /// "Capture (⌃⌃ or ⌃⌥1)": the capture hotkey and, when Point has one, its action hotkey.
-    private var captureTitle: String {
-        var keys = [state.preferences.hotkey.symbol]
-        if let point = state.preferences.actionHotkeys["point"]?.symbol { keys.append(point) }
-        return "Capture (\(keys.joined(separator: " or ")))"
+    /// The capture hotkey when it is a chord, else Point's action hotkey (⌃⌥1 by default).
+    private var captureShortcut: KeyboardShortcut? {
+        state.preferences.hotkey.keyboardShortcut ?? state.preferences.actionHotkeys["point"]?.keyboardShortcut
     }
 
-    /// "Snap (⌃⌥2)"; just the name when the action has no hotkey.
-    private func title(_ name: String, _ action: String) -> String {
-        guard let symbol = state.preferences.actionHotkeys[action]?.symbol else { return name }
-        return "\(name) (\(symbol))"
+    /// "Capture", or "Capture (⌃⌃)" when the only hotkey is a double-tap.
+    private var captureTitle: String {
+        guard captureShortcut == nil else { return "Capture" }
+        return "Capture (\(state.preferences.hotkey.symbol))"
+    }
+
+    private func shortcut(_ action: String) -> KeyboardShortcut? {
+        state.preferences.actionHotkeys[action]?.keyboardShortcut
+    }
+}
+
+private extension Hotkey {
+    /// The chord as a menu key equivalent. A double-tap, or a key without a single character
+    /// (an arrow, a function key), has none.
+    var keyboardShortcut: KeyboardShortcut? {
+        guard case .chord(_, let modifiers, let key) = self, key.count == 1, let character = key.lowercased().first else {
+            return nil
+        }
+        var eventModifiers: EventModifiers = []
+        if modifiers.contains(.control) { eventModifiers.insert(.control) }
+        if modifiers.contains(.option) { eventModifiers.insert(.option) }
+        if modifiers.contains(.shift) { eventModifiers.insert(.shift) }
+        if modifiers.contains(.command) { eventModifiers.insert(.command) }
+        return KeyboardShortcut(KeyEquivalent(character), modifiers: eventModifiers)
     }
 }
 
