@@ -202,6 +202,15 @@ What each one did, and when it was run:
 Statuses say "untested" until someone tests them. A report of what your agent did with a payload, or
 over MCP, is a welcome issue.
 
+## Measured against a screenshot
+
+Same fix, same model, same repo, same note: the only difference is what the agent was handed, a screenshot crop
+of the whole iOS Simulator window or one Locant capture of the element. With the screenshot the agent stopped
+to ask which element in 17 of 18 runs; with the Locant capture, 0 of 12. Median time to the edit went from 39 s
+to 22 s without a build and from 33 s to 16 s with one, median session tokens from 312k to 253k and from 287k
+to 162k, and all 30 runs made the correct edit in the right file. One task, one app, one model: the method, the
+raw transcripts, and the statistics are in [`docs/video/10-measurement-v3.md`](docs/video/10-measurement-v3.md).
+
 ## Known limitations
 
 - Element quality follows the target app. SwiftUI, AppKit, and the iOS Simulator work well. Electron
@@ -282,7 +291,7 @@ iteration to the sidecar. Locant never commits, never installs hooks, and never 
 repository.
 
 ```bash
-xcodebuild -project Locant.xcodeproj -scheme Locant test    # 123 tests over the pure functions
+xcodebuild -project Locant.xcodeproj -scheme Locant test    # 156 tests over the pure functions
 ```
 
 </details>
