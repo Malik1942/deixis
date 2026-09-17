@@ -6,16 +6,19 @@ enum MarkdownBuilder {
         var sections: [String] = ["## Locant capture (\(capture.mode.rawValue))"]
         let note = noteBlock(capture.note)
         let extras = [elementsBlock(capture), nearbyBlock(capture), textBlock(capture)].compactMap { $0 }
+        // v0.8 R58: a set selected with Shift is numbered; "this" and "that" match how notes are worded.
+        let elementBlocks = capture.targets.map { targets in targets.enumerated().map { targetBlock($1, index: $0, capture: capture) } }
+            ?? [elementBlock(capture.element)]
         switch capture.mode {
         case .fix:
             sections.append(sourceBlock(capture))
-            sections.append(elementBlock(capture.element))
+            sections.append(contentsOf: elementBlocks)
             sections.append(contentsOf: extras)
             if let note { sections.append(note) }
         case .reference:
             if let note { sections.append(note) }
             sections.append(sourceBlock(capture))
-            sections.append(elementBlock(capture.element))
+            sections.append(contentsOf: elementBlocks)
             sections.append(contentsOf: extras)
         }
         // The heading sits directly on the first block (section 5); blocks are separated by a blank line.
@@ -31,6 +34,7 @@ enum MarkdownBuilder {
         let windowTitle = source.window?.title ?? "none"
         let region = "\(number(capture.image.widthPt))×\(number(capture.image.heightPt)) pt @\(number(capture.image.scale))x"
         let regionNote = capture.elements != nil ? "drawn frame"
+            : capture.targets != nil ? (capture.targets!.contains { $0.imagePath != nil } ? "element 1 + \(number(Geometry.cropPadding)) pt; the others have their own images" : "\(capture.targets!.count) elements + \(number(Geometry.cropPadding)) pt")
             : capture.element == nil ? "around the click point" : "element + \(number(Geometry.cropPadding)) pt"
         var lines = [
             "Image: \(capture.image.path)",
@@ -42,21 +46,38 @@ enum MarkdownBuilder {
         return lines.joined(separator: "\n")
     }
 
+    /// One numbered element of a set: its own app, window, and image when they differ from the capture's.
+    private static func targetBlock(_ target: CaptureTarget, index: Int, capture: Capture) -> String {
+        let heading = "### Element \(index + 1)" + (index == 0 ? " (this)" : index == 1 ? " (that)" : "")
+        var lines = [heading]
+        if target.app.bundleId != capture.source.app.bundleId || target.window?.title != capture.source.window?.title {
+            lines.append("App: \(target.app.name) (\(target.app.bundleId)) · Window: \(target.window?.title ?? "none")")
+        }
+        if let url = target.url, url != capture.source.url { lines.append("URL: \(url)") }
+        if let path = target.imagePath { lines.append("Image: \(path)") }
+        lines.append(contentsOf: elementLines(target.element))
+        return lines.joined(separator: "\n")
+    }
+
     private static func elementBlock(_ element: ResolvedElement?) -> String {
         guard let element else {
             return "### Target element\nNo element information available (app exposes no accessibility tree). Use the image.\nIf this view is yours, give it .accessibilityElement() and .accessibilityIdentifier(\"…\") so Locant can point at it next time."
         }
+        return (["### Target element"] + elementLines(element)).joined(separator: "\n")
+    }
+
+    /// The lines under an element heading: the head line, advice, value, frame, and path.
+    private static func elementLines(_ element: ResolvedElement) -> [String] {
         if element.role == ElementResolver.clusterRole {
             let members = element.members ?? []
             var lines = [
-                "### Target element",
                 "cluster · \(members.count) elements (visual grouping computed by Locant, not an accessibility element; frame approximate)",
                 "Members: " + members.map(memberText).joined(separator: " · "),
             ]
             let f = element.frame
             lines.append("Frame: x=\(number(f.x)) y=\(number(f.y)) w=\(number(f.w)) h=\(number(f.h))")
             lines.append("Path: " + element.path.map(pathText).joined(separator: " > "))
-            return lines.joined(separator: "\n")
+            return lines
         }
         var head = element.role
         if let label = element.label { head += " \"\(label)\"" }
@@ -65,18 +86,30 @@ enum MarkdownBuilder {
             if element.identifierSource == .possiblySymbolName {
                 head += " (may be a symbol name, not a declared identifier)"
             }
-        } else {
-            head += " · no identifier"
         }
-        var lines = ["### Target element", head]
-        if element.identifier == nil {
+        // v0.8: the DOM's handles, beside or instead of the accessibility identifier.
+        if let dom = element.dom {
+            if let id = dom.id { head += " · #\(id)" }
+            if !dom.classes.isEmpty {
+                head += " · ." + dom.classes.prefix(Self.classLimit).joined(separator: ".")
+                if dom.classes.count > Self.classLimit { head += " (+\(dom.classes.count - Self.classLimit) more)" }
+            }
+        }
+        let hasHandle = element.identifier != nil || element.dom?.id != nil || !(element.dom?.classes.isEmpty ?? true)
+        if !hasHandle { head += " · no identifier" }
+        var lines = [head]
+        if element.identifier == nil, element.dom == nil {
             lines.append("No identifier. Grep the label text; add .accessibilityIdentifier(\"…\") to this view so the next capture is exact.")
+        } else if element.identifier == nil, element.dom?.id == nil {
+            lines.append(hasHandle
+                ? "No id attribute. Grep the class names or the label text; give the element an id so the next capture is exact."
+                : "No id or class. Grep the label text; give the element an id so the next capture is exact.")
         }
         if let value = element.value { lines.append("Value: \(valueText(value))") }
         let f = element.frame
         lines.append("Frame: x=\(number(f.x)) y=\(number(f.y)) w=\(number(f.w)) h=\(number(f.h))")
         lines.append("Path: " + element.path.map(pathText).joined(separator: " > "))
-        return lines.joined(separator: "\n")
+        return lines
     }
 
     // v0.2 blocks
@@ -128,9 +161,13 @@ enum MarkdownBuilder {
         return text
     }
 
+    /// How many class names the element line shows before "(+n more)".
+    static let classLimit = 6
+
     private static func pathText(_ entry: PathEntry) -> String {
-        guard let identifier = entry.identifier else { return entry.role }
-        return "\(entry.role)#\(identifier)"
+        if let identifier = entry.identifier { return "\(entry.role)#\(identifier)" }
+        if let dom = entry.dom { return entry.role + dom }
+        return entry.role
     }
 
     private static func valueText(_ value: ElementValue) -> String {

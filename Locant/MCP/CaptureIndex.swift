@@ -65,9 +65,12 @@ struct CaptureIndex: Sendable {
     }
 
     static func elementSummary(_ c: Capture) -> String {
+        if let targets = c.targets, targets.count > 1 {
+            return "\(targets.count) elements: " + targets.map { $0.element.identifier ?? $0.element.domReadout ?? $0.element.label ?? $0.element.role }.joined(separator: ", ")
+        }
         if let e = c.element {
             var s = e.role
-            if let id = e.identifier { s += " id=\(id)" } else if let label = e.label { s += " \"\(label)\"" } else { s += " (no identifier)" }
+            if let id = e.identifier { s += " id=\(id)" } else if let handle = e.domReadout { s += " \(handle)" } else if let label = e.label { s += " \"\(label)\"" } else { s += " (no identifier)" }
             return s
         }
         if let elements = c.elements, !elements.isEmpty { return "drawn frame with \(elements.count) elements" }

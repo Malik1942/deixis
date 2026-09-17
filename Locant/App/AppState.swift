@@ -54,6 +54,12 @@ final class AppState {
     @ObservationIgnored private var lockedElement: ResolvedElement?
     @ObservationIgnored private var lockedElements: [RegionElement]?
     @ObservationIgnored private var lockedNearby: [RegionElement]?
+    /// v0.8 R58: the elements added with Shift so far, the context of the first, and the set locked
+    /// at the final click with the crops for elements after the first.
+    @ObservationIgnored private var pinned: [CaptureTarget] = []
+    @ObservationIgnored private var pinnedContext: CaptureContext?
+    @ObservationIgnored private var lockedTargets: [CaptureTarget]?
+    @ObservationIgnored private var extraCropTasks: [Task<CroppedImage, any Error>] = []
     @ObservationIgnored private var action: Action = .point
     @ObservationIgnored private var colorSession: ColorPickerSession?
     @ObservationIgnored private var clipboardOnlyPreset = false
@@ -91,7 +97,9 @@ final class AppState {
         scheduleUpdateChecks()
         watchAppsForIterations()
         overlay.onHover = { [weak self] point in self?.hover(point) }
-        overlay.onClick = { [weak self] point in self?.click(point) }
+        overlay.onClick = { [weak self] point, shift in self?.click(point, shift: shift) }
+        overlay.onShiftPressed = { [weak self] in self?.showShiftHintIfNeeded() }
+        overlay.onReturn = { [weak self] in self?.confirmSetIfAny() ?? false }
         overlay.onCancel = { [weak self] in self?.cancel() }
         overlay.onCommit = { [weak self] note in self?.commit(note: note) }
         overlay.onOptionPressed = { [weak self] in self?.optionPressed() }
@@ -461,6 +469,13 @@ final class AppState {
         }
     }
 
+    /// v0.8 R58: once per install, the first time Shift is held over the Point overlay.
+    private func showShiftHintIfNeeded() {
+        guard phase == .hovering, action == .point, preferences.hintCount("shift") == 0 else { return }
+        preferences.markHintShown("shift")
+        toast.show(HudText.plain("⇧ click adds another element · from any app"), atBottomOf: NSEvent.mouseLocation, life: DesignTokens.hintLife)
+    }
+
     /// The first three opens of a mode: the gestures, at the bottom of the display under the cursor.
     private func showHintIfNeeded(key: String, text: String) {
         guard preferences.hintCount(key) < Self.hintShowings else { return }
@@ -583,9 +598,82 @@ final class AppState {
             .flatMap { ElementResolver.nonEmpty($0.title) }
     }
 
-    private func click(_ point: CGPoint) {
+    /// What a click at `point` means: the hovered selection at its Option level when the click is on or
+    /// near it, else a fresh read with the lazy-tree retry.
+    private func resolveClicked(at point: CGPoint) async -> (element: ResolvedElement?, snapshot: ElementSnapshot?) {
+        let slack = HitRefiner.stickiness
+        let hoverIsCurrent = !levels.isEmpty
+            && (lastHoverElement.map { $0.frame.cgRect.insetBy(dx: -slack, dy: -slack).contains(point) } ?? false)
+        if hoverIsCurrent, let shown = selectedElement() {
+            return (shown, lastHoverSnapshot)
+        } else if levelIndex > 0, let shown = selectedElement() {
+            return (shown, lastHoverSnapshot) // an Option level chosen on purpose
+        }
+        let snapshot = await ElementResolver.snapshotWithRetry(at: point, using: provider(at: point))
+        return (snapshot.map { HitRefiner.selectionLevels(for: $0, at: point).first ?? nil } ?? nil, snapshot)
+    }
+
+    /// v0.8 R58: an element as one of a set, with the app and window that own it.
+    private func describeTarget(_ element: ResolvedElement, snapshot: ElementSnapshot?, window: Geometry.WindowRecord?) async -> CaptureTarget {
+        let pid = window?.ownerPID ?? context?.frontPID ?? 0
+        let isNormalWindow = (window?.layer ?? 0) == 0
+        let title: ContextCollector.WindowTitle = isNormalWindow ? .focused : .known(snapshot.flatMap(Self.windowTitle(in:)))
+        let source = await ContextCollector.collect(reader: reader, pid: pid, windowTitle: title)?.source ?? context?.source
+        return CaptureTarget(element: element, app: source?.app ?? AppInfo(bundleId: "unknown", name: "unknown"), window: source?.window, url: snapshot?.url)
+    }
+
+    /// v0.8 R58: Shift-click adds the element under the cursor to the set, or removes it again. The
+    /// overlay stays open; the first element's app becomes the capture's source.
+    private func pin(at point: CGPoint) {
+        guard phase == .hovering, action == .point else { return }
+        Task {
+            let (element, snapshot) = await resolveClicked(at: point)
+            guard phase == .hovering, let element else { return }
+            let window = snapshot?.window ?? Geometry.windowOwner(at: point, windows: windows, excludingPID: ownPID)
+            if let index = pinned.firstIndex(where: { $0.element.frame == element.frame }) {
+                pinned.remove(at: index)
+            } else {
+                let target = await describeTarget(element, snapshot: snapshot, window: window)
+                guard phase == .hovering else { return }
+                if pinned.isEmpty, let context {
+                    let pid = window?.ownerPID ?? context.frontPID
+                    var first = await ContextCollector.collect(reader: reader, pid: pid, windowTitle: .focused) ?? context
+                    first.source.url = snapshot?.url
+                    pinnedContext = first
+                }
+                pinned.append(target)
+            }
+            guard phase == .hovering else { return }
+            overlay.setPinned(pinned.map { $0.element.frame.cgRect })
+        }
+    }
+
+    /// v0.8 R58: Return with a set in progress confirms the set as it stands, without adding
+    /// whatever happens to be under the cursor. Returns false when there is no set, so Return
+    /// keeps its plain meaning, a click at the cursor.
+    private func confirmSetIfAny() -> Bool {
+        guard phase == .hovering, action == .point, !pinned.isEmpty, context != nil else { return false }
+        toast.hide()
+        let last = pinned[pinned.count - 1].element.frame.cgRect
+        let point = CGPoint(x: last.midX, y: last.midY)
+        phase = .resolving
+        pendingHover = nil
+        clickPoint = point
+        guard ScreenCapture.hasPermission() else {
+            fail(.noScreenRecordingPermission, nearRect: last)
+            return true
+        }
+        Task { await finishSet(clicked: nil, snapshot: nil, window: nil, point: point) }
+        return true
+    }
+
+    private func click(_ point: CGPoint, shift: Bool) {
         guard phase == .hovering, context != nil else { return }
         toast.hide()
+        if shift, action == .point {
+            pin(at: point)
+            return
+        }
         switch action {
         case .point:
             break
@@ -610,25 +698,14 @@ final class AppState {
         Task {
             // What the user saw is what they clicked: keep the hovered selection (and its Option
             // depth) when the click is on or near it; otherwise resolve fresh with the lazy-tree retry.
-            let element: ResolvedElement?
-            let snapshot: ElementSnapshot?
-            let slack = HitRefiner.stickiness
-            let hoverIsCurrent = !levels.isEmpty
-                && (lastHoverElement.map { $0.frame.cgRect.insetBy(dx: -slack, dy: -slack).contains(point) } ?? false)
-            if hoverIsCurrent, let shown = selectedElement() {
-                element = shown
-                snapshot = lastHoverSnapshot
-            } else if levelIndex > 0, let shown = selectedElement() {
-                element = shown // an Option level chosen on purpose
-                snapshot = lastHoverSnapshot
-            } else {
-                // Nothing (or nothing specific) was hovered: read fresh, with the lazy-tree retry.
-                snapshot = await ElementResolver.snapshotWithRetry(at: point, using: provider(at: point))
-                element = snapshot.map { HitRefiner.selectionLevels(for: $0, at: point).first ?? nil } ?? nil
-            }
+            let (element, snapshot) = await resolveClicked(at: point)
             guard phase == .resolving else { return }
             // The window that answered the hit test, else the normal window under the point.
             let window = snapshot?.window ?? Geometry.windowOwner(at: point, windows: windows, excludingPID: ownPID)
+            if !pinned.isEmpty {
+                await finishSet(clicked: element, snapshot: snapshot, window: window, point: point)
+                return
+            }
             lockedElement = element
             if element == nil, let snapshot = lastHoverSnapshot {
                 // v0.2 R15: what sits around a point that has no element.
@@ -638,6 +715,8 @@ final class AppState {
 
             await recollectContextIfNeeded(window: window, snapshot: snapshot)
             guard phase == .resolving else { return }
+            // v0.8: the page address of a web node; the localhost rule in mode inference reads it.
+            if let url = snapshot?.url { context?.source.url = url }
 
             let display = SelectionOverlay.displayFrameCG(containing: point)
             let rect = Geometry.cropRect(element: element?.frame.cgRect, clickPoint: point, window: window?.bounds, display: display)
@@ -649,11 +728,40 @@ final class AppState {
         }
     }
 
+    /// v0.8 R58: the final click on a set. The clicked element joins it unless it is already in;
+    /// the first element's app is the source; one crop of the union when it fits, else one each.
+    private func finishSet(clicked: ResolvedElement?, snapshot: ElementSnapshot?, window: Geometry.WindowRecord?, point: CGPoint) async {
+        var targets = pinned
+        if let clicked, !targets.contains(where: { $0.element.frame == clicked.frame }) {
+            targets.append(await describeTarget(clicked, snapshot: snapshot, window: window))
+        }
+        guard phase == .resolving else { return }
+        if let pinnedContext { context = pinnedContext }
+        let last = targets.last!.element
+        lockedElement = targets[0].element
+        lockedTargets = targets.count > 1 ? targets : nil
+
+        let frames = targets.map { $0.element.frame.cgRect }
+        let display = SelectionOverlay.displayFrameCG(containing: CGPoint(x: frames[0].midX, y: frames[0].midY))
+        let rects = Geometry.cropRects(for: frames, display: display, displayFor: SelectionOverlay.displayFrameCG(containing:))
+        cropTask = Task { try await ScreenCapture.crop(rects[0]) }
+        extraCropTasks = rects.dropFirst().map { rect in Task { try await ScreenCapture.crop(rect) } }
+
+        overlay.setPinned(frames)
+        overlay.setHighlight(last.frame.cgRect, readout: .describing(last), around: point)
+        overlay.showNoteField(anchoredTo: last.frame.cgRect, around: point)
+        phase = .noting
+    }
+
     /// v0.2 R11–R13: a drawn frame. Everything at least half inside becomes `elements`, the best of
     /// it the primary `element`, and the frame itself is the crop.
     private func region(_ rect: CGRect, start: CGPoint) {
         guard phase == .hovering, let context else { return }
         toast.hide()
+        // A drawn frame replaces a set in progress.
+        pinned = []
+        pinnedContext = nil
+        overlay.setPinned([])
         if action != .point {
             runOneShot(on: rect, at: start, fromRegion: true)
             return
@@ -769,7 +877,9 @@ final class AppState {
         let element = lockedElement
         let elements = lockedElements
         let nearby = lockedNearby
-        let anchor = element?.frame.cgRect ?? SelectionOverlay.fallbackRect(around: clickPoint)
+        var targets = lockedTargets
+        let extraCrops = extraCropTasks
+        let anchor = (targets?.last?.element ?? element)?.frame.cgRect ?? SelectionOverlay.fallbackRect(around: clickPoint)
         let signals = ModeClassifier.signals(for: context, myApps: preferences.myApps, userTeamIDs: userTeamIDs)
         let store = FileStore(directory: preferences.captureFolderURL, organization: preferences.organization)
         Task {
@@ -796,15 +906,32 @@ final class AppState {
                     elements: elements,
                     nearby: nearby
                 )
+                // v0.8 R58: elements that did not fit the one image get their own, written first so
+                // the sidecar can name them.
+                if targets != nil, !extraCrops.isEmpty {
+                    for (offset, task) in extraCrops.enumerated() {
+                        let extra = try await task.value
+                        let url = try store.writeExtraImage(png: extra.png, capture: capture, index: offset + 2)
+                        targets?[offset + 1].imagePath = url.path(percentEncoded: false)
+                    }
+                    capture.targets = targets
+                } else {
+                    capture.targets = targets
+                }
                 // v0.2 R14: text in the image when nothing has an identifier.
                 let hasIdentifier = element?.identifier != nil || (elements?.contains { $0.identifier != nil } ?? false)
+                    || (targets?.contains { $0.element.identifier != nil || $0.element.dom?.id != nil } ?? false)
                 if !hasIdentifier, let lines = try? await TextRecognizer.lines(inPNG: image.png), !lines.isEmpty {
                     capture.ocr = lines.joined(separator: "\n")
                 }
                 let written = try store.write(png: image.png, capture: capture)
                 PasteboardWriter.write(markdown: MarkdownBuilder.build(written), png: image.png)
                 reset()
-                toast.show(HudText.copied(identifier: element?.identifier), near: anchor)
+                if let count = targets?.count {
+                    toast.show(HudText.plain("Copied · \(count) elements"), near: anchor)
+                } else {
+                    toast.show(HudText.copied(identifier: element?.identifier), near: anchor)
+                }
                 showAgentHintIfNeeded()
             } catch {
                 fail(.captureFailed(error), nearRect: anchor)
@@ -817,6 +944,7 @@ final class AppState {
         guard phase != .idle else { return }
         toast.hide()
         cropTask?.cancel()
+        extraCropTasks.forEach { $0.cancel() }
         reset()
     }
 
@@ -829,6 +957,10 @@ final class AppState {
         hoverTask = nil
         pendingHover = nil
         cropTask = nil
+        extraCropTasks = []
+        pinned = []
+        pinnedContext = nil
+        lockedTargets = nil
         lockedElement = nil
         lockedElements = nil
         lockedNearby = nil

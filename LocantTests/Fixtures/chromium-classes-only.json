@@ -1,0 +1,6 @@
+{
+  "element": { "AXRole": "AXStaticText", "AXValue": "Total", "AXDOMClassList": ["text-sm", "font-medium", "text-muted", "tracking-tight", "uppercase", "mt-2", "mb-1", "select-none"], "AXFrame": { "x": 620, "y": 600, "w": 80, "h": 20 }, "AXChildrenCount": 0 },
+  "ancestors": [
+    { "AXRole": "AXGroup", "AXDOMClassList": ["summary"], "AXFrame": { "x": 600, "y": 580, "w": 300, "h": 100 }, "AXChildrenCount": 3 }
+  ]
+}

@@ -12,6 +12,10 @@ struct AttributeSet: Codable, Sendable, Equatable {
     var identifier: String?
     var frame: Frame?
     var childCount: Int?
+    /// v0.8: the DOM id and class list WebKit and Chromium publish for web nodes. `domClasses` is
+    /// non-nil (possibly empty) exactly when the node is a web node.
+    var domId: String? = nil
+    var domClasses: [String]? = nil
 
     enum CodingKeys: String, CodingKey {
         case role = "AXRole"
@@ -22,6 +26,18 @@ struct AttributeSet: Codable, Sendable, Equatable {
         case identifier = "AXIdentifier"
         case frame = "AXFrame"
         case childCount = "AXChildrenCount"
+        case domId = "AXDOMIdentifier"
+        case domClasses = "AXDOMClassList"
+    }
+
+    /// True for a node of a web page or an Electron renderer.
+    var isWebNode: Bool { domClasses != nil || domId != nil }
+
+    /// `#id`, else `.firstClass`, else nil: the DOM handle a path segment shows.
+    var domHandle: String? {
+        if let id = ElementResolver.nonEmpty(domId) { return "#" + id }
+        if let first = domClasses?.first(where: { !$0.isEmpty }) { return "." + first }
+        return nil
     }
 }
 
@@ -35,6 +51,8 @@ struct ElementSnapshot: Codable, Sendable, Equatable {
     var siblings: [AttributeSet]? = nil
     /// The on-screen window whose owner answered the hit test (R3). Not part of fixtures.
     var window: Geometry.WindowRecord? = nil
+    /// v0.8: the page address, read from the web area above a web node. Nil elsewhere.
+    var url: String? = nil
 }
 
 /// Something that can hit-test a screen point and return a snapshot. The app's provider is the
@@ -56,9 +74,16 @@ enum ElementResolver {
         let label = nonEmpty(snapshot.element.title) ?? nonEmpty(snapshot.element.description)
 
         var path: [PathEntry] = snapshot.ancestors.prefix(maxAncestors).reversed().map { node in
-            PathEntry(role: mapRole(node.role ?? "", subrole: node.subrole), identifier: nonEmpty(node.identifier))
+            let nodeIdentifier = nonEmpty(node.identifier)
+            return PathEntry(role: mapRole(node.role ?? "", subrole: node.subrole), identifier: nodeIdentifier,
+                             dom: nodeIdentifier == nil ? node.domHandle : nil)
         }
-        path.append(PathEntry(role: role, identifier: identifier))
+        path.append(PathEntry(role: role, identifier: identifier, dom: identifier == nil ? snapshot.element.domHandle : nil))
+
+        // v0.8: web nodes carry the DOM's handles beside the accessibility identifier.
+        let dom: DOMInfo? = snapshot.element.isWebNode
+            ? DOMInfo(id: nonEmpty(snapshot.element.domId), classes: (snapshot.element.domClasses ?? []).filter { !$0.isEmpty })
+            : nil
 
         return ResolvedElement(
             role: role,
@@ -68,7 +93,8 @@ enum ElementResolver {
             identifierSource: identifierSource(role: role, identifier: identifier),
             value: snapshot.element.value,
             frame: frame,
-            path: path
+            path: path,
+            dom: dom
         )
     }
 

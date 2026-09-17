@@ -47,6 +47,17 @@ struct FileStore: Sendable {
         return url
     }
 
+    /// v0.8 R58: a further crop of a multi-element capture, `<base>-2.png` beside the capture's own
+    /// image, tagged like it. Written before the sidecar so the sidecar can name it.
+    func writeExtraImage(png: Data, capture: Capture, index: Int) throws -> URL {
+        let folder = folder(for: capture)
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        let url = folder.appending(path: "locant-\(Self.slug(capture.source.app.name))-\(capture.id)-\(index).png")
+        try png.write(to: url, options: .atomic)
+        Self.setFinderTags(Self.tags(for: capture), on: url)
+        return url
+    }
+
     /// Finder tags for a capture: Locant, the app, the mode, and the project name when known.
     static func tags(for capture: Capture) -> [String] {
         var tags = ["Locant", capture.source.app.name, capture.mode.rawValue]

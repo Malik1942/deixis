@@ -65,7 +65,8 @@ Three seconds, start to paste.
    Hover to see the highlight and the label `role · identifier`. The label tells you before you click
    whether the element has a declared identifier, only a label, or no accessibility tree at all.
 2. **Click** the element, or press **Return** while it is highlighted. Drag instead to capture a frame
-   with everything inside it. **Option** steps to the parent, and again for the next level.
+   with everything inside it. **Option** steps to the parent, and again for the next level. Hold
+   **Shift** and click to add more elements, from any app; the note then covers all of them.
 3. **Type** what should change, press **Enter**. The payload is on the clipboard. **Esc** at any point
    cancels; nothing is written and the clipboard is untouched.
 
@@ -131,6 +132,9 @@ The server reads the folder chosen in Settings › Captures; `--folder <path>` n
 
 - **Element, identifier, path.** The accessibility identifier is what the agent greps for. The path
   says where in the tree the element sits.
+- **Web pages and Electron apps too.** A web node carries its DOM id and class list
+  (`button "Checkout" · #checkout-button · .btn.btn-primary`), the path shows each ancestor's id or
+  first class, and the page URL is recorded; a `localhost` page counts as yours.
 - **A ladder when there is no element.** Identifier, then label, then a drawn frame with every element
   inside it listed, then recognized text and the nearest labeled neighbors, then the image alone. The
   payload says which rung it reached.
@@ -209,8 +213,9 @@ over MCP, is a welcome issue.
 - iOS Simulator: which app it is showing is inferred from the most recently launched simulated process.
   With two apps in one device, the newer one is assumed. The tree is built lazily; Locant retries for up
   to 600 ms before giving up.
-- Safari and Chrome tab URLs are not read yet, so `url` is always null and the localhost rule for fix
-  mode is dormant.
+- Web pages and Electron apps: the DOM id and class list come through, and the page URL; a `localhost`
+  page is fix mode. Tested in Chromium browsers and Electron; Safari exposes the same attributes but
+  has not been exercised.
 - Menus and popovers stay open under the overlay, but an element inside another app's menu may not resolve.
 - Snap and Cut on a click take a normal window only, not the desktop, menu bar, or Dock.
 
@@ -381,8 +386,7 @@ Locant was called Deixis until Sep 14, 2026; tags up to v0.6.1 carry the old nam
 ## Contributing
 
 Solo project; issues and PRs are welcome. The most useful bug report is the JSON sidecar of the capture
-that went wrong, plus the name of the app you pointed at. Next on the table, not promised: an MCP
-server that serves captures to agents directly, and reading Safari and Chrome tab URLs.
+that went wrong, plus the name of the app you pointed at.
 
 ## License
 

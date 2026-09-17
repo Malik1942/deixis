@@ -1,0 +1,12 @@
+{
+  "element": { "AXRole": "AXButton", "AXTitle": "Checkout", "AXDOMIdentifier": "checkout-button", "AXDOMClassList": ["btn", "btn-primary", "w-full"], "AXFrame": { "x": 640, "y": 720, "w": 220, "h": 44 }, "AXChildrenCount": 1 },
+  "ancestors": [
+    { "AXRole": "AXGroup", "AXDOMIdentifier": "", "AXDOMClassList": ["actions", "flex"], "AXFrame": { "x": 620, "y": 700, "w": 260, "h": 84 }, "AXChildrenCount": 2 },
+    { "AXRole": "AXGroup", "AXDOMIdentifier": "checkout", "AXDOMClassList": [], "AXFrame": { "x": 600, "y": 300, "w": 300, "h": 500 }, "AXChildrenCount": 4 },
+    { "AXRole": "AXGroup", "AXDOMClassList": ["relative", "w-full", "overflow-hidden", "bg-background", "h-screen", "flex", "flex-col"], "AXFrame": { "x": 0, "y": 80, "w": 1440, "h": 820 }, "AXChildrenCount": 3 },
+    { "AXRole": "AXGroup", "AXDOMIdentifier": "root", "AXDOMClassList": [], "AXFrame": { "x": 0, "y": 80, "w": 1440, "h": 820 }, "AXChildrenCount": 1 },
+    { "AXRole": "AXWebArea", "AXTitle": "Cart", "AXDOMClassList": [], "AXFrame": { "x": 0, "y": 80, "w": 1440, "h": 820 }, "AXChildrenCount": 1 },
+    { "AXRole": "AXWindow", "AXTitle": "Cart", "AXFrame": { "x": 0, "y": 0, "w": 1440, "h": 900 }, "AXChildrenCount": 2 }
+  ],
+  "url": "http://localhost:5173/cart"
+}
