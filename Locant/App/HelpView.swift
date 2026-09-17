@@ -36,6 +36,7 @@ struct HelpView: View {
                     Row(symbol: "keyboard", title: "Open the overlay", detail: "Press the hotkey, or click the ball. The pointing hand in the menu bar works too.", key: preferences.hotkey.symbol)
                     Row(symbol: "cursorarrow.rays", title: "Pick the element", detail: "Hover, then click or press Return. Drag for a frame with everything inside it; Option steps to the parent.", key: "↩")
                     Row(symbol: "text.cursor", title: "Say what should change", detail: "Type a note, press Return. The payload is on the clipboard; paste it into your agent. Esc at any point cancels, nothing written.", key: "↩")
+                    Row(symbol: "plus.square.on.square", title: "Select more than one", detail: "Hold ⇧ and click to add elements, from any app. Click the last one without ⇧, or press Return, and the note covers all of them.", key: "⇧ click")
                     Row(symbol: "circle.dotted", title: "Keep the ball?", detail: "The glass disc at the edge of the screen. The hotkey works without it; change your mind any time in Settings.") {
                         Toggle("Floating ball", isOn: $preferences.ballEnabled)
                             .labelsHidden()

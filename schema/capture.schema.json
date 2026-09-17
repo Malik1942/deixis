@@ -92,6 +92,14 @@
       },
       "maxItems": 3,
       "description": "Null-element point captures: the nearest labeled or identified elements around the click point."
+    },
+    "targets": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/target"
+      },
+      "minItems": 2,
+      "description": "Present when more than one element was selected with Shift (v0.8): every element in the order it was added. The first is also `element`, so readers of one element keep working. Elements may come from different apps."
     }
   },
   "$defs": {
@@ -452,6 +460,67 @@
             "string",
             "null"
           ]
+        }
+      }
+    },
+    "target": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "element",
+        "app",
+        "window"
+      ],
+      "properties": {
+        "element": {
+          "$ref": "#/$defs/element"
+        },
+        "app": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "bundleId",
+            "name"
+          ],
+          "properties": {
+            "bundleId": {
+              "type": "string"
+            },
+            "name": {
+              "type": "string"
+            }
+          },
+          "description": "The app that owns this element."
+        },
+        "window": {
+          "oneOf": [
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "title"
+              ],
+              "properties": {
+                "title": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              }
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "url": {
+          "type": "string",
+          "description": "The page address when this element is a web node."
+        },
+        "imagePath": {
+          "type": "string",
+          "description": "Absolute path to this element's own crop, present only when the set did not fit the capture's one image (another display, or more than 60 percent of it)."
         }
       }
     },

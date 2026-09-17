@@ -54,6 +54,31 @@ enum Geometry {
         return onDisplay.isEmpty ? display : onDisplay.integral
     }
 
+    /// A set covers at most this share of its display before each element gets its own crop.
+    static let setCropFraction: Double = 0.6
+
+    /// v0.8 R58: the crops for several selected elements. One crop of their union plus padding when
+    /// every frame's center is on `display` and the union covers less than `setCropFraction` of it;
+    /// otherwise one crop per element, each on the display that holds its center (`displayFor`).
+    static func cropRects(
+        for frames: [CGRect],
+        display: CGRect,
+        displayFor: (CGPoint) -> CGRect,
+        padding: Double = cropPadding
+    ) -> [CGRect] {
+        guard let first = frames.first else { return [] }
+        let centers = frames.map { CGPoint(x: $0.midX, y: $0.midY) }
+        let union = frames.dropFirst().reduce(first) { $0.union($1) }
+        let together = centers.allSatisfy { display.contains($0) }
+            && union.width * union.height < setCropFraction * display.width * display.height
+        if together {
+            return [cropRect(element: union, clickPoint: centers[0], window: nil, display: display, padding: padding)]
+        }
+        return zip(frames, centers).map { frame, center in
+            cropRect(element: frame, clickPoint: center, window: nil, display: displayFor(center), padding: padding)
+        }
+    }
+
     /// CG-space rect → the same rect relative to one display's top-left, in points.
     static func displayLocalRect(_ r: CGRect, inDisplay display: CGRect) -> CGRect {
         r.offsetBy(dx: -display.minX, dy: -display.minY)

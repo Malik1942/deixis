@@ -118,7 +118,10 @@ final class SelectionOverlay {
     /// Point ignores it; its frame already pauses at the note field.
     var adjustsRegion = false
     var onHover: ((CGPoint) -> Void)?
-    var onClick: ((CGPoint) -> Void)?
+    /// A click, and whether Shift was held (v0.8 R58: Shift adds the element to a set).
+    var onClick: ((CGPoint, Bool) -> Void)?
+    /// Shift pressed while hovering, for the one-time hint.
+    var onShiftPressed: (() -> Void)?
     var onCancel: (() -> Void)?
     var onCommit: ((String) -> Void)?
     /// Option pressed while hovering: step the selection to the parent.
@@ -199,8 +202,14 @@ final class SelectionOverlay {
         onHover?(Geometry.cgPoint(fromAppKit: point, primaryHeight: primaryHeight))
     }
 
-    func click(atAppKit point: CGPoint) {
-        onClick?(Geometry.cgPoint(fromAppKit: point, primaryHeight: primaryHeight))
+    func click(atAppKit point: CGPoint, shift: Bool) {
+        onClick?(Geometry.cgPoint(fromAppKit: point, primaryHeight: primaryHeight), shift)
+    }
+
+    /// v0.8 R58: the elements already in the set (CG rects), each outlined and numbered on its display.
+    func setPinned(_ frames: [CGRect]) {
+        let rects = frames.map { Geometry.appKitRect(fromCG: $0, primaryHeight: primaryHeight) }
+        for panel in panels { panel.contentOverlay.showPinned(rects) }
     }
 
     func region(atAppKit rect: CGRect, start: CGPoint) {
@@ -396,7 +405,7 @@ final class OverlayContentView: NSView, NSTextFieldDelegate {
                 owner?.region(atAppKit: window.convertToScreen(convert(rect, to: nil)), start: window.convertPoint(toScreen: start))
             }
         } else if editRegion == nil {
-            owner?.click(atAppKit: window.convertPoint(toScreen: event.locationInWindow))
+            owner?.click(atAppKit: window.convertPoint(toScreen: event.locationInWindow), shift: event.modifierFlags.contains(.shift))
         }
     }
 
@@ -491,7 +500,7 @@ final class OverlayContentView: NSView, NSTextFieldDelegate {
         guard editRegion != nil else {
             // v0.5 R38: Return is a click at the cursor; the hover is the selection.
             if event.keyCode == 36 || event.keyCode == 76, !locked {
-                owner?.click(atAppKit: NSEvent.mouseLocation)
+                owner?.click(atAppKit: NSEvent.mouseLocation, shift: event.modifierFlags.contains(.shift))
             }
             return
         }
@@ -512,12 +521,41 @@ final class OverlayContentView: NSView, NSTextFieldDelegate {
     }
 
     private var optionWasDown = false
+    private var shiftWasDown = false
 
     override func flagsChanged(with event: NSEvent) {
         let optionDown = event.modifierFlags.contains(.option)
-        defer { optionWasDown = optionDown }
+        let shiftDown = event.modifierFlags.contains(.shift)
+        defer { optionWasDown = optionDown; shiftWasDown = shiftDown }
         if optionDown, !optionWasDown, !locked {
             owner?.onOptionPressed?()
+        }
+        if shiftDown, !shiftWasDown, !locked {
+            owner?.onShiftPressed?()
+        }
+    }
+
+    // v0.8 R58: the set so far, each outlined like the hover and numbered at its top-left corner.
+    private var pinned: [NSView] = []
+
+    func showPinned(_ screenRects: [CGRect]) {
+        guard let window else { return }
+        pinned.forEach { $0.removeFromSuperview() }
+        pinned = []
+        for (index, rect) in screenRects.enumerated() {
+            let local = convert(window.convertFromScreen(rect), from: nil)
+            guard bounds.intersects(local) else { continue }
+            let outline = HighlightView()
+            outline.frame = local
+            addSubview(outline, positioned: .below, relativeTo: highlight)
+            let badge = HudLabel()
+            badge.set(NSAttributedString(string: "\(index + 1)", attributes: HudText.monoAttributes))
+            var origin = CGPoint(x: local.minX, y: local.maxY + DesignTokens.spaceS)
+            origin.x = min(max(origin.x, DesignTokens.spaceS), bounds.width - badge.hudSize.width - DesignTokens.spaceS)
+            origin.y = min(origin.y, bounds.height - badge.hudSize.height - DesignTokens.spaceS)
+            badge.frame = CGRect(origin: origin, size: badge.hudSize)
+            addSubview(badge)
+            pinned.append(contentsOf: [outline, badge])
         }
     }
 

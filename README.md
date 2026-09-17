@@ -65,7 +65,8 @@ Three seconds, start to paste.
    Hover to see the highlight and the label `role · identifier`. The label tells you before you click
    whether the element has a declared identifier, only a label, or no accessibility tree at all.
 2. **Click** the element, or press **Return** while it is highlighted. Drag instead to capture a frame
-   with everything inside it. **Option** steps to the parent, and again for the next level.
+   with everything inside it. **Option** steps to the parent, and again for the next level. Hold
+   **Shift** and click to add more elements, from any app; the note then covers all of them.
 3. **Type** what should change, press **Enter**. The payload is on the clipboard. **Esc** at any point
    cancels; nothing is written and the clipboard is untouched.
 

@@ -19,9 +19,11 @@ struct Capture: Codable, Sendable, Equatable {
     var elements: [RegionElement]? = nil
     /// Null-element point captures: the nearest labeled neighbors (v0.2).
     var nearby: [RegionElement]? = nil
+    /// v0.8 R58: every element selected with Shift, in order; `element` is the first of them.
+    var targets: [CaptureTarget]? = nil
 
     private enum CodingKeys: String, CodingKey {
-        case schemaVersion, id, createdAt, mode, image, source, element, note, ocr, iterations, resolved, elements, nearby
+        case schemaVersion, id, createdAt, mode, image, source, element, note, ocr, iterations, resolved, elements, nearby, targets
     }
 
     func encode(to encoder: any Encoder) throws {
@@ -39,6 +41,29 @@ struct Capture: Codable, Sendable, Equatable {
         try c.encode(resolved, forKey: .resolved)
         try c.encodeIfPresent(elements, forKey: .elements)
         try c.encodeIfPresent(nearby, forKey: .nearby)
+        try c.encodeIfPresent(targets, forKey: .targets)
+    }
+}
+
+/// v0.8 R58: one of several elements selected with Shift. Each names its own app and window, since
+/// the set may span apps: the view in the Simulator and the reference in a browser.
+struct CaptureTarget: Codable, Sendable, Equatable {
+    var element: ResolvedElement
+    var app: AppInfo
+    var window: WindowInfo?
+    var url: String? = nil
+    /// Its own crop when the set did not fit one image. Nil when `image` covers it.
+    var imagePath: String? = nil
+
+    private enum CodingKeys: String, CodingKey { case element, app, window, url, imagePath }
+
+    func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(element, forKey: .element)
+        try c.encode(app, forKey: .app)
+        try c.encode(window, forKey: .window)
+        try c.encodeIfPresent(url, forKey: .url)
+        try c.encodeIfPresent(imagePath, forKey: .imagePath)
     }
 }
 
