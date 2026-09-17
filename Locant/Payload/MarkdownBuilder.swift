@@ -65,12 +65,24 @@ enum MarkdownBuilder {
             if element.identifierSource == .possiblySymbolName {
                 head += " (may be a symbol name, not a declared identifier)"
             }
-        } else {
-            head += " · no identifier"
         }
+        // v0.8: the DOM's handles, beside or instead of the accessibility identifier.
+        if let dom = element.dom {
+            if let id = dom.id { head += " · #\(id)" }
+            if !dom.classes.isEmpty {
+                head += " · ." + dom.classes.prefix(Self.classLimit).joined(separator: ".")
+                if dom.classes.count > Self.classLimit { head += " (+\(dom.classes.count - Self.classLimit) more)" }
+            }
+        }
+        let hasHandle = element.identifier != nil || element.dom?.id != nil || !(element.dom?.classes.isEmpty ?? true)
+        if !hasHandle { head += " · no identifier" }
         var lines = ["### Target element", head]
-        if element.identifier == nil {
+        if element.identifier == nil, element.dom == nil {
             lines.append("No identifier. Grep the label text; add .accessibilityIdentifier(\"…\") to this view so the next capture is exact.")
+        } else if element.identifier == nil, element.dom?.id == nil {
+            lines.append(hasHandle
+                ? "No id attribute. Grep the class names or the label text; give the element an id so the next capture is exact."
+                : "No id or class. Grep the label text; give the element an id so the next capture is exact.")
         }
         if let value = element.value { lines.append("Value: \(valueText(value))") }
         let f = element.frame
@@ -128,9 +140,13 @@ enum MarkdownBuilder {
         return text
     }
 
+    /// How many class names the element line shows before "(+n more)".
+    static let classLimit = 6
+
     private static func pathText(_ entry: PathEntry) -> String {
-        guard let identifier = entry.identifier else { return entry.role }
-        return "\(entry.role)#\(identifier)"
+        if let identifier = entry.identifier { return "\(entry.role)#\(identifier)" }
+        if let dom = entry.dom { return entry.role + dom }
+        return entry.role
     }
 
     private static func valueText(_ value: ElementValue) -> String {

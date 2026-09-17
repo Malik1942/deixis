@@ -141,9 +141,11 @@ struct ResolvedElement: Codable, Sendable, Equatable {
     var path: [PathEntry]
     /// Present only when `role` is `cluster`: what the computed grouping contains (see `HitRefiner`).
     var members: [ElementMember]? = nil
+    /// v0.8: present for elements of a web page or an Electron app, the DOM's own handles.
+    var dom: DOMInfo? = nil
 
     private enum CodingKeys: String, CodingKey {
-        case role, rawRole, label, identifier, identifierSource, value, frame, path, members
+        case role, rawRole, label, identifier, identifierSource, value, frame, path, members, dom
     }
 
     func encode(to encoder: any Encoder) throws {
@@ -157,6 +159,33 @@ struct ResolvedElement: Codable, Sendable, Equatable {
         try c.encode(frame, forKey: .frame)
         try c.encode(path, forKey: .path)
         try c.encodeIfPresent(members, forKey: .members)
+        try c.encodeIfPresent(dom, forKey: .dom)
+    }
+}
+
+extension ResolvedElement {
+    /// v0.8: the DOM handle a label shows when there is no accessibility identifier: `#id`, else
+    /// the first two classes as `.a.b`, else nil.
+    var domReadout: String? {
+        guard let dom else { return nil }
+        if let id = dom.id { return "#" + id }
+        guard !dom.classes.isEmpty else { return nil }
+        return "." + dom.classes.prefix(2).joined(separator: ".")
+    }
+}
+
+/// v0.8: what the DOM says about an element in a browser or an Electron app. The `id` attribute is
+/// what an agent greps for; the class list is the next best handle when there is no id.
+struct DOMInfo: Codable, Sendable, Equatable {
+    var id: String?
+    var classes: [String]
+
+    private enum CodingKeys: String, CodingKey { case id, classes }
+
+    func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(id, forKey: .id)
+        try c.encode(classes, forKey: .classes)
     }
 }
 
@@ -185,13 +214,16 @@ enum IdentifierSource: String, Codable, Sendable {
 struct PathEntry: Codable, Sendable, Equatable {
     var role: String
     var identifier: String?
+    /// v0.8: the DOM handle of a web node, `#id` or `.firstClass`, when it has no accessibility identifier.
+    var dom: String? = nil
 
-    private enum CodingKeys: String, CodingKey { case role, identifier }
+    private enum CodingKeys: String, CodingKey { case role, identifier, dom }
 
     func encode(to encoder: any Encoder) throws {
         var c = encoder.container(keyedBy: CodingKeys.self)
         try c.encode(role, forKey: .role)
         try c.encode(identifier, forKey: .identifier)
+        try c.encodeIfPresent(dom, forKey: .dom)
     }
 }
 

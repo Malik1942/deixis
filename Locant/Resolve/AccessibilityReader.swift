@@ -173,16 +173,19 @@ actor AccessibilityReader {
 
     private func snapshot(of element: AXUIElement) -> ElementSnapshot {
         let elementAttributes = attributes(of: element)
+        // v0.8: a web node's ancestors are web nodes too; their DOM handles make the path grep-able.
+        let web = elementAttributes.isWebNode
         var ancestors: [AttributeSet] = []
         var parents: [AXUIElement] = []
         var current = element
         for _ in 0..<ElementResolver.maxAncestors {
             guard let parent = self.element(copy(current, kAXParentAttribute)) else { break }
             parents.append(parent)
-            ancestors.append(cachedAttributes(of: parent))
+            ancestors.append(cachedAttributes(of: parent, web: web))
             current = parent
         }
         var snapshot = ElementSnapshot(element: elementAttributes, ancestors: ancestors)
+        if web { snapshot.url = pageURL(above: current, pid: pidOf(element)) }
         // Flat trees (SwiftUI): read the neighbourhood so HitRefiner can form visual clusters.
         let window = HitRefiner.windowFrame(in: snapshot)
         if ElementResolver.isContainer(elementAttributes), HitRefiner.spans(elementAttributes.frame, window: window) {
@@ -205,18 +208,65 @@ actor AccessibilityReader {
 
     private var attributeCache: [ElementKey: (stamp: ContinuousClock.Instant, attributes: AttributeSet)] = [:]
 
-    private func cachedAttributes(of element: AXUIElement) -> AttributeSet {
-        var pid: pid_t = 0
-        AXUIElementGetPid(element, &pid)
-        let key = ElementKey(pid: pid, hash: CFHash(element))
+    private func cachedAttributes(of element: AXUIElement, web: Bool = false) -> AttributeSet {
+        let key = ElementKey(pid: pidOf(element), hash: CFHash(element))
         let now = ContinuousClock.now
-        if let cached = attributeCache[key], now - cached.stamp < Self.neighborTTL {
+        if let cached = attributeCache[key], now - cached.stamp < Self.neighborTTL, !web || cached.attributes.domClasses != nil {
             return cached.attributes
         }
-        let read = lightAttributes(of: element)
+        var read = lightAttributes(of: element)
+        if web { readDOM(of: element, into: &read) }
         if attributeCache.count > 256 { attributeCache.removeAll() }
         attributeCache[key] = (now, read)
         return read
+    }
+
+    private func pidOf(_ element: AXUIElement) -> pid_t {
+        var pid: pid_t = 0
+        AXUIElementGetPid(element, &pid)
+        return pid
+    }
+
+    // MARK: Web nodes (v0.8)
+
+    /// The DOM id and class list, which WebKit and Chromium publish on every web node and nothing
+    /// else has. `domClasses` becomes non-nil exactly when the node is a web node.
+    private func readDOM(of element: AXUIElement, into attributes: inout AttributeSet) {
+        if let classes = copy(element, "AXDOMClassList") as? [String] {
+            attributes.domClasses = classes
+            attributes.domId = string(copy(element, "AXDOMIdentifier"))
+        } else if let id = string(copy(element, "AXDOMIdentifier")) {
+            attributes.domClasses = []
+            attributes.domId = id
+        }
+    }
+
+    /// The page address, from the web area above a web node. DOM trees run deeper than the ancestors
+    /// a snapshot keeps, so this climbs on its own, and the answer is cached per app for `neighborTTL`
+    /// since hover asks for it many times a second.
+    private var urlCache: [pid_t: (stamp: ContinuousClock.Instant, url: String?)] = [:]
+
+    private func pageURL(above start: AXUIElement, pid: pid_t) -> String? {
+        let now = ContinuousClock.now
+        if let cached = urlCache[pid], now - cached.stamp < Self.neighborTTL { return cached.url }
+        var url: String?
+        var node: AXUIElement? = start
+        for _ in 0..<60 {
+            guard let current = node else { break }
+            if string(copy(current, kAXRoleAttribute)) == "AXWebArea" {
+                url = webURL(copy(current, "AXURL"))
+                break
+            }
+            node = element(copy(current, kAXParentAttribute))
+        }
+        urlCache[pid] = (now, url)
+        return url
+    }
+
+    private func webURL(_ value: CFTypeRef?) -> String? {
+        guard let value else { return nil }
+        if CFGetTypeID(value) == CFURLGetTypeID() { return ((value as! CFURL) as URL).absoluteString }
+        return string(value)
     }
 
     // MARK: Neighborhood cache
@@ -264,7 +314,7 @@ actor AccessibilityReader {
     private func attributes(of element: AXUIElement) -> AttributeSet {
         var childCount: CFIndex = 0
         AXUIElementGetAttributeValueCount(element, kAXChildrenAttribute as CFString, &childCount)
-        return AttributeSet(
+        var read = AttributeSet(
             role: string(copy(element, kAXRoleAttribute)),
             subrole: string(copy(element, kAXSubroleAttribute)),
             title: string(copy(element, kAXTitleAttribute)),
@@ -274,6 +324,8 @@ actor AccessibilityReader {
             frame: frame(copy(element, Self.frameAttribute)),
             childCount: Int(childCount)
         )
+        readDOM(of: element, into: &read)
+        return read
     }
 
     private func copy(_ element: AXUIElement, _ attribute: String) -> CFTypeRef? {

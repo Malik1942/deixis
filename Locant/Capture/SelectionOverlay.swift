@@ -42,16 +42,18 @@ struct Readout: Equatable, Sendable {
         if element.role == ElementResolver.clusterRole {
             return Readout(role: "cluster", identifier: nil, suffix: "\(element.members?.count ?? 0) elements", isFallback: false)
         }
+        // v0.8: a web node without an accessibility identifier shows its DOM handle instead.
+        let handle = element.identifier ?? element.domReadout
         var role = element.role
-        if element.identifier == nil, let label = element.label {
+        if handle == nil, let label = element.label {
             role += " \"\(label)\""
         }
-        let suffix: String? = switch (element.identifier, element.identifierSource) {
+        let suffix: String? = switch (handle, element.identifierSource) {
         case (nil, _): "no identifier"
         case (_, .possiblySymbolName): "may be a symbol name"
         default: nil
         }
-        return Readout(role: role, identifier: element.identifier, suffix: suffix, isFallback: false)
+        return Readout(role: role, identifier: handle, suffix: suffix, isFallback: false)
     }
 }
 

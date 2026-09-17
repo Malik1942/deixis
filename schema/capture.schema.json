@@ -185,7 +185,7 @@
             "string",
             "null"
           ],
-          "description": "Front tab URL. Filled only for Safari and Chrome; null otherwise."
+          "description": "The page address when the element is a web node: read from the web area above it in Safari, Chromium browsers, and Electron apps. null otherwise. A localhost address puts the capture in fix mode."
         },
         "simulator": {
           "oneOf": [
@@ -293,6 +293,31 @@
             "$ref": "#/$defs/member"
           },
           "description": "Present only when role is cluster: the accessibility elements the computed grouping contains, in reading order."
+        },
+        "dom": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "id",
+            "classes"
+          ],
+          "properties": {
+            "id": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "The element's id attribute, unmodified. null when it has none."
+            },
+            "classes": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "The element's class list in source order. Empty when it has none."
+            }
+          },
+          "description": "Present only for a node of a web page or an Electron app (v0.8): the DOM's own handles, as WebKit and Chromium publish them through accessibility. An agent greps for the id first, then the classes."
         }
       }
     },
@@ -344,6 +369,10 @@
             "string",
             "null"
           ]
+        },
+        "dom": {
+          "type": "string",
+          "description": "A web node's DOM handle when it has no accessibility identifier: #id, else .firstClass (v0.8). Absent otherwise."
         }
       }
     },

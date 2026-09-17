@@ -638,6 +638,8 @@ final class AppState {
 
             await recollectContextIfNeeded(window: window, snapshot: snapshot)
             guard phase == .resolving else { return }
+            // v0.8: the page address of a web node; the localhost rule in mode inference reads it.
+            if let url = snapshot?.url { context?.source.url = url }
 
             let display = SelectionOverlay.displayFrameCG(containing: point)
             let rect = Geometry.cropRect(element: element?.frame.cgRect, clickPoint: point, window: window?.bounds, display: display)
