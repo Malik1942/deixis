@@ -17,6 +17,28 @@ final class LifecycleTests: XCTestCase {
         XCTAssertEqual(Lifecycle.stale([old, recent], retentionDays: 7, now: now), [old, recent])
     }
 
+    func testExtraImagesOfASetGoAndStayWithTheirCapture() throws {
+        let dir = FileManager.default.temporaryDirectory.appending(path: "LocantLifecycle-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: dir) }
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        let base = "locant-simulator-20260810-120000-abcd"
+        try Data([1]).write(to: dir.appending(path: "\(base).png"))
+        try #"{"resolved": true}"#.data(using: .utf8)!.write(to: dir.appending(path: "\(base).json"))
+        try Data([1]).write(to: dir.appending(path: "\(base)-2.png"))
+        try Data([1]).write(to: dir.appending(path: "\(base)-3.png"))
+        // A Snap named like a capture with a number is not an extra: no sidecar at the stem.
+        try Data([1]).write(to: dir.appending(path: "locant-snap-figma-20260901-120000-efgh-2.png"))
+
+        let entries = Lifecycle.entries(in: dir).sorted { $0.urls[0].lastPathComponent < $1.urls[0].lastPathComponent }
+        XCTAssertEqual(entries.count, 2)
+        XCTAssertEqual(entries[0].urls.map(\.lastPathComponent), ["\(base).png", "\(base).json", "\(base)-2.png", "\(base)-3.png"])
+        XCTAssertTrue(entries[0].resolved, "the extras inherit the capture's resolved flag by riding in its entry")
+        XCTAssertEqual(entries[1].urls.count, 1)
+        XCTAssertEqual(Lifecycle.captureBase(ofExtraImage: "/x/\(base)-2"), "/x/\(base)")
+        XCTAssertNil(Lifecycle.captureBase(ofExtraImage: "/x/\(base)"))
+        XCTAssertNil(Lifecycle.captureBase(ofExtraImage: "/x/locant-snap-figma-2"))
+    }
+
     func testEntriesGroupSidecarsAndReadPinAndResolved() throws {
         let dir = FileManager.default.temporaryDirectory.appending(path: "LocantLifecycle-\(UUID().uuidString)")
         defer { try? FileManager.default.removeItem(at: dir) }
