@@ -16,6 +16,8 @@
     --hair: #d2d2d7;
     --accent: #007aff;
     --accent: color(display-p3 0 0.478 1);
+    --ribbon: color-mix(in srgb, var(--accent) 17%, var(--ground));
+    --ribbon-hi: color-mix(in srgb, var(--accent) 24%, var(--ground));
     --hud: rgba(255, 255, 255, 0.78);
     --hud-edge: rgba(0, 0, 0, 0.08);
     --glass: rgba(255, 255, 255, 0.22);
@@ -40,6 +42,8 @@
       --hair: #3a3a3c;
       --accent: #0a84ff;
       --accent: color(display-p3 0.04 0.52 1);
+      --ribbon: color-mix(in srgb, var(--accent) 26%, var(--surface));
+      --ribbon-hi: color-mix(in srgb, var(--accent) 34%, var(--surface));
       --hud: rgba(30, 30, 32, 0.78);
       --hud-edge: rgba(255, 255, 255, 0.12);
       --glass: rgba(255, 255, 255, 0.10);
@@ -64,6 +68,8 @@
     --hair: #3a3a3c;
     --accent: #0a84ff;
     --accent: color(display-p3 0.04 0.52 1);
+    --ribbon: color-mix(in srgb, var(--accent) 26%, var(--surface));
+    --ribbon-hi: color-mix(in srgb, var(--accent) 34%, var(--surface));
     --hud: rgba(30, 30, 32, 0.78);
     --hud-edge: rgba(255, 255, 255, 0.12);
     --glass: rgba(255, 255, 255, 0.10);
@@ -123,26 +129,30 @@
   .nav .in { max-width: 980px; margin-inline: auto; height: 52px; display: flex; align-items: center; gap: 28px; }
   .nav .brand { display: flex; align-items: center; gap: 10px; text-decoration: none; font-weight: 600; font-size: 15px; letter-spacing: -0.01em; }
   .nav .brand .mark { width: 24px; height: 24px; border-radius: 6px; background-image: var(--icon); background-size: 100% 100%; box-shadow: 0 1px 2px rgba(0,0,0,.18); }
-  .nav .links { display: flex; gap: 22px; margin-inline: auto; }
+  .nav .links { display: flex; gap: 22px; margin-left: auto; }
   .nav .links a { text-decoration: none; font-size: 14px; color: var(--muted); }
   .nav .links a:hover { color: var(--ink); }
-  .nav .by { font-size: 14px; color: var(--muted); text-decoration: none; }
-  .nav .by:hover { color: var(--ink); }
   .nav .dl { display: inline-block; text-decoration: none; background: var(--accent); color: #fff; font-weight: 600; font-size: 13px; padding: 7px 14px; border-radius: 980px; }
   .nav a:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 4px; }
-  @media (max-width: 720px) { .nav .links, .nav .by { display: none; } .nav .dl { margin-left: auto; } }
+  @media (max-width: 720px) { .nav .links { display: none; } .nav .dl { margin-left: auto; } }
 
-  /* ribbon: the announcement strip under the nav */
+  /* ribbon: the announcement strip above the nav, so the nav hairline is the only
+     rule between the chrome and the page, and the bar scrolls away on its own */
   .ribbon {
-    margin-inline: -20px; padding: 11px 20px;
-    text-align: center; font-size: 14px; line-height: 1.4; color: var(--ink);
-    background: color-mix(in srgb, var(--accent) 9%, var(--ground));
-    border-bottom: 1px solid color-mix(in srgb, var(--accent) 16%, var(--hair));
+    margin-inline: -20px; padding: 9px 20px;
+    text-align: center; font-size: 13px; line-height: 1.35; color: var(--ink);
+    background: var(--ribbon);
+    transition: background .18s ease;
   }
+  .ribbon:hover { background: var(--ribbon-hi); }
   .ribbon p { margin: 0; text-wrap: balance; }
   .ribbon b { font-weight: 600; }
-  .ribbon a { color: var(--accent); text-decoration: none; white-space: nowrap; }
-  .ribbon a:hover { text-decoration: underline; }
+  /* the bar is the blue; the link stays ink so it clears AA on the stronger tint
+     and the Download pill keeps its place as the only saturated blue up here */
+  .ribbon a { color: var(--ink); font-weight: 500; white-space: nowrap;
+    text-decoration: underline; text-underline-offset: 2px;
+    text-decoration-color: color-mix(in srgb, var(--ink) 35%, transparent); }
+  .ribbon a:hover { text-decoration-color: var(--ink); }
   .ribbon a:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 4px; }
   html { scroll-behavior: smooth; scroll-padding-top: 64px; }
   @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
@@ -360,6 +370,7 @@
     .hero { padding-block: 56px 36px; }
     /* phones get the loop cut at 4:5 (hero-mobile.mp4): the same take, framed on each shot's subject */
     .demo { aspect-ratio: 4 / 5; object-fit: cover; border-radius: 14px; }
+    .ribbon .v { display: none; }   /* two lines instead of three on a phone */
     .fine .g { flex-basis: 100%; justify-content: center; }
     .fine .g + .g::before { content: none; }
     /* phones get the same window captured at its narrowest (480 pt), so macOS wraps the text itself */
@@ -394,25 +405,20 @@
 </script>
 <script defer src="/_vercel/insights/script.js"></script>
 
+<div class="ribbon">
+  <p><b>Made for the Palantir Product Design Show&nbsp;&amp;&nbsp;Tell.</b> <span class="v">v0.4 in three hours, now v0.8.</span> <a href="https://github.com/Malik1942/locant/tags">See the commits&nbsp;›</a></p>
+</div>
 <nav class="nav" aria-label="Site">
   <div class="in">
     <a class="brand" href="#top"><span class="mark" aria-hidden="true"></span>Locant</a>
     <div class="links">
       <a href="#how">How it works</a>
-      <a href="#point">Point</a>
-      <a href="#ball">The ball</a>
-      <a href="#payload">Payload</a>
-      <a href="#actions">Actions</a>
       <a href="#measured">Measured</a>
       <a href="#privacy">Privacy</a>
     </div>
-    <a class="by" href="https://www.malikzhang.com">Built by Malik</a>
     <a class="dl" href="https://github.com/Malik1942/locant/releases/latest/download/Locant.dmg">Download</a>
   </div>
 </nav>
-<div class="ribbon">
-  <p><b>Made for the Palantir Product Design Show&nbsp;&amp;&nbsp;Tell.</b> v0.4.0 built in 3 hours. Iterated since to v0.8. <a href="https://github.com/Malik1942/locant/tags">See the commits&nbsp;›</a></p>
-</div>
 <main id="top">
   <header class="hero col">
     <div class="app-icon" role="img" aria-label="Locant app icon"></div>
@@ -540,6 +546,23 @@ make this rounded, match the other pills</pre>
     </div>
   </section>
 
+  <section class="col" id="measured">
+    <div class="sect-head">
+      <h2>Measured against a screenshot</h2>
+      <p class="lede">Same fix, same model, same repo, same note. The only difference is what gets pasted: a ⌘⇧4 crop of the phone, or one Locant capture of the orb.</p>
+    </div>
+    <figure class="shot" style="margin: 0 0 18px;">
+      <img src="assets/measured-comparison.png" width="2560" height="1440" alt="Two panels, no build and build verified. Bars: with a screenshot the agent stopped to ask which orb in 6 of 6 and 11 of 12 runs; with Locant, 0 of 6 both times. Dot strips of time to the edit: screenshot medians 39 and 33 seconds, Locant 22 and 16 seconds.">
+    </figure>
+    <div class="ladder">
+      <div class="rung"><span class="n">1</span><span class="chip">17 of 18 · 0 of 12</span><p><b>Stopped to ask which orb.</b> Screenshot runs asked; Locant runs never did. Fisher exact p ≤ 0.002 in both conditions.</p></div>
+      <div class="rung"><span class="n">2</span><span class="chip">39 s → 22 s · 33 s → 16 s</span><p><b>Time from paste to the edit,</b> medians, no build then build verified. The screenshot side's time already leaves out the seconds a person spends answering. Mann–Whitney p ≤ 0.002.</p></div>
+      <div class="rung"><span class="n">3</span><span class="chip">312k → 253k · 287k → 162k</span><p><b>Session tokens,</b> medians. The saving is the turns spent looking and asking, not the image.</p></div>
+      <div class="rung"><span class="n">4</span><span class="chip">30 of 30</span><p><b>Correct edit, right file, every run.</b> Every build in the build condition succeeded. Locant removes the one thing the agent could not know from pixels; it does not make the agent smarter.</p></div>
+      <div class="rung"><span class="n">5</span><span class="chip dash">One task, one app, one model</span><p><b>Read the caveats.</b> Claude Code on Opus 5 at medium effort, fresh session per run, no MCP on either side, no memory, the repo reset between runs, six pairs per condition with the order alternated. Method, raw transcripts and statistics: <a href="https://github.com/Malik1942/locant/blob/main/docs/video/10-measurement-v3.md">the report</a>.</p></div>
+    </div>
+  </section>
+
   <section class="col">
     <div class="sect-head">
       <h2>When there is no element</h2>
@@ -644,23 +667,6 @@ make this rounded, match the other pills</pre>
       <div class="agent"><b>Cursor</b><span>Fetches over MCP; Cursor asks once to enable the server</span><span class="chip">Verified Sep 15, 2026</span></div>
       <div class="agent"><b>Codex CLI</b><span>Fetches over MCP and views the image at the path</span><span class="chip">Verified Sep 15, 2026</span></div>
       <div class="agent"><b>Gemini CLI, Antigravity</b><span>Paste, or the snippet from Settings › Agents</span><span class="chip dash">Untested</span></div>
-    </div>
-  </section>
-
-  <section class="col" id="measured">
-    <div class="sect-head">
-      <h2>Measured against a screenshot</h2>
-      <p class="lede">Same fix, same model, same repo, same note. The only difference is what gets pasted: a ⌘⇧4 crop of the phone, or one Locant capture of the orb.</p>
-    </div>
-    <figure class="shot" style="margin: 0 0 18px;">
-      <img src="assets/measured-comparison.png" width="2560" height="1440" alt="Two panels, no build and build verified. Bars: with a screenshot the agent stopped to ask which orb in 6 of 6 and 11 of 12 runs; with Locant, 0 of 6 both times. Dot strips of time to the edit: screenshot medians 39 and 33 seconds, Locant 22 and 16 seconds.">
-    </figure>
-    <div class="ladder">
-      <div class="rung"><span class="n">1</span><span class="chip">17 of 18 · 0 of 12</span><p><b>Stopped to ask which orb.</b> Screenshot runs asked; Locant runs never did. Fisher exact p ≤ 0.002 in both conditions.</p></div>
-      <div class="rung"><span class="n">2</span><span class="chip">39 s → 22 s · 33 s → 16 s</span><p><b>Time from paste to the edit,</b> medians, no build then build verified. The screenshot side's time already leaves out the seconds a person spends answering. Mann–Whitney p ≤ 0.002.</p></div>
-      <div class="rung"><span class="n">3</span><span class="chip">312k → 253k · 287k → 162k</span><p><b>Session tokens,</b> medians. The saving is the turns spent looking and asking, not the image.</p></div>
-      <div class="rung"><span class="n">4</span><span class="chip">30 of 30</span><p><b>Correct edit, right file, every run.</b> Every build in the build condition succeeded. Locant removes the one thing the agent could not know from pixels; it does not make the agent smarter.</p></div>
-      <div class="rung"><span class="n">5</span><span class="chip dash">One task, one app, one model</span><p><b>Read the caveats.</b> Claude Code on Opus 5 at medium effort, fresh session per run, no MCP on either side, no memory, the repo reset between runs, six pairs per condition with the order alternated. Method, raw transcripts and statistics: <a href="https://github.com/Malik1942/locant/blob/main/docs/video/10-measurement-v3.md">the report</a>.</p></div>
     </div>
   </section>
 
