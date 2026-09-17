@@ -122,6 +122,9 @@ final class SelectionOverlay {
     var onClick: ((CGPoint, Bool) -> Void)?
     /// Shift pressed while hovering, for the one-time hint.
     var onShiftPressed: (() -> Void)?
+    /// Return while hovering. Returns true when it was taken (v0.8 R58: it confirms a set as it
+    /// stands); otherwise Return is a click at the cursor.
+    var onReturn: (() -> Bool)?
     var onCancel: (() -> Void)?
     var onCommit: ((String) -> Void)?
     /// Option pressed while hovering: step the selection to the parent.
@@ -204,6 +207,12 @@ final class SelectionOverlay {
 
     func click(atAppKit point: CGPoint, shift: Bool) {
         onClick?(Geometry.cgPoint(fromAppKit: point, primaryHeight: primaryHeight), shift)
+    }
+
+    /// v0.5 R38: Return is a click at the cursor, unless the owner takes it first.
+    func returnPressed(shift: Bool) {
+        if onReturn?() == true { return }
+        click(atAppKit: NSEvent.mouseLocation, shift: shift)
     }
 
     /// v0.8 R58: the elements already in the set (CG rects), each outlined and numbered on its display.
@@ -500,7 +509,7 @@ final class OverlayContentView: NSView, NSTextFieldDelegate {
         guard editRegion != nil else {
             // v0.5 R38: Return is a click at the cursor; the hover is the selection.
             if event.keyCode == 36 || event.keyCode == 76, !locked {
-                owner?.click(atAppKit: NSEvent.mouseLocation, shift: event.modifierFlags.contains(.shift))
+                owner?.returnPressed(shift: event.modifierFlags.contains(.shift))
             }
             return
         }

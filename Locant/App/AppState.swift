@@ -99,6 +99,7 @@ final class AppState {
         overlay.onHover = { [weak self] point in self?.hover(point) }
         overlay.onClick = { [weak self] point, shift in self?.click(point, shift: shift) }
         overlay.onShiftPressed = { [weak self] in self?.showShiftHintIfNeeded() }
+        overlay.onReturn = { [weak self] in self?.confirmSetIfAny() ?? false }
         overlay.onCancel = { [weak self] in self?.cancel() }
         overlay.onCommit = { [weak self] note in self?.commit(note: note) }
         overlay.onOptionPressed = { [weak self] in self?.optionPressed() }
@@ -645,6 +646,25 @@ final class AppState {
             guard phase == .hovering else { return }
             overlay.setPinned(pinned.map { $0.element.frame.cgRect })
         }
+    }
+
+    /// v0.8 R58: Return with a set in progress confirms the set as it stands, without adding
+    /// whatever happens to be under the cursor. Returns false when there is no set, so Return
+    /// keeps its plain meaning, a click at the cursor.
+    private func confirmSetIfAny() -> Bool {
+        guard phase == .hovering, action == .point, !pinned.isEmpty, context != nil else { return false }
+        toast.hide()
+        let last = pinned[pinned.count - 1].element.frame.cgRect
+        let point = CGPoint(x: last.midX, y: last.midY)
+        phase = .resolving
+        pendingHover = nil
+        clickPoint = point
+        guard ScreenCapture.hasPermission() else {
+            fail(.noScreenRecordingPermission, nearRect: last)
+            return true
+        }
+        Task { await finishSet(clicked: nil, snapshot: nil, window: nil, point: point) }
+        return true
     }
 
     private func click(_ point: CGPoint, shift: Bool) {
