@@ -286,10 +286,7 @@ final class AppState {
 
     /// The newest Point capture: an image with a sidecar.
     private func newestSidecar() -> URL? {
-        Lifecycle.entries(in: preferences.captureFolderURL)
-            .filter { $0.urls.count == 2 }
-            .max { $0.modified < $1.modified }?
-            .urls.first(where: { $0.pathExtension == "json" })
+        AutoVerify.newestSidecar(among: Lifecycle.entries(in: preferences.captureFolderURL))
     }
 
     /// R52: the app of the newest capture launched or came forward. If the capture is worth it
@@ -312,7 +309,11 @@ final class AppState {
     /// the nearest frame), capture it, and when the pixels changed record the git facts and append
     /// the iteration. The Before & After window is not opened; "Show before & after" is in the menu.
     private func collectIteration(sidecar: URL, capture: Capture, element: ResolvedElement, pid: pid_t) async {
+        // A set that shares one image is only comparable once every element is found again, and
+        // only this app's are reachable here: a set spanning apps simply never collects.
+        let companions = AutoVerify.companions(of: capture)
         var found: ResolvedElement?
+        var others: [ResolvedElement] = []
         var windowBounds: CGRect?
         for attempt in 0..<ElementRefinder.retries {
             let windows = WindowList.onScreen().filter { $0.ownerPID == pid && $0.layer == 0 }
@@ -321,14 +322,19 @@ final class AppState {
             let region = largest?.bounds ?? SelectionOverlay.displayFrameCG(containing: element.frame.cgRect.origin)
             let snapshots = await reader.elements(in: region, pid: pid)
             found = ElementRefinder.match(element, among: snapshots)
-            if found != nil { break }
+            others = companions.compactMap { ElementRefinder.match($0, among: snapshots) }
+            if found != nil, others.count == companions.count { break }
             if attempt < ElementRefinder.retries - 1 { try? await Task.sleep(for: ElementRefinder.retryInterval) }
         }
-        guard let found, phase == .idle else { return }
+        guard let found, others.count == companions.count, phase == .idle else { return }
         do {
             let center = CGPoint(x: found.frame.x + found.frame.w / 2, y: found.frame.y + found.frame.h / 2)
             let display = SelectionOverlay.displayFrameCG(containing: center)
-            let crop = Geometry.cropRect(element: found.frame.cgRect, clickPoint: center, window: windowBounds, display: display)
+            // The same crop the capture took, so the two images are comparable: the set's union
+            // when they shared one, the element's own otherwise.
+            let crop = companions.isEmpty
+                ? Geometry.cropRect(element: found.frame.cgRect, clickPoint: center, window: windowBounds, display: display)
+                : Geometry.cropRects(for: ([found] + others).map(\.frame.cgRect), display: display, displayFor: SelectionOverlay.displayFrameCG(containing:))[0]
             let image = try await ScreenCapture.crop(crop)
             let previous = try? Data(contentsOf: URL(filePath: AutoVerify.previousImagePath(of: capture)))
             let png = image.png
