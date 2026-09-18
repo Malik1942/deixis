@@ -68,6 +68,12 @@ final class AppState {
     /// R52: NSWorkspace launch and activation observers, and whether an iteration is being collected.
     @ObservationIgnored private var appObservers: [any NSObjectProtocol] = []
     @ObservationIgnored private var collecting = false
+    /// v0.9 R59: the agent app that came forward last, by pid; `lastAgent` checks it is still that app.
+    @ObservationIgnored private var lastAgentPID: pid_t?
+    /// v0.9 R59: a reader of its own for the target label, so a slow agent never holds up hover.
+    @ObservationIgnored private let agentReader = AccessibilityReader()
+    /// v0.9 R59: true while Locant brings an agent forward to paste; auto-verify ignores that activation.
+    @ObservationIgnored private var pasting = false
     @ObservationIgnored private let beforeAfter = BeforeAfterWindow()
     @ObservationIgnored private let help = HelpWindow()
     /// R25: the last ten picked colors, in memory only.
@@ -96,6 +102,7 @@ final class AppState {
         scheduleSweeps()
         scheduleUpdateChecks()
         watchAppsForIterations()
+        watchAgentApps()
         overlay.onHover = { [weak self] point in self?.hover(point) }
         overlay.onClick = { [weak self] point, shift in self?.click(point, shift: shift) }
         overlay.onShiftPressed = { [weak self] in self?.showShiftHintIfNeeded() }
@@ -215,6 +222,43 @@ final class AppState {
         }
     }
 
+    // MARK: Paste into the agent (v0.9 R59)
+
+    /// Remembers the agent app that came forward last. An observer of its own: `appCameForward`
+    /// returns early while iterations are off or a capture runs, and would drop these.
+    private func watchAgentApps() {
+        let center = NSWorkspace.shared.notificationCenter
+        appObservers.append(center.addObserver(forName: NSWorkspace.didActivateApplicationNotification, object: nil, queue: .main) { [weak self] note in
+            guard let app = note.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication,
+                  AgentPaste.isAgent(bundleId: app.bundleIdentifier) else { return }
+            let pid = app.processIdentifier
+            MainActor.assumeIsolated { self?.lastAgentPID = pid }
+        })
+    }
+
+    /// The last agent while it still runs as the same app; nil after it quits.
+    private var lastAgent: NSRunningApplication? {
+        guard let pid = lastAgentPID, let app = NSRunningApplication(processIdentifier: pid),
+              !app.isTerminated, AgentPaste.isAgent(bundleId: app.bundleIdentifier) else { return nil }
+        return app
+    }
+
+    /// After the clipboard: wait for the overlay to order out, so no Locant panel is key, then bring
+    /// the last agent forward and paste; Return too for a note when the second switch is on. Skipped
+    /// when another capture has started meanwhile. The toast speaks only when nothing was pasted.
+    private func pasteIntoAgent(note: String, near anchor: CGRect) async {
+        let send = AgentPaste.sends(note: note, enabled: preferences.sendsWithNote)
+        try? await Task.sleep(for: .milliseconds(Int(DesignTokens.dismiss * 1000) + 40))
+        guard phase == .idle else { return }
+        let app = lastAgent
+        pasting = true
+        let outcome = await AgentPaster.paste(into: app, send: send, reader: agentReader)
+        pasting = false
+        if let text = AgentPaste.toastText(outcome, appName: app?.localizedName) {
+            toast.show(HudText.plain(text), near: anchor)
+        }
+    }
+
     // MARK: Updates (v0.6 R45)
 
     /// 10 s after launch, then every 24 hours while running; skipped when the last check, on any
@@ -293,7 +337,7 @@ final class AppState {
     /// (`AutoVerify.wants`), wait for the window to draw, find the element again, and keep an
     /// iteration when it looks different. Never a toast on failure: the next activation tries again.
     private func appCameForward(bundleId: String, pid: pid_t) {
-        guard preferences.collectsIterations, phase == .idle, !collecting else { return }
+        guard preferences.collectsIterations, phase == .idle, !collecting, !pasting else { return }
         guard let sidecar = newestSidecar(), let capture = try? IterationStore.load(sidecar),
               AutoVerify.wants(capture, activated: bundleId), let element = capture.element else { return }
         collecting = true
@@ -938,7 +982,12 @@ final class AppState {
                 } else {
                     toast.show(HudText.copied(identifier: element?.identifier), near: anchor)
                 }
-                showAgentHintIfNeeded()
+                // v0.9 R59: with the option on, the hint about fetching over MCP stays unspent.
+                if preferences.pastesIntoAgent {
+                    await pasteIntoAgent(note: note, near: anchor)
+                } else {
+                    showAgentHintIfNeeded()
+                }
             } catch {
                 fail(.captureFailed(error), nearRect: anchor)
             }
