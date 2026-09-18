@@ -54,6 +54,11 @@ final class KeyEventTap {
                 MainActor.assumeIsolated { tap.enable() }
                 return Unmanaged.passUnretained(event)
             case .keyDown, .flagsChanged:
+                // v0.9 R59: the keys Locant posts to paste into an agent pass untouched, so a hotkey
+                // recorded as ⌘V or ⌘↩ cannot swallow Locant's own paste.
+                if AgentPaste.isOwnEvent(userData: event.getIntegerValueField(.eventSourceUserData)) {
+                    return Unmanaged.passUnretained(event)
+                }
                 let keyEvent = KeyEvent(
                     kind: type == .keyDown ? .keyDown : .flagsChanged,
                     keyCode: UInt16(truncatingIfNeeded: event.getIntegerValueField(.keyboardEventKeycode)),

@@ -1,4 +1,5 @@
-import Foundation
+import AppKit
+import Carbon.HIToolbox
 
 /// v0.9 R59: after Return, the capture is pasted into the agent app the user used last. The
 /// decisions are pure and tested here; `AgentPaster` activates the app and posts the keys.
@@ -54,5 +55,100 @@ enum AgentPaste {
 
     static func isOwnEvent(userData: Int64) -> Bool {
         userData == eventMarker
+    }
+}
+
+/// v0.9 R59: brings the agent app forward and posts ⌘V, then Return when asked. Not pure; not unit
+/// tested. Every step checks the agent is still in front, so a key never lands in the app the user
+/// pointed at.
+@MainActor
+enum AgentPaster {
+    /// After the agent is frontmost, before ⌘V: Electron puts focus back in its composer.
+    static let settle: Duration = .milliseconds(150)
+    /// Between ⌘V and Return: Electron paste handlers, and an image attachment most of all, finish
+    /// after the key. Tuned in dogfood.
+    static let sendGap: Duration = .milliseconds(400)
+
+    static func paste(into app: NSRunningApplication?, send: Bool, reader: AccessibilityReader) async -> AgentPaste.Outcome {
+        guard let app, !app.isTerminated else { return .noAgent }
+        guard CGPreflightPostEventAccess() else { return .noPermission }
+        await waitForKeysUp()
+        guard await bringForward(app, reader: reader) else { return .didNotComeForward }
+        try? await Task.sleep(for: settle)
+        guard isFrontmost(app) else { return .didNotComeForward }
+        post(keyCode: pasteKeyCode(), flags: .maskCommand)
+        guard send else { return .pasted }
+        try? await Task.sleep(for: sendGap)
+        guard isFrontmost(app) else { return .pasted }
+        post(keyCode: CGKeyCode(kVK_Return), flags: [])
+        return .sent
+    }
+
+    /// The Return that committed the note, and any modifier still held, must be up first, or they
+    /// leak into the posted keys. Half a second at most.
+    private static func waitForKeysUp() async {
+        let modifiers: CGEventFlags = [.maskCommand, .maskAlternate, .maskControl, .maskShift]
+        for _ in 0..<20 {
+            let returnDown = CGEventSource.keyState(.hidSystemState, key: CGKeyCode(kVK_Return))
+            let held = !CGEventSource.flagsState(.hidSystemState).intersection(modifiers).isEmpty
+            if !returnDown, !held { return }
+            try? await Task.sleep(for: .milliseconds(25))
+        }
+    }
+
+    /// Activates, then polls every 25 ms for a second: a notification never comes when the app is
+    /// already in front. After 300 ms, accessibility raises it, which reaches a window on another Space.
+    private static func bringForward(_ app: NSRunningApplication, reader: AccessibilityReader) async -> Bool {
+        if isFrontmost(app) { return true }
+        _ = app.activate(options: [])
+        for tick in 1...40 {
+            try? await Task.sleep(for: .milliseconds(25))
+            if isFrontmost(app) { return true }
+            if app.isTerminated { return false }
+            if tick == 12 { await reader.raise(pid: app.processIdentifier) }
+        }
+        return false
+    }
+
+    private static func isFrontmost(_ app: NSRunningApplication) -> Bool {
+        NSWorkspace.shared.frontmostApplication?.processIdentifier == app.processIdentifier
+    }
+
+    /// Key down and up with the flags on the events themselves: separate Command events would feed
+    /// the double-tap detector. Marked, so Locant's own tap lets them through.
+    private static func post(keyCode: CGKeyCode, flags: CGEventFlags) {
+        let source = CGEventSource(stateID: .privateState)
+        for down in [true, false] {
+            guard let event = CGEvent(keyboardEventSource: source, virtualKey: keyCode, keyDown: down) else { continue }
+            event.flags = flags
+            event.setIntegerValueField(.eventSourceUserData, value: AgentPaste.eventMarker)
+            event.post(tap: .cgSessionEventTap)
+        }
+    }
+
+    /// The key that makes ⌘V on the current layout: the ASCII-capable one, so an active Chinese or
+    /// Japanese input method still finds it, read with Command held, so "Dvorak – QWERTY ⌘" pastes
+    /// too. ANSI V when the layout cannot be read.
+    private static func pasteKeyCode() -> CGKeyCode {
+        let fallback = CGKeyCode(kVK_ANSI_V)
+        guard let source = TISCopyCurrentASCIICapableKeyboardLayoutInputSource()?.takeRetainedValue(),
+              let property = TISGetInputSourceProperty(source, kTISPropertyUnicodeKeyLayoutData) else { return fallback }
+        let data = Unmanaged<CFData>.fromOpaque(property).takeUnretainedValue() as Data
+        let command = UInt32((cmdKey >> 8) & 0xFF)
+        let found = data.withUnsafeBytes { raw -> CGKeyCode? in
+            guard let layout = raw.baseAddress?.assumingMemoryBound(to: UCKeyboardLayout.self) else { return nil }
+            for code in CGKeyCode(0)..<CGKeyCode(128) {
+                var deadKeys: UInt32 = 0
+                var length = 0
+                var characters = [UniChar](repeating: 0, count: 4)
+                let status = UCKeyTranslate(
+                    layout, code, UInt16(kUCKeyActionDown), command, UInt32(LMGetKbdType()),
+                    OptionBits(kUCKeyTranslateNoDeadKeysMask), &deadKeys, characters.count, &length, &characters
+                )
+                if status == noErr, length == 1, characters[0] == UniChar(0x76) { return code } // "v"
+            }
+            return nil
+        }
+        return found ?? fallback
     }
 }
