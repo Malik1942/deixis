@@ -37,6 +37,7 @@ final class AgentPasteTests: XCTestCase {
     func testToastExplainsOnlyAMissedPaste() {
         XCTAssertNil(AgentPaste.toastText(.pasted, appName: "Cursor"))
         XCTAssertNil(AgentPaste.toastText(.sent, appName: "Cursor"))
+        XCTAssertNil(AgentPaste.toastText(.superseded, appName: "Cursor"))
         XCTAssertEqual(AgentPaste.toastText(.noAgent, appName: nil), "Copied · no agent yet")
         XCTAssertEqual(AgentPaste.toastText(.didNotComeForward, appName: "Cursor"), "Copied · Cursor didn't come forward")
         XCTAssertEqual(AgentPaste.toastText(.didNotComeForward, appName: nil), "Copied · the agent didn't come forward")

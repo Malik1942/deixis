@@ -34,15 +34,16 @@ enum AgentPaste {
         return TargetLabel(lead: "→ \(appName)", title: (title?.isEmpty ?? true) ? nil : title)
     }
 
-    /// How a paste ended.
+    /// How a paste ended. `.superseded`: a newer capture started, or the clipboard changed, before a
+    /// key; the user has moved on, so nothing is said.
     enum Outcome: Equatable, Sendable {
-        case pasted, sent, noAgent, noPermission, didNotComeForward
+        case pasted, sent, noAgent, noPermission, didNotComeForward, superseded
     }
 
     /// What the toast says when nothing was pasted; nil when the paste itself is the feedback.
     static func toastText(_ outcome: Outcome, appName: String?) -> String? {
         switch outcome {
-        case .pasted, .sent: nil
+        case .pasted, .sent, .superseded: nil
         case .noAgent: "Copied · no agent yet"
         case .noPermission: "Copied · pasting needs Accessibility"
         case .didNotComeForward: "Copied · \(appName ?? "the agent") didn't come forward"
@@ -69,17 +70,26 @@ enum AgentPaster {
     /// after the key. Tuned in dogfood.
     static let sendGap: Duration = .milliseconds(400)
 
-    static func paste(into app: NSRunningApplication?, send: Bool, reader: AccessibilityReader) async -> AgentPaste.Outcome {
+    /// `proceed` is asked before the agent is brought forward, while waiting for it, and before each
+    /// key; false means a newer capture or a clipboard write won.
+    static func paste(
+        into app: NSRunningApplication?, send: Bool, reader: AccessibilityReader,
+        proceed: @MainActor @Sendable () -> Bool
+    ) async -> AgentPaste.Outcome {
         guard let app, !app.isTerminated else { return .noAgent }
         guard CGPreflightPostEventAccess() else { return .noPermission }
         await waitForKeysUp()
-        guard await bringForward(app, reader: reader) else { return .didNotComeForward }
+        guard proceed() else { return .superseded }
+        guard await bringForward(app, reader: reader, proceed: proceed) else {
+            return proceed() ? .didNotComeForward : .superseded
+        }
         try? await Task.sleep(for: settle)
+        guard proceed() else { return .superseded }
         guard isFrontmost(app) else { return .didNotComeForward }
         post(keyCode: pasteKeyCode(), flags: .maskCommand)
         guard send else { return .pasted }
         try? await Task.sleep(for: sendGap)
-        guard isFrontmost(app) else { return .pasted }
+        guard proceed(), isFrontmost(app) else { return .pasted }
         post(keyCode: CGKeyCode(kVK_Return), flags: [])
         return .sent
     }
@@ -97,12 +107,17 @@ enum AgentPaster {
     }
 
     /// Activates, then polls every 25 ms for a second: a notification never comes when the app is
-    /// already in front. After 300 ms, accessibility raises it, which reaches a window on another Space.
-    private static func bringForward(_ app: NSRunningApplication, reader: AccessibilityReader) async -> Bool {
+    /// already in front. After 300 ms, accessibility raises it, which reaches a window on another
+    /// Space; `proceed` is checked at the top of every tick, before that raise, so it never pulls the
+    /// agent in front of a capture the user just started.
+    private static func bringForward(
+        _ app: NSRunningApplication, reader: AccessibilityReader, proceed: @MainActor @Sendable () -> Bool
+    ) async -> Bool {
         if isFrontmost(app) { return true }
         _ = app.activate(options: [])
         for tick in 1...40 {
             try? await Task.sleep(for: .milliseconds(25))
+            guard proceed() else { return false }
             if isFrontmost(app) { return true }
             if app.isTerminated { return false }
             if tick == 12 { await reader.raise(pid: app.processIdentifier) }

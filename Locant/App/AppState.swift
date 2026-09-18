@@ -72,8 +72,9 @@ final class AppState {
     @ObservationIgnored private var lastAgentPID: pid_t?
     /// v0.9 R59: a reader of its own for the target label, so a slow agent never holds up hover.
     @ObservationIgnored private let agentReader = AccessibilityReader()
-    /// v0.9 R59: true while Locant brings an agent forward to paste; auto-verify ignores that activation.
-    @ObservationIgnored private var pasting = false
+    /// v0.9 R59: pastes under way; auto-verify ignores activations while any is. A count, since two
+    /// quick Returns can overlap.
+    @ObservationIgnored private var pastesInFlight = 0
     @ObservationIgnored private let beforeAfter = BeforeAfterWindow()
     @ObservationIgnored private let help = HelpWindow()
     /// R25: the last ten picked colors, in memory only.
@@ -244,16 +245,21 @@ final class AppState {
     }
 
     /// After the clipboard: wait for the overlay to order out, so no Locant panel is key, then bring
-    /// the last agent forward and paste; Return too for a note when the second switch is on. Skipped
-    /// when another capture has started meanwhile. The toast speaks only when nothing was pasted.
+    /// the last agent forward and paste; Return too for a note when the second switch is on. A newer
+    /// capture, or anything else written to the clipboard, cancels it at any step, silently. The toast
+    /// speaks only when nothing was pasted.
     private func pasteIntoAgent(note: String, near anchor: CGRect) async {
+        // Read first: commit(note:) calls this right after PasteboardWriter.write, reset(), and the
+        // toast, with no other clipboard write between, so this is what Return itself wrote.
+        let clipboard = NSPasteboard.general.changeCount
+        let proceed: @MainActor @Sendable () -> Bool = { self.phase == .idle && NSPasteboard.general.changeCount == clipboard }
         let send = AgentPaste.sends(note: note, enabled: preferences.sendsWithNote)
         try? await Task.sleep(for: .milliseconds(Int(DesignTokens.dismiss * 1000) + 40))
-        guard phase == .idle else { return }
+        guard proceed() else { return }
         let app = lastAgent
-        pasting = true
-        let outcome = await AgentPaster.paste(into: app, send: send, reader: agentReader)
-        pasting = false
+        pastesInFlight += 1
+        let outcome = await AgentPaster.paste(into: app, send: send, reader: agentReader, proceed: proceed)
+        pastesInFlight -= 1
         if let text = AgentPaste.toastText(outcome, appName: app?.localizedName) {
             toast.show(HudText.plain(text), near: anchor)
         }
@@ -337,7 +343,7 @@ final class AppState {
     /// (`AutoVerify.wants`), wait for the window to draw, find the element again, and keep an
     /// iteration when it looks different. Never a toast on failure: the next activation tries again.
     private func appCameForward(bundleId: String, pid: pid_t) {
-        guard preferences.collectsIterations, phase == .idle, !collecting, !pasting else { return }
+        guard preferences.collectsIterations, phase == .idle, !collecting, pastesInFlight == 0 else { return }
         guard let sidecar = newestSidecar(), let capture = try? IterationStore.load(sidecar),
               AutoVerify.wants(capture, activated: bundleId), let element = capture.element else { return }
         collecting = true
