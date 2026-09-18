@@ -237,6 +237,30 @@ final class AppState {
         })
     }
 
+    /// The note field, and beside it where Return will paste when that option is on.
+    private func showNoteField(anchoredTo frame: CGRect?, around point: CGPoint) {
+        overlay.showNoteField(anchoredTo: frame, around: point)
+        showPasteTarget()
+    }
+
+    /// The app at once; its window title when the agent's own reader answers, if the field is
+    /// still open by then.
+    private func showPasteTarget() {
+        guard preferences.pastesIntoAgent else { return }
+        guard let app = lastAgent else {
+            overlay.setNoteTarget(HudText.pasteTarget(AgentPaste.label(appName: nil, windowTitle: nil)))
+            return
+        }
+        let name = app.localizedName ?? "Agent"
+        overlay.setNoteTarget(HudText.pasteTarget(AgentPaste.label(appName: name, windowTitle: nil)))
+        let pid = app.processIdentifier
+        Task { @MainActor in
+            let title = await agentReader.agentWindowTitle(pid: pid)
+            guard phase == .noting else { return }
+            overlay.setNoteTarget(HudText.pasteTarget(AgentPaste.label(appName: name, windowTitle: title)))
+        }
+    }
+
     /// The last agent while it still runs as the same app; nil after it quits.
     private var lastAgent: NSRunningApplication? {
         guard let pid = lastAgentPID, let app = NSRunningApplication(processIdentifier: pid),
@@ -779,7 +803,7 @@ final class AppState {
             cropTask = Task { try await ScreenCapture.crop(rect) }
 
             overlay.setHighlight(element?.frame.cgRect, readout: .describing(element), around: point)
-            overlay.showNoteField(anchoredTo: element?.frame.cgRect, around: point)
+            showNoteField(anchoredTo: element?.frame.cgRect, around: point)
             phase = .noting
         }
     }
@@ -805,7 +829,7 @@ final class AppState {
 
         overlay.setPinned(frames)
         overlay.setHighlight(last.frame.cgRect, readout: .describing(last), around: point)
-        overlay.showNoteField(anchoredTo: last.frame.cgRect, around: point)
+        showNoteField(anchoredTo: last.frame.cgRect, around: point)
         phase = .noting
     }
 
@@ -855,7 +879,7 @@ final class AppState {
             cropTask = Task { try await ScreenCapture.crop(crop) }
 
             overlay.showMarks(elements.map { $0.frame.cgRect })
-            overlay.showNoteField(anchoredTo: rect, around: clickPoint)
+            showNoteField(anchoredTo: rect, around: clickPoint)
             phase = .noting
         }
     }

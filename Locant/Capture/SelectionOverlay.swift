@@ -86,6 +86,16 @@ enum HudText {
         NSAttributedString(string: text, attributes: sansAttributes)
     }
 
+    /// v0.9 R59: "→ Cursor · <window title>" beside the note field, the title secondary.
+    static func pasteTarget(_ label: AgentPaste.TargetLabel) -> NSAttributedString {
+        let s = NSMutableAttributedString(string: label.lead, attributes: sansAttributes)
+        if let title = label.title {
+            s.append(NSAttributedString(string: " · ", attributes: sansAttributes))
+            s.append(NSAttributedString(string: title, attributes: secondaryAttributes))
+        }
+        return s
+    }
+
     static var sansAttributes: [NSAttributedString.Key: Any] {
         [.font: DesignTokens.sans, .foregroundColor: NSColor.labelColor]
     }
@@ -199,6 +209,11 @@ final class SelectionOverlay {
         target.contentOverlay.showNoteField(screenRect: rect)
     }
 
+    /// v0.9 R59: where Return will paste, beside the note field; nil hides it.
+    func setNoteTarget(_ text: NSAttributedString?) {
+        panels.first { $0.contentOverlay.hasNoteField }?.contentOverlay.setNoteTarget(text)
+    }
+
     // MARK: Called by the content views (AppKit screen coordinates)
 
     func hover(atAppKit point: CGPoint) {
@@ -290,6 +305,9 @@ final class OverlayContentView: NSView, NSTextFieldDelegate {
     private let highlight = HighlightView()
     private let label = HudLabel()
     private var noteField: NoteFieldView?
+    /// v0.9 R59: where Return will paste, and the element the field is anchored to (local coordinates).
+    private let targetLabel = HudLabel()
+    private var noteAnchor: CGRect = .zero
     private var trackingArea: NSTrackingArea?
     private var locked = false
 
@@ -320,6 +338,8 @@ final class OverlayContentView: NSView, NSTextFieldDelegate {
         sizeLabel.isHidden = true
         addSubview(marquee)
         addSubview(sizeLabel)
+        targetLabel.isHidden = true
+        addSubview(targetLabel)
     }
 
     @available(*, unavailable)
@@ -604,6 +624,7 @@ final class OverlayContentView: NSView, NSTextFieldDelegate {
         label.isHidden = true
         sizeLabel.isHidden = true
         let local = convert(window.convertFromScreen(screenRect), from: nil)
+        noteAnchor = local
         let size = CGSize(width: max(local.width, DesignTokens.fieldMinWidth), height: NoteFieldView.height)
         let field = NoteFieldView(frame: anchoredFrame(size: size, below: local))
         field.textField.delegate = self
@@ -616,6 +637,27 @@ final class OverlayContentView: NSView, NSTextFieldDelegate {
             context.timingFunction = CAMediaTimingFunction(name: .easeOut)
             field.animator().alphaValue = 1
         }
+    }
+
+    var hasNoteField: Bool { noteField != nil }
+
+    /// v0.9 R59: where Return will paste, on the far side of the note field from the element and
+    /// left-aligned with it; kept on screen. Nil hides it.
+    func setNoteTarget(_ text: NSAttributedString?) {
+        guard let field = noteField, let text else {
+            targetLabel.isHidden = true
+            return
+        }
+        targetLabel.set(text)
+        let size = targetLabel.hudSize
+        var origin = CGPoint(x: field.frame.minX, y: field.frame.minY - DesignTokens.spaceS - size.height)
+        if field.frame.midY > noteAnchor.midY { // the field flipped above the element
+            origin.y = field.frame.maxY + DesignTokens.spaceS
+        }
+        origin.x = min(max(origin.x, DesignTokens.spaceM), bounds.width - size.width - DesignTokens.spaceM)
+        origin.y = min(max(origin.y, DesignTokens.spaceM), bounds.height - size.height - DesignTokens.spaceM)
+        targetLabel.frame = CGRect(origin: origin, size: size)
+        targetLabel.isHidden = false
     }
 
     /// 8 pt below the element, or above it when within 40 pt of the screen bottom; kept on screen.
