@@ -25,6 +25,8 @@ final class PreferencesTests: XCTestCase {
         XCTAssertTrue(p.adjustSelection)
         XCTAssertTrue(p.checksForUpdates)
         XCTAssertTrue(p.collectsIterations)
+        XCTAssertFalse(p.pastesIntoAgent)
+        XCTAssertFalse(p.sendsWithNote)
         XCTAssertNil(p.lastUpdateCheck)
         XCTAssertNil(p.skippedUpdateVersion)
         XCTAssertEqual(p.actionHotkeys, Preferences.defaultActionHotkeys)
@@ -113,6 +115,8 @@ final class PreferencesTests: XCTestCase {
         p.adjustSelection = false
         p.checksForUpdates = false
         p.collectsIterations = false
+        p.pastesIntoAgent = true
+        p.sendsWithNote = true
         p.lastUpdateCheck = Date(timeIntervalSince1970: 1_800_000_000)
         p.skippedUpdateVersion = "0.7.0"
         XCTAssertEqual(hotkeyChanges, 1, "only a real change restarts the monitor")
@@ -129,6 +133,8 @@ final class PreferencesTests: XCTestCase {
         XCTAssertFalse(again.adjustSelection)
         XCTAssertFalse(again.checksForUpdates)
         XCTAssertFalse(again.collectsIterations)
+        XCTAssertTrue(again.pastesIntoAgent)
+        XCTAssertTrue(again.sendsWithNote)
         XCTAssertEqual(again.lastUpdateCheck, Date(timeIntervalSince1970: 1_800_000_000))
         XCTAssertEqual(again.skippedUpdateVersion, "0.7.0")
         XCTAssertEqual(again.captureFolderURL.path(percentEncoded: false), "/tmp/captures/")
