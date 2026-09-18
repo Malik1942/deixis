@@ -39,6 +39,30 @@ final class LifecycleTests: XCTestCase {
         XCTAssertNil(Lifecycle.captureBase(ofExtraImage: "/x/locant-snap-figma-2"))
     }
 
+    func testAfterImagesOfACaptureGoAndStayWithIt() throws {
+        let dir = FileManager.default.temporaryDirectory.appending(path: "LocantLifecycle-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: dir) }
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        let base = "locant-simulator-20260810-120000-abcd"
+        try Data([1]).write(to: dir.appending(path: "\(base).png"))
+        try #"{"resolved": true}"#.data(using: .utf8)!.write(to: dir.appending(path: "\(base).json"))
+        try Data([1]).write(to: dir.appending(path: "\(base)-2.png"))
+        try Data([1]).write(to: dir.appending(path: "\(base)-after-1.png"))
+        try Data([1]).write(to: dir.appending(path: "\(base)-after-2.png"))
+        // An after-image whose capture is gone is not folded into anything: no sidecar at the stem.
+        try Data([1]).write(to: dir.appending(path: "locant-snap-figma-20260901-120000-efgh-after-1.png"))
+
+        let entries = Lifecycle.entries(in: dir).sorted { $0.urls[0].lastPathComponent < $1.urls[0].lastPathComponent }
+        XCTAssertEqual(entries.count, 2)
+        XCTAssertEqual(entries[0].urls.map(\.lastPathComponent),
+                       ["\(base).png", "\(base).json", "\(base)-2.png", "\(base)-after-1.png", "\(base)-after-2.png"])
+        XCTAssertTrue(entries[0].resolved, "the after-images inherit the capture's resolved flag by riding in its entry")
+        XCTAssertEqual(entries[1].urls.count, 1)
+        XCTAssertEqual(Lifecycle.captureBase(ofExtraImage: "/x/\(base)-after-1"), "/x/\(base)")
+        XCTAssertNil(Lifecycle.captureBase(ofExtraImage: "/x/\(base)-after"))
+        XCTAssertNil(Lifecycle.captureBase(ofExtraImage: "/x/locant-after-1"))
+    }
+
     func testEntriesGroupSidecarsAndReadPinAndResolved() throws {
         let dir = FileManager.default.temporaryDirectory.appending(path: "LocantLifecycle-\(UUID().uuidString)")
         defer { try? FileManager.default.removeItem(at: dir) }

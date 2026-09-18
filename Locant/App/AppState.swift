@@ -287,7 +287,7 @@ final class AppState {
     /// The newest Point capture: an image with a sidecar.
     private func newestSidecar() -> URL? {
         Lifecycle.entries(in: preferences.captureFolderURL)
-            .filter { $0.urls.count == 2 }
+            .filter { $0.urls.contains { $0.pathExtension == "json" } }
             .max { $0.modified < $1.modified }?
             .urls.first(where: { $0.pathExtension == "json" })
     }
@@ -360,7 +360,7 @@ final class AppState {
     /// R35: the newest capture that has iterations.
     func showBeforeAfter() {
         let candidates = Lifecycle.entries(in: preferences.captureFolderURL)
-            .filter { $0.urls.count == 2 }
+            .filter { $0.urls.contains { $0.pathExtension == "json" } }
             .sorted { $0.modified > $1.modified }
         for entry in candidates {
             guard let sidecar = entry.urls.first(where: { $0.pathExtension == "json" }),
