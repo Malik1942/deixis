@@ -86,7 +86,7 @@ enum HudText {
         NSAttributedString(string: text, attributes: sansAttributes)
     }
 
-    /// v0.9 R59: "→ Cursor · <window title>" beside the note field, the title secondary.
+    /// v0.8.1 R63: "→ Cursor · <window title>" beside the note field, the title secondary.
     static func pasteTarget(_ label: AgentPaste.TargetLabel) -> NSAttributedString {
         let s = NSMutableAttributedString(string: label.lead, attributes: sansAttributes)
         if let title = label.title {
@@ -209,7 +209,7 @@ final class SelectionOverlay {
         target.contentOverlay.showNoteField(screenRect: rect)
     }
 
-    /// v0.9 R59: where Return will paste, beside the note field; nil hides it.
+    /// v0.8.1 R63: where Return will paste, beside the note field; nil hides it.
     func setNoteTarget(_ text: NSAttributedString?) {
         panels.first { $0.contentOverlay.hasNoteField }?.contentOverlay.setNoteTarget(text)
     }
@@ -305,7 +305,7 @@ final class OverlayContentView: NSView, NSTextFieldDelegate {
     private let highlight = HighlightView()
     private let label = HudLabel()
     private var noteField: NoteFieldView?
-    /// v0.9 R59: where Return will paste, and the element the field is anchored to (local coordinates).
+    /// v0.8.1 R63: where Return will paste, and the element the field is anchored to (local coordinates).
     private let targetLabel = HudLabel()
     private var noteAnchor: CGRect = .zero
     private var trackingArea: NSTrackingArea?
@@ -641,7 +641,7 @@ final class OverlayContentView: NSView, NSTextFieldDelegate {
 
     var hasNoteField: Bool { noteField != nil }
 
-    /// v0.9 R59: where Return will paste, on the far side of the note field from the element and
+    /// v0.8.1 R63: where Return will paste, on the far side of the note field from the element and
     /// left-aligned with it; kept on screen. Nil hides it.
     func setNoteTarget(_ text: NSAttributedString?) {
         guard let field = noteField, let text else {

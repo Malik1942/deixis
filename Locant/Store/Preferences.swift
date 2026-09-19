@@ -121,7 +121,7 @@ final class Preferences {
         static let checksForUpdates = "checksForUpdates" // v0.6 R46
         static let lastUpdateCheck = "lastUpdateCheck"
         static let skippedUpdateVersion = "skippedUpdateVersion"
-        static let pastesIntoAgent = "pastesIntoAgent" // v0.9 R59
+        static let pastesIntoAgent = "pastesIntoAgent" // v0.8.1 R63
     }
 
     /// The actions that can carry a hotkey (R29), in menu and ring order; each one's digit is its position here.
@@ -273,7 +273,7 @@ final class Preferences {
         didSet { defaults.set(checksForUpdates, forKey: Key.checksForUpdates) }
     }
 
-    /// v0.9 R59: after Return, bring the agent app used last forward and paste the capture there.
+    /// v0.8.1 R63: after Return, bring the agent app used last forward and paste the capture there.
     var pastesIntoAgent: Bool {
         didSet { defaults.set(pastesIntoAgent, forKey: Key.pastesIntoAgent) }
     }

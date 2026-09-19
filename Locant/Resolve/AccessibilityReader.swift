@@ -163,7 +163,7 @@ actor AccessibilityReader {
         return string(copy(window, kAXTitleAttribute))
     }
 
-    // MARK: Paste into the agent (v0.9 R59)
+    // MARK: Paste into the agent (v0.8.1 R63)
 
     /// Title of an agent app's focused window, for the note field's target label. A short messaging
     /// timeout, so an app that does not answer costs a quarter second rather than the system's six.

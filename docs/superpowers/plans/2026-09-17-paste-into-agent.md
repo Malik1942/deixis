@@ -1,10 +1,10 @@
 # Paste Into the Agent After Return — Implementation Plan
 
-> **Sep 19, 2026: sending was removed after the first dogfood.** Locant pastes and never presses Return; the "Send when there is a note" switch, `AgentPaste.sends`, `Outcome.sent`, and `AgentPaster.sendGap` are gone. Tasks 1–5 below record what was built on Sep 17 and still mention them. `specs/v0.9.md` R59 ("Never sends") is authoritative; Task 6 is updated to its five checks.
+> **Sep 19, 2026: renumbered to v0.8.1 R63** (`specs/v0.8.1.md` holds R59–R62 for taps and sounds). **Sending was removed after the first dogfood.** Locant pastes and never presses Return; the "Send when there is a note" switch, `AgentPaste.sends`, `Outcome.sent`, and `AgentPaster.sendGap` are gone. Tasks 1–5 below record what was built on Sep 17 and still mention them. `specs/v0.8.1-paste.md` R63 ("Never sends") is authoritative; Task 6 is updated to its five checks.
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Implement `specs/v0.9.md` R59: an opt-in option (off by default) that, after Return on a Point capture, brings the agent app the user used last forward and pastes the capture into it, pressing Return too when there is a note and a second switch is on.
+**Goal:** Implement `specs/v0.8.1-paste.md` R63: an opt-in option (off by default) that, after Return on a Point capture, brings the agent app the user used last forward and pastes the capture into it, pressing Return too when there is a note and a second switch is on.
 
 **Architecture:** One new file, `Locant/Payload/AgentPaste.swift`, split the way the repo splits `AgentConfig` (pure, tested) from `AgentConnector` (impure, untested): `AgentPaste` holds every decision as pure functions; `AgentPaster` activates the app and posts the keys. `AppState` records the last agent from an activation observer of its own and calls the paster at the end of `commit(note:)`, after the clipboard is written. The clipboard, the files, and the MCP server are unchanged.
 
@@ -12,7 +12,7 @@
 
 ## Global Constraints
 
-- The spec is `specs/v0.9.md` R59. If this plan and the spec disagree, the spec wins; say so and continue.
+- The spec is `specs/v0.8.1-paste.md` R63. If this plan and the spec disagree, the spec wins; say so and continue.
 - House rules are `docs/CLAUDE.md`: pure functions get tests; accessibility calls run on the `AccessibilityReader` actor; no third-party packages; no private API; never overwrite the clipboard on a failed capture.
 - Both new preferences default to `false`: `pastesIntoAgent`, `sendsWithNote`.
 - Agent apps are matched by exact bundle id, never by name: `com.anthropic.claudefordesktop`, `com.todesktop.230313mzl4w4u92`, `com.openai.codex`.
@@ -133,7 +133,7 @@ Create `Locant/Payload/AgentPaste.swift`:
 ```swift
 import Foundation
 
-/// v0.9 R59: after Return, the capture is pasted into the agent app the user used last. The
+/// v0.8.1 R63: after Return, the capture is pasted into the agent app the user used last. The
 /// decisions are pure and tested here; `AgentPaster` activates the app and posts the keys.
 enum AgentPaste {
     /// Agent apps by exact bundle id, verified on this Mac on Sep 17, 2026. Never matched by name:
@@ -249,20 +249,20 @@ Expected: `error: value of type 'Preferences' has no member 'pastesIntoAgent'` a
 In `Locant/Store/Preferences.swift`, in `enum Key`, after `static let skippedUpdateVersion = "skippedUpdateVersion"` add:
 
 ```swift
-        static let pastesIntoAgent = "pastesIntoAgent" // v0.9 R59
-        static let sendsWithNote = "sendsWithNote" // v0.9 R59
+        static let pastesIntoAgent = "pastesIntoAgent" // v0.8.1 R63
+        static let sendsWithNote = "sendsWithNote" // v0.8.1 R63
 ```
 
 After the `checksForUpdates` property (the block ending `didSet { defaults.set(checksForUpdates, forKey: Key.checksForUpdates) }` and its `}`) add:
 
 ```swift
 
-    /// v0.9 R59: after Return, bring the agent app used last forward and paste the capture there.
+    /// v0.8.1 R63: after Return, bring the agent app used last forward and paste the capture there.
     var pastesIntoAgent: Bool {
         didSet { defaults.set(pastesIntoAgent, forKey: Key.pastesIntoAgent) }
     }
 
-    /// v0.9 R59: with a note, also press Return in the agent. Only while `pastesIntoAgent` is on.
+    /// v0.8.1 R63: with a note, also press Return in the agent. Only while `pastesIntoAgent` is on.
     var sendsWithNote: Bool {
         didSet { defaults.set(sendsWithNote, forKey: Key.sendsWithNote) }
     }
@@ -291,7 +291,7 @@ In `Locant/App/SettingsView.swift`, replace the tab comment line
 with
 
 ```swift
-        // Agents (v0.7.1 R56, v0.9 R59) is where Return pastes and who fetches captures over MCP. The selection lives in AppState so
+        // Agents (v0.7.1 R56, v0.8.1 R63) is where Return pastes and who fetches captures over MCP. The selection lives in AppState so
 ```
 
 In `struct AgentSettings`, after `@State private var copied = false` add:
@@ -315,7 +315,7 @@ with
     var body: some View {
         @Bindable var preferences = state.preferences
         Form {
-            // v0.9 R59: paste is the handoff, so it comes first; MCP below is how an agent looks back.
+            // v0.8.1 R63: paste is the handoff, so it comes first; MCP below is how an agent looks back.
             Section {
                 Toggle(isOn: $preferences.pastesIntoAgent) {
                     Text("Paste into your agent")
@@ -373,7 +373,7 @@ In `Locant/Resolve/AccessibilityReader.swift`, right after the closing `}` of `f
 
 ```swift
 
-    // MARK: Paste into the agent (v0.9 R59)
+    // MARK: Paste into the agent (v0.8.1 R63)
 
     /// Title of an agent app's focused window, for the note field's target label. A short messaging
     /// timeout, so an app that does not answer costs a quarter second rather than the system's six.
@@ -425,7 +425,7 @@ Then append at the end of the file:
 
 ```swift
 
-/// v0.9 R59: brings the agent app forward and posts ⌘V, then Return when asked. Not pure; not unit
+/// v0.8.1 R63: brings the agent app forward and posts ⌘V, then Return when asked. Not pure; not unit
 /// tested. Every step checks the agent is still in front, so a key never lands in the app the user
 /// pointed at.
 @MainActor
@@ -534,7 +534,7 @@ with
 
 ```swift
             case .keyDown, .flagsChanged:
-                // v0.9 R59: the keys Locant posts to paste into an agent pass untouched, so a hotkey
+                // v0.8.1 R63: the keys Locant posts to paste into an agent pass untouched, so a hotkey
                 // recorded as ⌘V or ⌘↩ cannot swallow Locant's own paste.
                 if AgentPaste.isOwnEvent(userData: event.getIntegerValueField(.eventSourceUserData)) {
                     return Unmanaged.passUnretained(event)
@@ -570,11 +570,11 @@ git commit -m "paste: bring the agent forward and post ⌘V and Return, marked s
 After `@ObservationIgnored private var collecting = false` add:
 
 ```swift
-    /// v0.9 R59: the agent app that came forward last, by pid; `lastAgent` checks it is still that app.
+    /// v0.8.1 R63: the agent app that came forward last, by pid; `lastAgent` checks it is still that app.
     @ObservationIgnored private var lastAgentPID: pid_t?
-    /// v0.9 R59: a reader of its own for the target label, so a slow agent never holds up hover.
+    /// v0.8.1 R63: a reader of its own for the target label, so a slow agent never holds up hover.
     @ObservationIgnored private let agentReader = AccessibilityReader()
-    /// v0.9 R59: true while Locant brings an agent forward to paste; auto-verify ignores that activation.
+    /// v0.8.1 R63: true while Locant brings an agent forward to paste; auto-verify ignores that activation.
     @ObservationIgnored private var pasting = false
 ```
 
@@ -590,7 +590,7 @@ After the closing `}` of `private func watchAppsForIterations()` add:
 
 ```swift
 
-    // MARK: Paste into the agent (v0.9 R59)
+    // MARK: Paste into the agent (v0.8.1 R63)
 
     /// Remembers the agent app that came forward last. An observer of its own: `appCameForward`
     /// returns early while iterations are off or a capture runs, and would drop these.
@@ -653,7 +653,7 @@ At the end of `commit(note:)`, replace the single line
 with
 
 ```swift
-                // v0.9 R59: with the option on, the hint about fetching over MCP stays unspent.
+                // v0.8.1 R63: with the option on, the hint about fetching over MCP stays unspent.
                 if preferences.pastesIntoAgent {
                     await pasteIntoAgent(note: note, near: anchor)
                 } else {
@@ -721,7 +721,7 @@ In `enum HudText`, after `static func plain(_:)` add:
 
 ```swift
 
-    /// v0.9 R59: "→ Cursor · <window title>" beside the note field, the title secondary.
+    /// v0.8.1 R63: "→ Cursor · <window title>" beside the note field, the title secondary.
     static func pasteTarget(_ label: AgentPaste.TargetLabel) -> NSAttributedString {
         let s = NSMutableAttributedString(string: label.lead, attributes: sansAttributes)
         if let title = label.title {
@@ -737,7 +737,7 @@ In `enum HudText`, after `static func plain(_:)` add:
 In `OverlayContentView`, after `private var noteField: NoteFieldView?` add:
 
 ```swift
-    /// v0.9 R59: where Return will paste, and the element the field is anchored to (local coordinates).
+    /// v0.8.1 R63: where Return will paste, and the element the field is anchored to (local coordinates).
     private let targetLabel = HudLabel()
     private var noteAnchor: CGRect = .zero
 ```
@@ -761,7 +761,7 @@ After the closing `}` of `showNoteField(screenRect:)` add:
 
     var hasNoteField: Bool { noteField != nil }
 
-    /// v0.9 R59: where Return will paste, on the far side of the note field from the element and
+    /// v0.8.1 R63: where Return will paste, on the far side of the note field from the element and
     /// left-aligned with it; kept on screen. Nil hides it.
     func setNoteTarget(_ text: NSAttributedString?) {
         guard let field = noteField, let text else {
@@ -789,7 +789,7 @@ In `SelectionOverlay`, after the closing `}` of `func showNoteField(anchoredTo f
 
 ```swift
 
-    /// v0.9 R59: where Return will paste, beside the note field; nil hides it.
+    /// v0.8.1 R63: where Return will paste, beside the note field; nil hides it.
     func setNoteTarget(_ text: NSAttributedString?) {
         panels.first { $0.contentOverlay.hasNoteField }?.contentOverlay.setNoteTarget(text)
     }
@@ -821,7 +821,7 @@ with, respectively:
             showNoteField(anchoredTo: rect, around: clickPoint)
 ```
 
-Then, in the `// MARK: Paste into the agent (v0.9 R59)` section added in Task 4, after `watchAgentApps()`'s closing `}`, add:
+Then, in the `// MARK: Paste into the agent (v0.8.1 R63)` section added in Task 4, after `watchAgentApps()`'s closing `}`, add:
 
 ```swift
 
@@ -884,9 +884,9 @@ git commit -m "overlay: the note field shows where Return will paste"
 ### Task 6: Dogfood, and write down what it found
 
 **Files:**
-- Modify: `specs/v0.9.md` (append a `### Dogfood notes` section under R59)
+- Modify: `specs/v0.8.1-paste.md` (append a `### Dogfood notes` section under R63)
 
-No code unless a check fails. Run the option on for a normal working day, then answer the spec's five checks in `specs/v0.9.md`, dated, one line each:
+No code unless a check fails. Run the option on for a normal working day, then answer the spec's five checks in `specs/v0.8.1-paste.md`, dated, one line each:
 
 - [ ] **1.** What Claude, Cursor, and ChatGPT each took from the one item carrying PNG and Markdown: text, image attachment, or both. If one took only the image, that is a spec change (text-only item for that app, then the full item written back); stop and bring it back to the spec, do not patch it here.
 - [ ] **2.** How often ⌘V landed in Cursor's code editor instead of its chat.
@@ -897,6 +897,6 @@ No code unless a check fails. Run the option on for a normal working day, then a
 - [ ] **Commit the notes**
 
 ```bash
-git add specs/v0.9.md
-git commit -m "specs: v0.9 R59 dogfood notes"
+git add specs/v0.8.1-paste.md
+git commit -m "specs: v0.8.1 R63 dogfood notes"
 ```

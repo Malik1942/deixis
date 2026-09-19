@@ -54,7 +54,7 @@ final class KeyEventTap {
                 MainActor.assumeIsolated { tap.enable() }
                 return Unmanaged.passUnretained(event)
             case .keyDown, .flagsChanged:
-                // v0.9 R59: the ⌘V Locant posts to paste into an agent passes untouched, so a hotkey
+                // v0.8.1 R63: the ⌘V Locant posts to paste into an agent passes untouched, so a hotkey
                 // recorded as ⌘V cannot swallow Locant's own paste.
                 if AgentPaste.isOwnEvent(userData: event.getIntegerValueField(.eventSourceUserData)) {
                     return Unmanaged.passUnretained(event)

@@ -1,7 +1,7 @@
 import AppKit
 import Carbon.HIToolbox
 
-/// v0.9 R59: after Return, the capture is pasted into the agent app the user used last. The
+/// v0.8.1 R63: after Return, the capture is pasted into the agent app the user used last. The
 /// decisions are pure and tested here; `AgentPaster` activates the app and posts ⌘V.
 enum AgentPaste {
     /// Agent apps by exact bundle id, verified on this Mac on Sep 17, 2026. Never matched by name:
@@ -54,7 +54,7 @@ enum AgentPaste {
     }
 }
 
-/// v0.9 R59: brings the agent app forward and posts ⌘V, never Return: sending stays the user's, in
+/// v0.8.1 R63: brings the agent app forward and posts ⌘V, never Return: sending stays the user's, in
 /// the agent, where the paste can still be edited or deleted. Not pure; not unit tested. Every step
 /// checks the agent is still in front, so ⌘V never lands in the app the user pointed at.
 @MainActor

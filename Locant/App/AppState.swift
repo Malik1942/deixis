@@ -68,11 +68,11 @@ final class AppState {
     /// R52: NSWorkspace launch and activation observers, and whether an iteration is being collected.
     @ObservationIgnored private var appObservers: [any NSObjectProtocol] = []
     @ObservationIgnored private var collecting = false
-    /// v0.9 R59: the agent app that came forward last, by pid; `lastAgent` checks it is still that app.
+    /// v0.8.1 R63: the agent app that came forward last, by pid; `lastAgent` checks it is still that app.
     @ObservationIgnored private var lastAgentPID: pid_t?
-    /// v0.9 R59: a reader of its own for the target label, so a slow agent never holds up hover.
+    /// v0.8.1 R63: a reader of its own for the target label, so a slow agent never holds up hover.
     @ObservationIgnored private let agentReader = AccessibilityReader()
-    /// v0.9 R59: pastes under way; auto-verify ignores activations while any is. A count, since two
+    /// v0.8.1 R63: pastes under way; auto-verify ignores activations while any is. A count, since two
     /// quick Returns can overlap.
     @ObservationIgnored private var pastesInFlight = 0
     @ObservationIgnored private let beforeAfter = BeforeAfterWindow()
@@ -223,7 +223,7 @@ final class AppState {
         }
     }
 
-    // MARK: Paste into the agent (v0.9 R59)
+    // MARK: Paste into the agent (v0.8.1 R63)
 
     /// Remembers the agent app that came forward last. An observer of its own: `appCameForward`
     /// returns early while iterations are off or a capture runs, and would drop these.
@@ -1011,7 +1011,7 @@ final class AppState {
                 } else {
                     toast.show(HudText.copied(identifier: element?.identifier), near: anchor)
                 }
-                // v0.9 R59: with the option on, the hint about fetching over MCP stays unspent.
+                // v0.8.1 R63: with the option on, the hint about fetching over MCP stays unspent.
                 if preferences.pastesIntoAgent {
                     await pasteIntoAgent(near: anchor)
                 } else {

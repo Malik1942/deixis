@@ -11,7 +11,7 @@ struct SettingsView: View {
         @Bindable var state = state
         // v0.6 R51: tabs, the way System Settings groups things. General is what the app is
         // and needs; Hotkeys is every key; Captures is what is written and how; My Apps is the list;
-        // Agents (v0.7.1 R56, v0.9 R59) is where Return pastes and who fetches captures over MCP. The selection lives in AppState so
+        // Agents (v0.7.1 R56, v0.8.1 R63) is where Return pastes and who fetches captures over MCP. The selection lives in AppState so
         // the help page can open Settings on the tab a row belongs to.
         TabView(selection: $state.settingsTab) {
             GeneralSettings()
@@ -640,7 +640,7 @@ struct AgentSettings: View {
     var body: some View {
         @Bindable var preferences = state.preferences
         Form {
-            // v0.9 R59: paste is the handoff, so it comes first; MCP below is how an agent looks back.
+            // v0.8.1 R63: paste is the handoff, so it comes first; MCP below is how an agent looks back.
             Section {
                 Toggle(isOn: $preferences.pastesIntoAgent) {
                     Text("Paste into your agent")
