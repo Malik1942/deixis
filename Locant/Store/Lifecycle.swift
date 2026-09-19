@@ -23,8 +23,10 @@ enum Lifecycle {
     }
 
     /// Every Locant image under `folder`, recursively, grouped with its sidecar. v0.8 R58: the
-    /// further crops of a set, `<base>-2.png` and on, belong to the capture at `<base>` and go or
-    /// stay with it.
+    /// further crops of a set, `<base>-2.png` and on, and the auto-verify after-images,
+    /// `<base>-after-<n>.png`, belong to the capture at `<base>` and go or stay with it. The capture
+    /// keeps them alive, never the other way round: `modified` stays the capture's own, so a capture
+    /// is judged on when it was made and `newest` still means the capture pointed at most recently.
     static func entries(in folder: URL) -> [LifecycleEntry] {
         let keys: [URLResourceKey] = [.contentModificationDateKey, .isRegularFileKey]
         guard let enumerator = FileManager.default.enumerator(at: folder, includingPropertiesForKeys: keys) else { return [] }
@@ -57,13 +59,15 @@ enum Lifecycle {
         }
     }
 
-    /// `…/locant-app-20260916-120000-ab12-2` → `…/locant-app-20260916-120000-ab12`; nil for anything
-    /// that is not a capture base followed by `-<number>`.
+    /// `…/locant-app-20260916-120000-ab12-2` and `…-ab12-after-3` → `…/locant-app-20260916-120000-ab12`;
+    /// nil for anything that is not a capture base followed by `-<number>` or `-after-<number>`.
     static func captureBase(ofExtraImage base: String) -> String? {
         guard let dash = base.lastIndex(of: "-") else { return nil }
         let suffix = base[base.index(after: dash)...]
         guard !suffix.isEmpty, suffix.allSatisfy(\.isNumber) else { return nil }
-        let stem = String(base[..<dash])
+        var stem = String(base[..<dash])
+        // An auto-verify after-image (`IterationStore.afterImageURL`) documents its capture and goes with it.
+        if stem.hasSuffix("-after") { stem.removeLast("-after".count) }
         // The stem must end in the capture id: yyyyMMdd-HHmmss-xxxx.
         let tail = stem.suffix(20)
         guard tail.count == 20, tail.dropFirst(8).first == "-", tail.dropFirst(15).first == "-" else { return nil }
