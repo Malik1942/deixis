@@ -1,5 +1,7 @@
 # Paste Into the Agent After Return — Implementation Plan
 
+> **Sep 19, 2026: sending was removed after the first dogfood.** Locant pastes and never presses Return; the "Send when there is a note" switch, `AgentPaste.sends`, `Outcome.sent`, and `AgentPaster.sendGap` are gone. Tasks 1–5 below record what was built on Sep 17 and still mention them. `specs/v0.9.md` R59 ("Never sends") is authoritative; Task 6 is updated to its five checks.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Implement `specs/v0.9.md` R59: an opt-in option (off by default) that, after Return on a Point capture, brings the agent app the user used last forward and pastes the capture into it, pressing Return too when there is a note and a second switch is on.
@@ -884,14 +886,13 @@ git commit -m "overlay: the note field shows where Return will paste"
 **Files:**
 - Modify: `specs/v0.9.md` (append a `### Dogfood notes` section under R59)
 
-No code unless a check fails. Run the option on for a normal working day, then answer the spec's six checks in `specs/v0.9.md`, dated, one line each:
+No code unless a check fails. Run the option on for a normal working day, then answer the spec's five checks in `specs/v0.9.md`, dated, one line each:
 
 - [ ] **1.** What Claude, Cursor, and ChatGPT each took from the one item carrying PNG and Markdown: text, image attachment, or both. If one took only the image, that is a spec change (text-only item for that app, then the full item written back); stop and bring it back to the spec, do not patch it here.
-- [ ] **2.** How often ⌘V landed in Cursor's code editor instead of its chat, and whether a sent Return ever reached code.
+- [ ] **2.** How often ⌘V landed in Cursor's code editor instead of its chat.
 - [ ] **3.** Whether the agent came forward every time, including from another Space and from full screen; how often `Copied · … didn't come forward` appeared.
-- [ ] **4.** Whether 400 ms (`AgentPaster.sendGap`) was enough before Return, especially with an image attachment. If it was not, change the constant, rebuild, re-run the full tests, and commit as `paste: <new value> between ⌘V and Return, from dogfood`.
-- [ ] **5.** Whether focus moving to the agent on every Return fit the normal workflow.
-- [ ] **6.** The raw window titles seen in Task 5 for each app, as samples for a later workspace parser.
+- [ ] **4.** Whether focus moving to the agent on every Return fit the normal workflow.
+- [ ] **5.** The raw window titles seen in Task 5 for each app, as samples for a later workspace parser.
 
 - [ ] **Commit the notes**
 
