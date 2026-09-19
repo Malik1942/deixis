@@ -269,20 +269,19 @@ final class AppState {
     }
 
     /// After the clipboard: wait for the overlay to order out, so no Locant panel is key, then bring
-    /// the last agent forward and paste; Return too for a note when the second switch is on. A newer
-    /// capture, or anything else written to the clipboard, cancels it at any step, silently. The toast
-    /// speaks only when nothing was pasted.
-    private func pasteIntoAgent(note: String, near anchor: CGRect) async {
+    /// the last agent forward and paste into its message field. It never sends. A newer capture, or
+    /// anything else written to the clipboard, cancels it at any step, silently. The toast speaks
+    /// only when nothing was pasted.
+    private func pasteIntoAgent(near anchor: CGRect) async {
         // Read first: commit(note:) calls this right after PasteboardWriter.write, reset(), and the
         // toast, with no other clipboard write between, so this is what Return itself wrote.
         let clipboard = NSPasteboard.general.changeCount
         let proceed: @MainActor @Sendable () -> Bool = { self.phase == .idle && NSPasteboard.general.changeCount == clipboard }
-        let send = AgentPaste.sends(note: note, enabled: preferences.sendsWithNote)
         try? await Task.sleep(for: .milliseconds(Int(DesignTokens.dismiss * 1000) + 40))
         guard proceed() else { return }
         let app = lastAgent
         pastesInFlight += 1
-        let outcome = await AgentPaster.paste(into: app, send: send, reader: agentReader, proceed: proceed)
+        let outcome = await AgentPaster.paste(into: app, reader: agentReader, proceed: proceed)
         pastesInFlight -= 1
         if let text = AgentPaste.toastText(outcome, appName: app?.localizedName) {
             toast.show(HudText.plain(text), near: anchor)
@@ -1014,7 +1013,7 @@ final class AppState {
                 }
                 // v0.9 R59: with the option on, the hint about fetching over MCP stays unspent.
                 if preferences.pastesIntoAgent {
-                    await pasteIntoAgent(note: note, near: anchor)
+                    await pasteIntoAgent(near: anchor)
                 } else {
                     showAgentHintIfNeeded()
                 }

@@ -122,7 +122,6 @@ final class Preferences {
         static let lastUpdateCheck = "lastUpdateCheck"
         static let skippedUpdateVersion = "skippedUpdateVersion"
         static let pastesIntoAgent = "pastesIntoAgent" // v0.9 R59
-        static let sendsWithNote = "sendsWithNote" // v0.9 R59
     }
 
     /// The actions that can carry a hotkey (R29), in menu and ring order; each one's digit is its position here.
@@ -279,11 +278,6 @@ final class Preferences {
         didSet { defaults.set(pastesIntoAgent, forKey: Key.pastesIntoAgent) }
     }
 
-    /// v0.9 R59: with a note, also press Return in the agent. Only while `pastesIntoAgent` is on.
-    var sendsWithNote: Bool {
-        didSet { defaults.set(sendsWithNote, forKey: Key.sendsWithNote) }
-    }
-
     /// When the last check ran, whatever it found; nil until the first.
     var lastUpdateCheck: Date? {
         didSet {
@@ -335,7 +329,6 @@ final class Preferences {
         collectsIterations = defaults.object(forKey: Key.collectsIterations) as? Bool ?? true
         checksForUpdates = defaults.object(forKey: Key.checksForUpdates) as? Bool ?? true
         pastesIntoAgent = defaults.object(forKey: Key.pastesIntoAgent) as? Bool ?? false
-        sendsWithNote = defaults.object(forKey: Key.sendsWithNote) as? Bool ?? false
         lastUpdateCheck = defaults.object(forKey: Key.lastUpdateCheck) as? Date
         skippedUpdateVersion = defaults.string(forKey: Key.skippedUpdateVersion)
         if let data = defaults.data(forKey: Key.actionHotkeySettings), let stored = try? JSONDecoder().decode([String: ActionHotkeySetting].self, from: data) {

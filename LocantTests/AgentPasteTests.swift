@@ -17,15 +17,7 @@ final class AgentPasteTests: XCTestCase {
         XCTAssertFalse(AgentPaste.isAgent(bundleId: nil))
     }
 
-    // 2: Return goes to the agent only for a note with words in it, and only with the switch on.
-    func testSendsOnlyANoteWithTheSwitchOn() {
-        XCTAssertTrue(AgentPaste.sends(note: "make it rounded", enabled: true))
-        XCTAssertFalse(AgentPaste.sends(note: "make it rounded", enabled: false))
-        XCTAssertFalse(AgentPaste.sends(note: "", enabled: true))
-        XCTAssertFalse(AgentPaste.sends(note: "  \n\t ", enabled: true))
-    }
-
-    // 3: the label names the app at once and the window when it is known.
+    // 2: the label names the app at once and the window when it is known.
     func testLabelNamesTheAppThenTheWindow() {
         XCTAssertEqual(AgentPaste.label(appName: nil, windowTitle: "x"), .init(lead: "→ no agent yet", title: nil))
         XCTAssertEqual(AgentPaste.label(appName: "Cursor", windowTitle: nil), .init(lead: "→ Cursor", title: nil))
@@ -33,10 +25,9 @@ final class AgentPasteTests: XCTestCase {
         XCTAssertEqual(AgentPaste.label(appName: "ChatGPT", windowTitle: " Deixis — v0.9 "), .init(lead: "→ ChatGPT", title: "Deixis — v0.9"))
     }
 
-    // 4: the toast speaks only when nothing was pasted.
+    // 3: the toast speaks only when nothing was pasted.
     func testToastExplainsOnlyAMissedPaste() {
         XCTAssertNil(AgentPaste.toastText(.pasted, appName: "Cursor"))
-        XCTAssertNil(AgentPaste.toastText(.sent, appName: "Cursor"))
         XCTAssertNil(AgentPaste.toastText(.superseded, appName: "Cursor"))
         XCTAssertEqual(AgentPaste.toastText(.noAgent, appName: nil), "Copied · no agent yet")
         XCTAssertEqual(AgentPaste.toastText(.didNotComeForward, appName: "Cursor"), "Copied · Cursor didn't come forward")
@@ -44,7 +35,7 @@ final class AgentPasteTests: XCTestCase {
         XCTAssertEqual(AgentPaste.toastText(.noPermission, appName: "Cursor"), "Copied · pasting needs Accessibility")
     }
 
-    // 5: Locant's own posted keys are known by their marker, and nothing else is.
+    // 4: Locant's own posted keys are known by their marker, and nothing else is.
     func testOwnEventsAreKnownByTheirMarker() {
         XCTAssertTrue(AgentPaste.isOwnEvent(userData: AgentPaste.eventMarker))
         XCTAssertFalse(AgentPaste.isOwnEvent(userData: 0))

@@ -644,15 +644,9 @@ struct AgentSettings: View {
             Section {
                 Toggle(isOn: $preferences.pastesIntoAgent) {
                     Text("Paste into your agent")
-                    Text("After Return, Locant brings forward the agent app you used last, Claude, Cursor, or Codex, and pastes the capture there.")
+                    Text("After Return, Locant brings forward the agent app you used last, Claude, Cursor, or Codex, and pastes the capture into its message field. Locant never sends it; you do.")
                 }
                 .toggleStyle(.switch)
-                Toggle(isOn: $preferences.sendsWithNote) {
-                    Text("Send when there is a note")
-                    Text("Locant also presses Return in the agent. Without a note, the capture waits in the message field.")
-                }
-                .toggleStyle(.switch)
-                .disabled(!preferences.pastesIntoAgent)
                 Footnote(text: "The note field shows where the capture will go. The clipboard holds it either way, and connected agents can still fetch it.")
             }
             Section {

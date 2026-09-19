@@ -2,7 +2,7 @@ import AppKit
 import Carbon.HIToolbox
 
 /// v0.9 R59: after Return, the capture is pasted into the agent app the user used last. The
-/// decisions are pure and tested here; `AgentPaster` activates the app and posts the keys.
+/// decisions are pure and tested here; `AgentPaster` activates the app and posts ⌘V.
 enum AgentPaste {
     /// Agent apps by exact bundle id, verified on this Mac on Sep 17, 2026. Never matched by name:
     /// ChatGPT Classic (`com.openai.chat`), CodexBar, and the Claude app's background-only Claude
@@ -17,11 +17,6 @@ enum AgentPaste {
         bundleId.map { bundleIds.contains($0) } ?? false
     }
 
-    /// Return is pressed in the agent only for a note with words in it, and only with the switch on.
-    static func sends(note: String, enabled: Bool) -> Bool {
-        enabled && !note.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-    }
-
     /// Beside the note field: the arrow and the app, then the window's title once it is known.
     struct TargetLabel: Equatable, Sendable {
         var lead: String
@@ -34,16 +29,16 @@ enum AgentPaste {
         return TargetLabel(lead: "→ \(appName)", title: (title?.isEmpty ?? true) ? nil : title)
     }
 
-    /// How a paste ended. `.superseded`: a newer capture started, or the clipboard changed, before a
-    /// key; the user has moved on, so nothing is said.
+    /// How a paste ended. `.superseded`: a newer capture started, or the clipboard changed, before
+    /// ⌘V; the user has moved on, so nothing is said.
     enum Outcome: Equatable, Sendable {
-        case pasted, sent, noAgent, noPermission, didNotComeForward, superseded
+        case pasted, noAgent, noPermission, didNotComeForward, superseded
     }
 
     /// What the toast says when nothing was pasted; nil when the paste itself is the feedback.
     static func toastText(_ outcome: Outcome, appName: String?) -> String? {
         switch outcome {
-        case .pasted, .sent, .superseded: nil
+        case .pasted, .superseded: nil
         case .noAgent: "Copied · no agent yet"
         case .noPermission: "Copied · pasting needs Accessibility"
         case .didNotComeForward: "Copied · \(appName ?? "the agent") didn't come forward"
@@ -59,21 +54,18 @@ enum AgentPaste {
     }
 }
 
-/// v0.9 R59: brings the agent app forward and posts ⌘V, then Return when asked. Not pure; not unit
-/// tested. Every step checks the agent is still in front, so a key never lands in the app the user
-/// pointed at.
+/// v0.9 R59: brings the agent app forward and posts ⌘V, never Return: sending stays the user's, in
+/// the agent, where the paste can still be edited or deleted. Not pure; not unit tested. Every step
+/// checks the agent is still in front, so ⌘V never lands in the app the user pointed at.
 @MainActor
 enum AgentPaster {
     /// After the agent is frontmost, before ⌘V: Electron puts focus back in its composer.
     static let settle: Duration = .milliseconds(150)
-    /// Between ⌘V and Return: Electron paste handlers, and an image attachment most of all, finish
-    /// after the key. Tuned in dogfood.
-    static let sendGap: Duration = .milliseconds(400)
 
-    /// `proceed` is asked before the agent is brought forward, while waiting for it, and before each
-    /// key; false means a newer capture or a clipboard write won.
+    /// `proceed` is asked before the agent is brought forward, while waiting for it, and before ⌘V;
+    /// false means a newer capture or a clipboard write won.
     static func paste(
-        into app: NSRunningApplication?, send: Bool, reader: AccessibilityReader,
+        into app: NSRunningApplication?, reader: AccessibilityReader,
         proceed: @MainActor @Sendable () -> Bool
     ) async -> AgentPaste.Outcome {
         guard let app, !app.isTerminated else { return .noAgent }
@@ -87,11 +79,7 @@ enum AgentPaster {
         guard proceed() else { return .superseded }
         guard isFrontmost(app) else { return .didNotComeForward }
         post(keyCode: pasteKeyCode(), flags: .maskCommand)
-        guard send else { return .pasted }
-        try? await Task.sleep(for: sendGap)
-        guard proceed(), isFrontmost(app) else { return .pasted }
-        post(keyCode: CGKeyCode(kVK_Return), flags: [])
-        return .sent
+        return .pasted
     }
 
     /// The Return that committed the note, and any modifier still held, must be up first, or they
