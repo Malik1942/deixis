@@ -24,4 +24,30 @@ enum AutoVerify {
     static func previousImagePath(of capture: Capture) -> String {
         capture.iterations.last?.imagePath ?? capture.image.path
     }
+
+    /// The sidecar of the newest Point capture, or nil when the folder holds none. A set's extra
+    /// crops ride in its own entry (v0.8 R58), so what marks a Point capture is the sidecar, not
+    /// the number of files: Snap and Cut write an image and nothing else.
+    static func newestSidecar(among entries: [LifecycleEntry]) -> URL? {
+        entries
+            .filter { $0.urls.contains { $0.pathExtension == "json" } }
+            .max { $0.modified < $1.modified }?
+            .urls.first { $0.pathExtension == "json" }
+    }
+
+    /// v0.8 R58: `capture.image` is `Geometry.cropRects(for:)[0]` — the union of a set whose
+    /// elements fit one crop, or the first element's own crop when each got its own. Refinding the
+    /// first element alone reproduces the baseline only in the second case; in the first, every
+    /// element has to be found again before the crops can be compared.
+    static func sharesOneImage(_ capture: Capture) -> Bool {
+        guard let targets = capture.targets, targets.count > 1 else { return false }
+        return targets.dropFirst().allSatisfy { $0.imagePath == nil }
+    }
+
+    /// The elements that have to be refound besides the first one before an iteration can be
+    /// compared: a shared image's companions, and nothing otherwise.
+    static func companions(of capture: Capture) -> [ResolvedElement] {
+        guard sharesOneImage(capture) else { return [] }
+        return (capture.targets ?? []).dropFirst().map(\.element)
+    }
 }

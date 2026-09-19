@@ -121,6 +121,7 @@ final class Preferences {
         static let checksForUpdates = "checksForUpdates" // v0.6 R46
         static let lastUpdateCheck = "lastUpdateCheck"
         static let skippedUpdateVersion = "skippedUpdateVersion"
+        static let pastesIntoAgent = "pastesIntoAgent" // v0.8.1 R63
     }
 
     /// The actions that can carry a hotkey (R29), in menu and ring order; each one's digit is its position here.
@@ -272,6 +273,11 @@ final class Preferences {
         didSet { defaults.set(checksForUpdates, forKey: Key.checksForUpdates) }
     }
 
+    /// v0.8.1 R63: after Return, bring the agent app used last forward and paste the capture there.
+    var pastesIntoAgent: Bool {
+        didSet { defaults.set(pastesIntoAgent, forKey: Key.pastesIntoAgent) }
+    }
+
     /// When the last check ran, whatever it found; nil until the first.
     var lastUpdateCheck: Date? {
         didSet {
@@ -322,6 +328,7 @@ final class Preferences {
         hintCounts = defaults.dictionary(forKey: Key.hintCounts) as? [String: Int] ?? [:]
         collectsIterations = defaults.object(forKey: Key.collectsIterations) as? Bool ?? true
         checksForUpdates = defaults.object(forKey: Key.checksForUpdates) as? Bool ?? true
+        pastesIntoAgent = defaults.object(forKey: Key.pastesIntoAgent) as? Bool ?? false
         lastUpdateCheck = defaults.object(forKey: Key.lastUpdateCheck) as? Date
         skippedUpdateVersion = defaults.string(forKey: Key.skippedUpdateVersion)
         if let data = defaults.data(forKey: Key.actionHotkeySettings), let stored = try? JSONDecoder().decode([String: ActionHotkeySetting].self, from: data) {
