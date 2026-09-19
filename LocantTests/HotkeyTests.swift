@@ -131,10 +131,7 @@ final class HotkeyTests: XCTestCase {
     }
 
     func testCheckReportsLocantClashFirst() {
-        let name = "LocantTests-\(UUID().uuidString)"
-        let defaults = UserDefaults(suiteName: name)!
-        defaults.removePersistentDomain(forName: name)
-        let p = Preferences(defaults: defaults)
+        let p = Preferences(defaults: isolatedDefaults())
         let snap = Preferences.defaultActionHotkey("snap")!
         XCTAssertEqual(HotkeyConflicts.check(snap, for: "text", in: p).first, .locant(action: "snap"))
         XCTAssertEqual(HotkeyConflicts.check(snap, for: "snap", in: p), [])

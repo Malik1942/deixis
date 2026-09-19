@@ -3,13 +3,6 @@ import XCTest
 
 @MainActor
 final class PreferencesTests: XCTestCase {
-    private func isolatedDefaults() -> UserDefaults {
-        let name = "LocantTests-\(UUID().uuidString)"
-        let defaults = UserDefaults(suiteName: name)!
-        defaults.removePersistentDomain(forName: name)
-        return defaults
-    }
-
     // 1
     func testDefaultsWhenNothingStored() {
         let p = Preferences(defaults: isolatedDefaults())
@@ -25,6 +18,7 @@ final class PreferencesTests: XCTestCase {
         XCTAssertTrue(p.adjustSelection)
         XCTAssertTrue(p.checksForUpdates)
         XCTAssertTrue(p.collectsIterations)
+        XCTAssertFalse(p.pastesIntoAgent)
         XCTAssertNil(p.lastUpdateCheck)
         XCTAssertNil(p.skippedUpdateVersion)
         XCTAssertEqual(p.actionHotkeys, Preferences.defaultActionHotkeys)
@@ -113,6 +107,7 @@ final class PreferencesTests: XCTestCase {
         p.adjustSelection = false
         p.checksForUpdates = false
         p.collectsIterations = false
+        p.pastesIntoAgent = true
         p.lastUpdateCheck = Date(timeIntervalSince1970: 1_800_000_000)
         p.skippedUpdateVersion = "0.7.0"
         XCTAssertEqual(hotkeyChanges, 1, "only a real change restarts the monitor")
@@ -129,6 +124,7 @@ final class PreferencesTests: XCTestCase {
         XCTAssertFalse(again.adjustSelection)
         XCTAssertFalse(again.checksForUpdates)
         XCTAssertFalse(again.collectsIterations)
+        XCTAssertTrue(again.pastesIntoAgent)
         XCTAssertEqual(again.lastUpdateCheck, Date(timeIntervalSince1970: 1_800_000_000))
         XCTAssertEqual(again.skippedUpdateVersion, "0.7.0")
         XCTAssertEqual(again.captureFolderURL.path(percentEncoded: false), "/tmp/captures/")
@@ -153,4 +149,23 @@ final class PreferencesTests: XCTestCase {
         p.ballPosition = nil
         XCTAssertNil(Preferences(defaults: defaults).ballPosition)
     }
+}
+
+extension XCTestCase {
+    /// A defaults store of its own that never touches disk. A suite per test left a plist behind on
+    /// every run: emptying the domain afterwards is not enough, cfprefsd writes the empty file back
+    /// seconds later.
+    func isolatedDefaults() -> UserDefaults { InMemoryDefaults(suiteName: "LocantTests-InMemory")! }
+}
+
+/// `UserDefaults` held in memory. Every getter `Preferences` uses (`string`, `data`, `array`,
+/// `dictionary`, and `object` for Bools and Ints) reads through `object(forKey:)`, and every setter
+/// writes through `set(_:forKey:)`; the round-trip test fails if one does not. It is made with a
+/// throwaway suite name, never the app's own domain.
+final class InMemoryDefaults: UserDefaults, @unchecked Sendable {
+    private var values: [String: Any] = [:]
+
+    override func object(forKey defaultName: String) -> Any? { values[defaultName] }
+    override func set(_ value: Any?, forKey defaultName: String) { values[defaultName] = value }
+    override func removeObject(forKey defaultName: String) { values[defaultName] = nil }
 }

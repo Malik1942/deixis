@@ -163,6 +163,31 @@ actor AccessibilityReader {
         return string(copy(window, kAXTitleAttribute))
     }
 
+    // MARK: Paste into the agent (v0.8.1 R63)
+
+    /// Title of an agent app's focused window, for the note field's target label. A short messaging
+    /// timeout, so an app that does not answer costs a quarter second rather than the system's six.
+    func agentWindowTitle(pid: pid_t) -> String? {
+        let app = AXUIElementCreateApplication(pid)
+        AXUIElementSetMessagingTimeout(app, 0.25)
+        guard let window = element(copy(app, kAXFocusedWindowAttribute)) ?? element(copy(app, kAXMainWindowAttribute)) else {
+            return nil
+        }
+        AXUIElementSetMessagingTimeout(window, 0.25)
+        return string(copy(window, kAXTitleAttribute))
+    }
+
+    /// Brings an app forward through accessibility when `activate()` was not honored, as for a
+    /// window on another Space: the app becomes frontmost and its main window is raised.
+    func raise(pid: pid_t) {
+        let app = AXUIElementCreateApplication(pid)
+        AXUIElementSetMessagingTimeout(app, 0.25)
+        AXUIElementSetAttributeValue(app, kAXFrontmostAttribute as CFString, kCFBooleanTrue)
+        if let window = element(copy(app, kAXMainWindowAttribute)) {
+            AXUIElementPerformAction(window, kAXRaiseAction as CFString)
+        }
+    }
+
     // MARK: Reading
 
     private func hit(_ root: AXUIElement, at point: CGPoint) -> AXUIElement? {

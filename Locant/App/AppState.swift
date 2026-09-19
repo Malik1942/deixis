@@ -68,6 +68,13 @@ final class AppState {
     /// R52: NSWorkspace launch and activation observers, and whether an iteration is being collected.
     @ObservationIgnored private var appObservers: [any NSObjectProtocol] = []
     @ObservationIgnored private var collecting = false
+    /// v0.8.1 R63: the agent app that came forward last, by pid; `lastAgent` checks it is still that app.
+    @ObservationIgnored private var lastAgentPID: pid_t?
+    /// v0.8.1 R63: a reader of its own for the target label, so a slow agent never holds up hover.
+    @ObservationIgnored private let agentReader = AccessibilityReader()
+    /// v0.8.1 R63: pastes under way; auto-verify ignores activations while any is. A count, since two
+    /// quick Returns can overlap.
+    @ObservationIgnored private var pastesInFlight = 0
     @ObservationIgnored private let beforeAfter = BeforeAfterWindow()
     @ObservationIgnored private let help = HelpWindow()
     /// R25: the last ten picked colors, in memory only.
@@ -96,6 +103,7 @@ final class AppState {
         scheduleSweeps()
         scheduleUpdateChecks()
         watchAppsForIterations()
+        watchAgentApps()
         overlay.onHover = { [weak self] point in self?.hover(point) }
         overlay.onClick = { [weak self] point, shift in self?.click(point, shift: shift) }
         overlay.onShiftPressed = { [weak self] in self?.showShiftHintIfNeeded() }
@@ -215,6 +223,71 @@ final class AppState {
         }
     }
 
+    // MARK: Paste into the agent (v0.8.1 R63)
+
+    /// Remembers the agent app that came forward last. An observer of its own: `appCameForward`
+    /// returns early while iterations are off or a capture runs, and would drop these.
+    private func watchAgentApps() {
+        let center = NSWorkspace.shared.notificationCenter
+        appObservers.append(center.addObserver(forName: NSWorkspace.didActivateApplicationNotification, object: nil, queue: .main) { [weak self] note in
+            guard let app = note.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication,
+                  AgentPaste.isAgent(bundleId: app.bundleIdentifier) else { return }
+            let pid = app.processIdentifier
+            MainActor.assumeIsolated { self?.lastAgentPID = pid }
+        })
+    }
+
+    /// The note field, and beside it where Return will paste when that option is on.
+    private func showNoteField(anchoredTo frame: CGRect?, around point: CGPoint) {
+        overlay.showNoteField(anchoredTo: frame, around: point)
+        showPasteTarget()
+    }
+
+    /// The app at once; its window title when the agent's own reader answers, if the field is
+    /// still open by then.
+    private func showPasteTarget() {
+        guard preferences.pastesIntoAgent else { return }
+        guard let app = lastAgent else {
+            overlay.setNoteTarget(HudText.pasteTarget(AgentPaste.label(appName: nil, windowTitle: nil)))
+            return
+        }
+        let name = app.localizedName ?? "Agent"
+        overlay.setNoteTarget(HudText.pasteTarget(AgentPaste.label(appName: name, windowTitle: nil)))
+        let pid = app.processIdentifier
+        Task { @MainActor in
+            let title = await agentReader.agentWindowTitle(pid: pid)
+            guard phase == .noting else { return }
+            overlay.setNoteTarget(HudText.pasteTarget(AgentPaste.label(appName: name, windowTitle: title)))
+        }
+    }
+
+    /// The last agent while it still runs as the same app; nil after it quits.
+    private var lastAgent: NSRunningApplication? {
+        guard let pid = lastAgentPID, let app = NSRunningApplication(processIdentifier: pid),
+              !app.isTerminated, AgentPaste.isAgent(bundleId: app.bundleIdentifier) else { return nil }
+        return app
+    }
+
+    /// After the clipboard: wait for the overlay to order out, so no Locant panel is key, then bring
+    /// the last agent forward and paste into its message field. It never sends. A newer capture, or
+    /// anything else written to the clipboard, cancels it at any step, silently. The toast speaks
+    /// only when nothing was pasted.
+    private func pasteIntoAgent(near anchor: CGRect) async {
+        // Read first: commit(note:) calls this right after PasteboardWriter.write, reset(), and the
+        // toast, with no other clipboard write between, so this is what Return itself wrote.
+        let clipboard = NSPasteboard.general.changeCount
+        let proceed: @MainActor @Sendable () -> Bool = { self.phase == .idle && NSPasteboard.general.changeCount == clipboard }
+        try? await Task.sleep(for: .milliseconds(Int(DesignTokens.dismiss * 1000) + 40))
+        guard proceed() else { return }
+        let app = lastAgent
+        pastesInFlight += 1
+        let outcome = await AgentPaster.paste(into: app, reader: agentReader, proceed: proceed)
+        pastesInFlight -= 1
+        if let text = AgentPaste.toastText(outcome, appName: app?.localizedName) {
+            toast.show(HudText.plain(text), near: anchor)
+        }
+    }
+
     // MARK: Updates (v0.6 R45)
 
     /// 10 s after launch, then every 24 hours while running; skipped when the last check, on any
@@ -286,17 +359,14 @@ final class AppState {
 
     /// The newest Point capture: an image with a sidecar.
     private func newestSidecar() -> URL? {
-        Lifecycle.entries(in: preferences.captureFolderURL)
-            .filter { $0.urls.count == 2 }
-            .max { $0.modified < $1.modified }?
-            .urls.first(where: { $0.pathExtension == "json" })
+        AutoVerify.newestSidecar(among: Lifecycle.entries(in: preferences.captureFolderURL))
     }
 
     /// R52: the app of the newest capture launched or came forward. If the capture is worth it
     /// (`AutoVerify.wants`), wait for the window to draw, find the element again, and keep an
     /// iteration when it looks different. Never a toast on failure: the next activation tries again.
     private func appCameForward(bundleId: String, pid: pid_t) {
-        guard preferences.collectsIterations, phase == .idle, !collecting else { return }
+        guard preferences.collectsIterations, phase == .idle, !collecting, pastesInFlight == 0 else { return }
         guard let sidecar = newestSidecar(), let capture = try? IterationStore.load(sidecar),
               AutoVerify.wants(capture, activated: bundleId), let element = capture.element else { return }
         collecting = true
@@ -312,7 +382,11 @@ final class AppState {
     /// the nearest frame), capture it, and when the pixels changed record the git facts and append
     /// the iteration. The Before & After window is not opened; "Show before & after" is in the menu.
     private func collectIteration(sidecar: URL, capture: Capture, element: ResolvedElement, pid: pid_t) async {
+        // A set that shares one image is only comparable once every element is found again, and
+        // only this app's are reachable here: a set spanning apps simply never collects.
+        let companions = AutoVerify.companions(of: capture)
         var found: ResolvedElement?
+        var others: [ResolvedElement] = []
         var windowBounds: CGRect?
         for attempt in 0..<ElementRefinder.retries {
             let windows = WindowList.onScreen().filter { $0.ownerPID == pid && $0.layer == 0 }
@@ -321,14 +395,19 @@ final class AppState {
             let region = largest?.bounds ?? SelectionOverlay.displayFrameCG(containing: element.frame.cgRect.origin)
             let snapshots = await reader.elements(in: region, pid: pid)
             found = ElementRefinder.match(element, among: snapshots)
-            if found != nil { break }
+            others = companions.compactMap { ElementRefinder.match($0, among: snapshots) }
+            if found != nil, others.count == companions.count { break }
             if attempt < ElementRefinder.retries - 1 { try? await Task.sleep(for: ElementRefinder.retryInterval) }
         }
-        guard let found, phase == .idle else { return }
+        guard let found, others.count == companions.count, phase == .idle else { return }
         do {
             let center = CGPoint(x: found.frame.x + found.frame.w / 2, y: found.frame.y + found.frame.h / 2)
             let display = SelectionOverlay.displayFrameCG(containing: center)
-            let crop = Geometry.cropRect(element: found.frame.cgRect, clickPoint: center, window: windowBounds, display: display)
+            // The same crop the capture took, so the two images are comparable: the set's union
+            // when they shared one, the element's own otherwise.
+            let crop = companions.isEmpty
+                ? Geometry.cropRect(element: found.frame.cgRect, clickPoint: center, window: windowBounds, display: display)
+                : Geometry.cropRects(for: ([found] + others).map(\.frame.cgRect), display: display, displayFor: SelectionOverlay.displayFrameCG(containing:))[0]
             let image = try await ScreenCapture.crop(crop)
             let previous = try? Data(contentsOf: URL(filePath: AutoVerify.previousImagePath(of: capture)))
             let png = image.png
@@ -723,7 +802,7 @@ final class AppState {
             cropTask = Task { try await ScreenCapture.crop(rect) }
 
             overlay.setHighlight(element?.frame.cgRect, readout: .describing(element), around: point)
-            overlay.showNoteField(anchoredTo: element?.frame.cgRect, around: point)
+            showNoteField(anchoredTo: element?.frame.cgRect, around: point)
             phase = .noting
         }
     }
@@ -749,7 +828,7 @@ final class AppState {
 
         overlay.setPinned(frames)
         overlay.setHighlight(last.frame.cgRect, readout: .describing(last), around: point)
-        overlay.showNoteField(anchoredTo: last.frame.cgRect, around: point)
+        showNoteField(anchoredTo: last.frame.cgRect, around: point)
         phase = .noting
     }
 
@@ -799,7 +878,7 @@ final class AppState {
             cropTask = Task { try await ScreenCapture.crop(crop) }
 
             overlay.showMarks(elements.map { $0.frame.cgRect })
-            overlay.showNoteField(anchoredTo: rect, around: clickPoint)
+            showNoteField(anchoredTo: rect, around: clickPoint)
             phase = .noting
         }
     }
@@ -932,7 +1011,12 @@ final class AppState {
                 } else {
                     toast.show(HudText.copied(identifier: element?.identifier), near: anchor)
                 }
-                showAgentHintIfNeeded()
+                // v0.8.1 R63: with the option on, the hint about fetching over MCP stays unspent.
+                if preferences.pastesIntoAgent {
+                    await pasteIntoAgent(near: anchor)
+                } else {
+                    showAgentHintIfNeeded()
+                }
             } catch {
                 fail(.captureFailed(error), nearRect: anchor)
             }

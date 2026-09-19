@@ -11,7 +11,7 @@ struct SettingsView: View {
         @Bindable var state = state
         // v0.6 R51: tabs, the way System Settings groups things. General is what the app is
         // and needs; Hotkeys is every key; Captures is what is written and how; My Apps is the list;
-        // Agents (v0.7.1 R56) is who fetches captures over MCP. The selection lives in AppState so
+        // Agents (v0.7.1 R56, v0.8.1 R63) is where Return pastes and who fetches captures over MCP. The selection lives in AppState so
         // the help page can open Settings on the tab a row belongs to.
         TabView(selection: $state.settingsTab) {
             GeneralSettings()
@@ -633,11 +633,22 @@ struct AgentSettings: View {
     @State private var failures: [Agent: String] = [:]
     @State private var busy: Set<Agent> = []
     @State private var copied = false
+    @Environment(AppState.self) private var state
 
     private var executable: String { AgentConnector.executable }
 
     var body: some View {
+        @Bindable var preferences = state.preferences
         Form {
+            // v0.8.1 R63: paste is the handoff, so it comes first; MCP below is how an agent looks back.
+            Section {
+                Toggle(isOn: $preferences.pastesIntoAgent) {
+                    Text("Paste into your agent")
+                    Text("After Return, Locant brings forward the agent app you used last, Claude, Cursor, or Codex, and pastes the capture into its message field. Locant never sends it; you do.")
+                }
+                .toggleStyle(.switch)
+                Footnote(text: "The note field shows where the capture will go. The clipboard holds it either way, and connected agents can still fetch it.")
+            }
             Section {
                 ForEach(Agent.allCases) { agent in
                     AgentRow(
